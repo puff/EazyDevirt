@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EazyDevirt", "EazyDevirt\EazyDevirt.csproj", "{E9FE02D7-BD21-4BB2-98F3-1CF517F538C0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AsmResolver", "AsmResolver", "{27844DB8-D8DB-45DA-9978-32A15BA1F1BA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsmResolver.DotNet", "libs\AsmResolver\src\AsmResolver.DotNet\AsmResolver.DotNet.csproj", "{36039D87-C16C-43AB-B820-60858899CDAA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsmResolver.PE", "libs\AsmResolver\src\AsmResolver.PE\AsmResolver.PE.csproj", "{4E0F04CE-ACCF-4563-A1F3-58687E0A6261}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsmResolver.PE.File", "libs\AsmResolver\src\AsmResolver.PE.File\AsmResolver.PE.File.csproj", "{84468E39-1485-4249-ABF8-76CBDAAD6206}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsmResolver", "libs\AsmResolver\src\AsmResolver\AsmResolver.csproj", "{B28A79B5-0C4C-45BB-8590-C150489842E3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E9FE02D7-BD21-4BB2-98F3-1CF517F538C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9FE02D7-BD21-4BB2-98F3-1CF517F538C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9FE02D7-BD21-4BB2-98F3-1CF517F538C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9FE02D7-BD21-4BB2-98F3-1CF517F538C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36039D87-C16C-43AB-B820-60858899CDAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36039D87-C16C-43AB-B820-60858899CDAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36039D87-C16C-43AB-B820-60858899CDAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36039D87-C16C-43AB-B820-60858899CDAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E0F04CE-ACCF-4563-A1F3-58687E0A6261}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E0F04CE-ACCF-4563-A1F3-58687E0A6261}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E0F04CE-ACCF-4563-A1F3-58687E0A6261}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E0F04CE-ACCF-4563-A1F3-58687E0A6261}.Release|Any CPU.Build.0 = Release|Any CPU
+		{84468E39-1485-4249-ABF8-76CBDAAD6206}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84468E39-1485-4249-ABF8-76CBDAAD6206}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84468E39-1485-4249-ABF8-76CBDAAD6206}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84468E39-1485-4249-ABF8-76CBDAAD6206}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B28A79B5-0C4C-45BB-8590-C150489842E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B28A79B5-0C4C-45BB-8590-C150489842E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B28A79B5-0C4C-45BB-8590-C150489842E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B28A79B5-0C4C-45BB-8590-C150489842E3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{36039D87-C16C-43AB-B820-60858899CDAA} = {27844DB8-D8DB-45DA-9978-32A15BA1F1BA}
+		{4E0F04CE-ACCF-4563-A1F3-58687E0A6261} = {27844DB8-D8DB-45DA-9978-32A15BA1F1BA}
+		{84468E39-1485-4249-ABF8-76CBDAAD6206} = {27844DB8-D8DB-45DA-9978-32A15BA1F1BA}
+		{B28A79B5-0C4C-45BB-8590-C150489842E3} = {27844DB8-D8DB-45DA-9978-32A15BA1F1BA}
+	EndGlobalSection
+EndGlobal
