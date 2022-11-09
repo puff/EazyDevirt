@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsmResolver.PE.File", "libs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsmResolver", "libs\AsmResolver\src\AsmResolver\AsmResolver.csproj", "{B28A79B5-0C4C-45BB-8590-C150489842E3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EazSample", "EazSample\EazSample.csproj", "{C6E9E20E-7B83-4779-B079-07ADE9837477}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +40,10 @@ Global
 		{B28A79B5-0C4C-45BB-8590-C150489842E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B28A79B5-0C4C-45BB-8590-C150489842E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B28A79B5-0C4C-45BB-8590-C150489842E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C6E9E20E-7B83-4779-B079-07ADE9837477}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6E9E20E-7B83-4779-B079-07ADE9837477}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6E9E20E-7B83-4779-B079-07ADE9837477}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6E9E20E-7B83-4779-B079-07ADE9837477}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{36039D87-C16C-43AB-B820-60858899CDAA} = {27844DB8-D8DB-45DA-9978-32A15BA1F1BA}
