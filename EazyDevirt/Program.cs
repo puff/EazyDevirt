@@ -7,7 +7,7 @@ using EazyDevirt.Devirtualization.Options;
 
 namespace EazyDevirt;
 
-internal class Program
+internal static class Program
 {
     private static async Task Main(params string[] args)
     {
@@ -21,6 +21,8 @@ internal class Program
     {
         var ctx = new DevirtualizationContext(options);
         var devirtualizer = new Devirtualizer(ctx);
+        
+        devirtualizer.Run();
 
         ctx.Options.OutputPath.Create();
         var outputFilePath = ctx.Options.OutputPath.FullName + ctx.Options.Assembly.Name +

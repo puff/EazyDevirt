@@ -18,7 +18,7 @@ public class Devirtualizer
     private DevirtualizationContext Context { get; }
     private List<IStage> Pipeline { get; }
 
-    public void Run(DevirtualizationOptions options)
+    public void Run()
     {
         foreach (var stage in Pipeline)
         {
