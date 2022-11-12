@@ -25,8 +25,8 @@ internal static class Program
         devirtualizer.Run();
 
         ctx.Options.OutputPath.Create();
-        var outputFilePath = ctx.Options.OutputPath.FullName + ctx.Options.Assembly.Name +
-                             ctx.Options.Assembly.Extension;
+        var outputFilePath = ctx.Options.OutputPath.FullName + '\\' + Path.GetFileNameWithoutExtension(ctx.Options.Assembly.Name) +
+                             "-devirt" + ctx.Options.Assembly.Extension;
         ctx.Module.Write(outputFilePath,
             new ManagedPEImageBuilder(
                 new DotNetDirectoryFactory(
@@ -44,8 +44,8 @@ internal static class Program
                 result.ErrorMessage = $"Invalid file extension type '{ext}'. Valid extensions are '.exe' and '.dll'.";
         });
         
-        var outputOption = new Option<DirectoryInfo>(new[] { "--output", "-o" }, "Path to output directory");
-        outputOption.SetDefaultValue("./eazydevirt-output");
+        var outputArgument = new Argument<DirectoryInfo>("output", "Path to output directory");
+        outputArgument.SetDefaultValue(new DirectoryInfo("./eazydevirt-output"));
         
         var verbosityOption = new Option<int>(new[] { "--verbose", "-v" }, "Level of verbosity output");
         verbosityOption.SetDefaultValue(0);
@@ -60,14 +60,14 @@ internal static class Program
                                           "from an assembly virtualized with Eazfuscator.NET")
         {
             inputArgument,
-            outputOption,
+            outputArgument,
             verbosityOption,
             preserveAllOption,
             keepTypesOption,
         };
         
         rootCommand.SetHandler(Run, 
-            new DevirtualizationOptionsBinder(inputArgument, outputOption, verbosityOption,
+            new DevirtualizationOptionsBinder(inputArgument, outputArgument, verbosityOption,
                 preserveAllOption, keepTypesOption));
         
         return new CommandLineBuilder(rootCommand)
