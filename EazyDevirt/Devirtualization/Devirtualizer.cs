@@ -1,5 +1,4 @@
 ﻿using EazyDevirt.Abstractions;
-using EazyDevirt.Devirtualization.Options;
 using EazyDevirt.Devirtualization.Pipeline;
 
 namespace EazyDevirt.Devirtualization;
@@ -9,22 +8,24 @@ public class Devirtualizer
     public Devirtualizer(DevirtualizationContext ctx)
     {
         Context = ctx;
-        Pipeline = new List<IStage>
+        Pipeline = new List<Stage>
         {
-            new ResourceParser(),
+            new ResourceParser(ctx),
         };
     }
     
     private DevirtualizationContext Context { get; }
-    private List<IStage> Pipeline { get; }
+    private List<Stage> Pipeline { get; }
 
     public void Run()
     {
         foreach (var stage in Pipeline)
         {
             Context.Console.Info($"Executing {stage.Name}...");
-            stage.Run(Context);
-            Context.Console.Success($"Executed {stage.Name}!");
+            if (!stage.Run())
+                Context.Console.Error($"Failed running {stage.Name}!");
+            else
+                Context.Console.Success($"Executed {stage.Name}!");
         }
     }
 }
