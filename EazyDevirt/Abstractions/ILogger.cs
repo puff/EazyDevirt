@@ -2,9 +2,9 @@
 
 public interface ILogger
 {
-    void Success(string message);
-    void Warning(string message);
-    void Error(string message);
-    void Info(string message);
-    void InfoStr(string message, string message2);
+    void Success(object message);
+    void Warning(object message);
+    void Error(object message);
+    void Info(object message);
+    void InfoStr(object message, object message2);
 }
