@@ -20,7 +20,7 @@ public class ResourceParser : Stage
         if (_resourceInitializationMethod == null)
             Ctx.Console.Error("Failed to find resource initialization method!");
 
-        if (found && Ctx.Options.VeryVerbose)
+        if (found && Ctx.Options.Verbose)
         {
             Ctx.Console.InfoStr("VM Resource Getter", _resourceGetterMethod!.MetadataToken.ToString());
             Ctx.Console.InfoStr("VM Resource Initializer", _resourceInitializationMethod!.MetadataToken.ToString());

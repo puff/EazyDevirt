@@ -47,7 +47,7 @@ internal static class Program
         var outputArgument = new Argument<DirectoryInfo>("output", "Path to output directory");
         outputArgument.SetDefaultValue(new DirectoryInfo("./eazydevirt-output"));
         
-        var verbosityOption = new Option<int>(new[] { "--verbose", "-v" }, "Level of verbosity output");
+        var verbosityOption = new Option<int>(new[] { "--verbose", "-v" }, "Level of verbosity output [1: Verbose, 2: Very Verbose]");
         verbosityOption.SetDefaultValue(0);
 
         var preserveAllOption = new Option<bool>(new[] { "--preserve-all", "-p"}, "Preserves all metadata tokens");
