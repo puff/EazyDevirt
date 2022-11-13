@@ -3,8 +3,6 @@
   <component name="UserContentModel">
     <attachedFolders />
     <explicitIncludes />
-    <explicitExcludes>
-      <Path>EazSample/bin</Path>
-    </explicitExcludes>
+    <explicitExcludes />
   </component>
 </project>
