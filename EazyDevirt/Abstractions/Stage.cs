@@ -14,6 +14,10 @@ public abstract class Stage
     /// Name of stage.
     /// </summary>
     public string Name { get; }
+    
+    /// <summary>
+    /// Devirtualization Context.
+    /// </summary>
     private protected DevirtualizationContext Ctx { get; }
     
     /// <summary>

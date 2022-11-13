@@ -23,7 +23,7 @@ public record DevirtualizationOptions
  /// TODO: update this and VeryVerbose description
  /// Shows useful debug information
  /// </summary>
- public bool Verbose => Verbosity == 1;
+ public bool Verbose => Verbosity >= 1;
 
  /// <summary>
  /// Shows verbose information and more useful debugging information

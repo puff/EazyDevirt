@@ -11,7 +11,6 @@ internal static class Program
 {
     private static async Task Main(params string[] args)
     {
-        Console.WriteLine(Logo);
         var parser = BuildParser();
 
         await parser.InvokeAsync(args).ConfigureAwait(false);
@@ -22,6 +21,8 @@ internal static class Program
         var ctx = new DevirtualizationContext(options);
         var devirtualizer = new Devirtualizer(ctx);
         
+        ctx.Console.Success(Logo);
+
         devirtualizer.Run();
 
         ctx.Options.OutputPath.Create();
@@ -52,7 +53,8 @@ internal static class Program
 
         var preserveAllOption = new Option<bool>(new[] { "--preserve-all", "-p"}, "Preserves all metadata tokens");
         preserveAllOption.SetDefaultValue(false);
-        
+
+        // TODO: Implement this in code or remove this option
         var keepTypesOption = new Option<bool>(new[] { "--keep-types", "-kt"}, "Keeps obfuscator types");
         keepTypesOption.SetDefaultValue(false);
         

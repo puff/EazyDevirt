@@ -23,7 +23,7 @@ public class Devirtualizer
         {
             Context.Console.Info($"Executing {stage.Name}...");
             if (!stage.Run())
-                Context.Console.Error($"Failed running {stage.Name}!");
+                Context.Console.Error($"Failed executing {stage.Name}!");
             else
                 Context.Console.Success($"Executed {stage.Name}!");
         }
