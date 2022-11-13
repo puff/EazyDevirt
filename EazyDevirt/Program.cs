@@ -9,6 +9,8 @@ namespace EazyDevirt;
 
 internal static class Program
 {
+    private static readonly Version CurrentVersion = new("1.0.0");
+
     private static async Task Main(params string[] args)
     {
         var parser = BuildParser();
@@ -19,10 +21,9 @@ internal static class Program
     private static void Run(DevirtualizationOptions options)
     {
         var ctx = new DevirtualizationContext(options);
-        var devirtualizer = new Devirtualizer(ctx);
+        ctx.Console.ShowInfo(CurrentVersion);
         
-        ctx.Console.Success(Logo);
-
+        var devirtualizer = new Devirtualizer(ctx);
         devirtualizer.Run();
 
         ctx.Options.OutputPath.Create();
@@ -77,13 +78,4 @@ internal static class Program
             .UseHelp()
             .Build();
     }
-
-    private static string Logo =>
-        "▄███▄   ██   ▄▄▄▄▄▄ ▀▄    ▄ \n" +
-        "█▀   ▀  █ █ ▀   ▄▄▀   █  █  \n" +
-        "██▄▄    █▄▄█ ▄▀▀   ▄▀  ▀█   \n" +
-        "█▄   ▄▀ █  █ ▀▀▀▀▀▀    █    \n" +
-        "▀███▀      █         ▄▀     \n" +
-        "          █                 \n" +
-        "         ▀                  ";
 }
