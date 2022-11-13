@@ -24,8 +24,9 @@
       <EmbeddedResource Include="Resources\encrypted and compressed.png" />
     </ItemGroup>
 
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-      <Exec Command="xcopy $(OutDir) ..\samples\EazSample /Y" />
+    <!-- Don't overwrite sample in Debug mode. Eazfuscator.NET only obfuscates in Release mode. -->
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(ConfigurationName)' == 'Release'">
+      <Exec Command="xcopy $(OutDir) ..\samples\EazSample /Y /I" />
     </Target>
 
 </Project>
