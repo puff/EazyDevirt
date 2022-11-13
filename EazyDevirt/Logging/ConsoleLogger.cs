@@ -41,7 +41,7 @@ public class ConsoleLogger : ILogger
         WriteMiddle(@"Github Repo - ", ConsoleColor.DarkMagenta);
         
         Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine("https://github.com/puff/eazydevirt");
+        Console.WriteLine("https://github.com/puff/EazyDevirt");
         Console.ResetColor();
         
         WriteMiddle(@"Thanks to - ", ConsoleColor.DarkMagenta);
