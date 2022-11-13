@@ -22,18 +22,11 @@
       <EmbeddedResource Include="Resources\encrypted.jpg" />
       <!-- <None Remove="Resources\encrypted and compressed.png" /> -->
       <EmbeddedResource Include="Resources\encrypted and compressed.png" />
-      <EmbeddedResource Remove="bin\**" />
     </ItemGroup>
 
     <!-- Add all output files to a group so we can copy them -->
     <ItemGroup>
         <_CopyItems Include="$(OutDir)*.*" />
-    </ItemGroup>
-    <ItemGroup>
-      <Compile Remove="bin\**" />
-    </ItemGroup>
-    <ItemGroup>
-      <None Remove="bin\**" />
     </ItemGroup>
     
     <!-- Don't overwrite sample in Debug mode. Eazfuscator.NET only obfuscates in Release mode. -->
