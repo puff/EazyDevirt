@@ -1,6 +1,7 @@
 ﻿using AsmResolver;
 using AsmResolver.DotNet;
 using AsmResolver.DotNet.Serialized;
+using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
 using EazyDevirt.PatternMatching.Patterns;
 #pragma warning disable CS8618
@@ -12,8 +13,10 @@ public class ResourceParser : Stage
     // Rider won't shut up unless I make them nullable.
     private MethodDefinition? _resourceGetterMethod;
     private MethodDefinition? _resourceInitializationMethod;
+    private MethodDefinition? _resourceModulusStringMethod;
 
     private byte[] _keyBytes;
+    private string _modulusString;
     
     private protected override bool Init()
     {
@@ -24,14 +27,19 @@ public class ResourceParser : Stage
         if (_resourceInitializationMethod == null)
             Ctx.Console.Error("Failed to find vm resource stream initialization method!");
 
+        if (_resourceModulusStringMethod == null || _resourceModulusStringMethod.CilMethodBody!.Instructions.All
+                (i => i.OpCode != CilOpCodes.Ldstr))
+            Ctx.Console.Error("Failed to find vm resource modulus string method! Have strings been decrypted?");
+
         if (found && Ctx.Options.Verbose)
         {
-            Ctx.Console.Success("Found vm resource stream getter and initializer methods!");
+            Ctx.Console.Success("Found vm resource stream getter, initializer, and modulus string methods!");
 
             if (Ctx.Options.VeryVerbose)
             {
                 Ctx.Console.InfoStr("VM Resource Stream Getter", _resourceGetterMethod!.MetadataToken);
                 Ctx.Console.InfoStr("VM Resource Stream Initializer", _resourceInitializationMethod!.MetadataToken);
+                Ctx.Console.InfoStr("VM Resource Modulus String Method", _resourceModulusStringMethod!.MetadataToken);
             }
         }
         
@@ -46,11 +54,25 @@ public class ResourceParser : Stage
         if (Ctx.Options.Verbose)
         {
             Ctx.Console.Success("Found vm resource stream key bytes!");
-            
             if (Ctx.Options.VeryVerbose)
                 Ctx.Console.InfoStr("VM Resource Stream Key Bytes", BitConverter.ToString(_keyBytes));
         }
+
+        _modulusString = _resourceModulusStringMethod!.CilMethodBody!.Instructions.FirstOrDefault
+            (i => i.OpCode == CilOpCodes.Ldstr)!.Operand?.ToString()!;
+        if (string.IsNullOrWhiteSpace(_modulusString))
+        {
+            Ctx.Console.Error("VM Resource Modulus String is null!");
+            found = false;
+        }
         
+        if (Ctx.Options.Verbose)
+        {
+            Ctx.Console.Success("Found vm resource modulus string!");
+            if (Ctx.Options.VeryVerbose)
+                Ctx.Console.InfoStr("VM Resource Modulus String", _modulusString);
+        }
+
         return found;
     }
 
@@ -79,6 +101,8 @@ public class ResourceParser : Stage
                 _resourceGetterMethod = method;
                 _resourceInitializationMethod =
                     (SerializedMethodDefinition)method.CilMethodBody!.Instructions[13].Operand!;
+                _resourceModulusStringMethod =
+                    (SerializedMethodDefinition)method.CilMethodBody!.Instructions[12].Operand!;
             }
 
         }
