@@ -49,6 +49,10 @@ public class ConsoleLogger : ILogger
         Console.ForegroundColor = ConsoleColor.White;
         Console.WriteLine("clifford for helping with Eazfuscator.NET's VM."); 
         
+        // 55 = ("saneki for his well-documented eazdevirt project.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
+        Console.WriteLine(string.Format("{0," + (Console.WindowWidth / 2
+                                                 + 55 + "}"), "saneki for his well-documented eazdevirt project."));
+        
         // 55 = ("TobitoFatitoRE for the amazing HexDevirt project.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
         Console.WriteLine(string.Format("{0," + (Console.WindowWidth / 2 
                                                  + 55 + "}"), "TobitoFatitoRE for the amazing HexDevirt project."));
