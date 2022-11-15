@@ -1,6 +1,6 @@
 ﻿namespace EazyDevirt.Abstractions;
 
-public interface ILogger
+internal interface ILogger
 {
     void Success(object message);
     void Warning(object message);

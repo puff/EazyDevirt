@@ -3,7 +3,7 @@ using EazyDevirt.Devirtualization.Pipeline;
 
 namespace EazyDevirt.Devirtualization;
 
-public class Devirtualizer
+internal class Devirtualizer
 {
     public Devirtualizer(DevirtualizationContext ctx)
     {

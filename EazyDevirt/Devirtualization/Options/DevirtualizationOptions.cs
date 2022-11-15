@@ -1,6 +1,6 @@
 ﻿namespace EazyDevirt.Devirtualization.Options;
 
-public record DevirtualizationOptions
+internal record DevirtualizationOptions
 {
  /// <summary>
  /// Target assembly info

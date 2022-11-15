@@ -2,7 +2,7 @@
 
 namespace EazyDevirt.Logging;
 
-public class ConsoleLogger : ILogger
+internal  class ConsoleLogger : ILogger
 {
     public void Success(object message) => WriteLine(message, ConsoleColor.Cyan, '+');
 

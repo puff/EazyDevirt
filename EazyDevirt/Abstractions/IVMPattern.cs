@@ -3,7 +3,7 @@ using EazyDevirt.Architecture;
 
 namespace EazyDevirt.Abstractions;
 
-public interface IVMPattern : IPattern
+internal interface IVMPattern : IPattern
 {
     VMOpCode Translates { get; }
 }
