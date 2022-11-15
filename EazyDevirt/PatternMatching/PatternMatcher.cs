@@ -31,7 +31,7 @@ public class PatternMatcher
     /// <param name="method">Method to match body against</param>
     /// <param name="index">Index of method's instruction body to start matching at.</param>
     /// <returns>Whether the pattern matches method's instruction body</returns>
-    public static bool MatchesPattern(IPattern pattern, MethodDefinition method, int index = 0)
+    public bool MatchesPattern(IPattern pattern, MethodDefinition method, int index = 0)
     {
         if (!method.HasMethodBody) return false;
         var instructions = method.CilMethodBody!.Instructions;

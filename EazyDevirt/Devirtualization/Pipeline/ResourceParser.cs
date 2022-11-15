@@ -133,7 +133,7 @@ public class ResourceParser : Stage
                 if (_resourceGetterMethod != null && _resourceInitializationMethod != null) return true;
                 // TODO: make a better way of using non-vm patterns
                 if (_resourceGetterMethod != null ||
-                    !PatternMatching.PatternMatcher.MatchesPattern(new GetVMStreamPattern(), method)) continue;
+                    !Ctx.PatternMatcher.MatchesPattern(new GetVMStreamPattern(), method)) continue;
                 
                 _resourceGetterMethod = method;
                 _resourceInitializationMethod =
