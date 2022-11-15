@@ -1,4 +1,5 @@
-﻿using AsmResolver;
+﻿using System.Security.Cryptography;
+using AsmResolver;
 using AsmResolver.DotNet;
 using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
@@ -100,8 +101,23 @@ public class ResourceParser : Stage
         // the fun begins...
         if (!Init()) return false;
 
+        var modulus1 = Convert.FromBase64String(_modulusString);
+        var modulus2 = new byte[_keyBytes.Length + _keyBytes.Length];
+        Buffer.BlockCopy(_keyBytes, 0, modulus2, 0, _keyBytes.Length);
+        Buffer.BlockCopy(modulus1, 0, modulus2, _keyBytes.Length, modulus1.Length);
         
-        
+        // this puts the bits in reverse compared to bouncy castle's implementation. might be nothing to worry about?
+        // var modulus = new BigInteger(modulus2, true, true);
+
+        var rsaParams = new RSAParameters
+        {
+            // rsaParams.Modulus = modulus.ToByteArray();
+            Modulus = modulus2,
+            Exponent = BitConverter.GetBytes(65537UL) // may need to be reversed
+        };
+
+        // Ctx.VMStream.Rsa = RSA.Create(rsaParams);
+
         return true;
     }
 

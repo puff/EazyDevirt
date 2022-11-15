@@ -1,4 +1,5 @@
-﻿using AsmResolver.DotNet;
+﻿using System.Security.Cryptography;
+using AsmResolver.DotNet;
 using EazyDevirt.Devirtualization.Options;
 using EazyDevirt.Logging;
 using EazyDevirt.PatternMatching;
@@ -14,9 +15,8 @@ public record DevirtualizationContext
         PatternMatcher = new PatternMatcher();
         Console = new ConsoleLogger();
     }
-
+    
     public DevirtualizationOptions Options { get; }
-
     public ModuleDefinition Module { get; }
     public PatternMatcher PatternMatcher { get; }
     public ConsoleLogger Console { get; }
