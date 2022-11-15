@@ -6,7 +6,7 @@ using EazyDevirt.Architecture;
 
 namespace EazyDevirt.PatternMatching;
 
-public class PatternMatcher
+internal class PatternMatcher
 {
     public PatternMatcher()
     {

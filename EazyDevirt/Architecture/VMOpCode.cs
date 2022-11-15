@@ -1,6 +1,6 @@
 ﻿namespace EazyDevirt.Architecture;
 
-public enum VMOpCode
+internal enum VMOpCode
 {
     Nop,
     

@@ -6,7 +6,7 @@ using EazyDevirt.PatternMatching;
 
 namespace EazyDevirt.Devirtualization;
 
-public record DevirtualizationContext
+internal record DevirtualizationContext
 {
     public DevirtualizationContext(DevirtualizationOptions opts)
     {

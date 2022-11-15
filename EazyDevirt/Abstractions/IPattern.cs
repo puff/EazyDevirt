@@ -4,7 +4,7 @@ using EazyDevirt.Architecture;
 
 namespace EazyDevirt.Abstractions;
 
-public interface IPattern
+internal interface IPattern
 {
     /// <summary>
     /// Pattern of CilOpCodes in order of top to bottom to check against CIL instruction bodies.

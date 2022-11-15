@@ -5,7 +5,7 @@ using EazyDevirt.Abstractions;
 
 namespace EazyDevirt.PatternMatching.Patterns;
 
-public record GetVMStreamPattern : IPattern
+internal  record GetVMStreamPattern : IPattern
 {
     /// <summary>
     /// Pattern for the VM Resource Stream Getter / Initializer

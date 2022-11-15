@@ -2,7 +2,7 @@
 
 namespace EazyDevirt.Abstractions;
 
-public abstract class Stage
+internal abstract class Stage
 {
     protected Stage(DevirtualizationContext ctx)
     {

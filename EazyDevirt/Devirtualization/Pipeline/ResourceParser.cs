@@ -9,7 +9,7 @@ using EazyDevirt.PatternMatching.Patterns;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
-public class ResourceParser : Stage
+internal class ResourceParser : Stage
 {
     // Rider won't shut up unless I make them nullable.
     private MethodDefinition? _resourceGetterMethod;
@@ -118,6 +118,24 @@ public class ResourceParser : Stage
 
         // Ctx.VMStream.Rsa = RSA.Create(rsaParams);
 
+        var stream = new MemoryStream(_resource.GetData());
+        // @"5<]fEBf\76"
+        var decryptedPos = 0x2852; // 10322
+        stream.Seek(decryptedPos, SeekOrigin.Begin);
+
+        var key = -463041498 ^ -559030707;
+
+        var count = 4;
+        var currPos = stream.Position;
+        var test = new byte[0x10]; // 16
+        var read = stream.Read(test, 0, count);
+
+        for (var i = 0; i < count + read; i++)
+        {
+            var b = (byte)(key ^ (int)(currPos++));
+            test[i] ^= b;
+        }
+        
         return true;
     }
 
