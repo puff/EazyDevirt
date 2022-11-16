@@ -1,4 +1,4 @@
-﻿namespace EazyDevirt.Architecture;
+﻿namespace EazyDevirt.Core.IO;
 
 internal class VMStream : Stream
 {

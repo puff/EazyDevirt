@@ -20,4 +20,7 @@ internal record DevirtualizationContext
     public ModuleDefinition Module { get; }
     public PatternMatcher PatternMatcher { get; }
     public ConsoleLogger Console { get; }
+
+    public int PositionCryptoKey { get; set; }
+    public int MethodCryptoKey { get; set; }
 }

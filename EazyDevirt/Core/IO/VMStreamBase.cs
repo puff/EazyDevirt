@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
 
-namespace EazyDevirt.Architecture;
+namespace EazyDevirt.Core.IO;
 
 internal class VMStreamBase : Stream
 {
