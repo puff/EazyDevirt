@@ -2,12 +2,12 @@
 
 namespace EazyDevirt.Architecture;
 
-internal class VMStream2 : Stream
+internal class VMStreamBase : Stream
 {
     private Stream _stream;
     private RSA _rsa;
     
-    public VMStream2(Stream stream, RSA rsa)
+    public VMStreamBase(Stream stream, RSA rsa)
     {
         _stream = stream;
         _rsa = rsa;
@@ -44,6 +44,7 @@ internal class VMStream2 : Stream
         return Position;
     }
 
+    #region not implemented
     public override void SetLength(long value)
     {
         throw new NotImplementedException();
@@ -57,6 +58,19 @@ internal class VMStream2 : Stream
     public override void Flush()
     {
     }
+    #endregion
+
+    private void Initialize()
+    {
+        if (_Initialized) return;
+        
+    }
+    
+    private int _Length;
+    private bool _Initialized;
+
+    private readonly int inputBlockSize = 0xFF; //  255 bytes
+    private readonly int outputBlockSize = 0x100; // 256 bytes
 
     public override bool CanRead => true;
     public override bool CanSeek => true;
@@ -66,7 +80,8 @@ internal class VMStream2 : Stream
     {
         get
         {
-            return 0;
+            Initialize();
+            return _Length;
         }
     }
     public override long Position { get; set; }
