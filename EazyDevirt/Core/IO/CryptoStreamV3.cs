@@ -1,4 +1,6 @@
 ﻿using System.Diagnostics;
+using System.Numerics;
+using System.Security.Cryptography;
 
 namespace EazyDevirt.Core.IO;
 
@@ -6,11 +8,51 @@ public class CryptoStreamV3 : Stream
 {
     private Stream _stream;
     private int _key;
+    private int _modulus;
+    private RSAParameters _rsaParameters;
 
-    public CryptoStreamV3(Stream stream, int key)
+    public CryptoStreamV3(Stream stream, int key, RSAParameters? rsaParams = null)
     {
         _stream = stream;
-        _key = key ^ -559030707; // TODO: find this constant automatically
+        _key = key ^
+               -559030707; // TODO: find this constant automatically (though in all samples i've analyzed, this key is the same)
+
+        _rsaParameters = rsaParams.GetValueOrDefault();
+    }
+
+    
+    
+    private byte[] RSAPublicDecrypt(byte[] encryptedData)
+    {
+        // TODO: this don't work. migrate to bouncy castle or implement custom BigInteger
+        var encData = new BigInteger(encryptedData);
+        var bnData =  BigInteger.ModPow(encData, new BigInteger(_rsaParameters.Exponent!)
+            , new BigInteger(_rsaParameters.Modulus!));
+
+        var mostSignificantBit = bnData.GetBitLength();
+        
+        return bnData.ToByteArray(false, true);
+    }
+    
+    public void DecryptBlock(int pos)
+    {
+        if (_rsaParameters.Modulus == null) return;
+
+        // Console.WriteLine(Convert.ToBase64String(_rsa.ExportRSAPrivateKey()));
+        
+        var oldPos = this.Position;
+        this.Position = pos;
+        
+        const int blockSize = 0x100; // 256
+        
+        var blockBuffer = new byte[blockSize];
+        var read = _stream.Read(blockBuffer, 0, blockSize);
+        if (read != blockSize) return;
+
+        this.Position = pos;
+        var decrypted = RSAPublicDecrypt(blockBuffer);
+        _stream.Write(decrypted, 0, blockSize);
+        this.Position = oldPos;
     }
     
     private byte Decrypt(byte byte_0, uint uint_0)
@@ -23,8 +65,8 @@ public class CryptoStreamV3 : Stream
     {
         var num = (uint)_stream.Position;
         var num2 = _stream.Read(buffer, offset, count);
-        var num3 = count + num2;
-        for (var i = count; i < num3; i++)
+        var num3 = offset + num2;
+        for (var i = offset; i < num3; i++)
             buffer[i] = Decrypt(buffer[i], num++);
         return num2;
     }

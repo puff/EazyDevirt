@@ -95,6 +95,8 @@ internal class ResourceParser : Stage
             }
         }
 
+        Ctx.VMResourceMdToken = _resourceGetterMethod!.MetadataToken;
+
         return found;
     }
 
@@ -119,7 +121,24 @@ internal class ResourceParser : Stage
         };
 
         // Ctx.VMStream.Rsa = RSA.Create(rsaParams);
+        var Rsa = RSA.Create(rsaParams);
 
+        var resourceStream = new MemoryStream(_resource!.GetData()!);
+        var lengthStream = new CryptoStreamV3(resourceStream, 0);
+        
+        var lengthReader = new VMBinaryReader(lengthStream);
+        var length = lengthReader.ReadInt32();
+
+        var decryptedPosition = 0x2852;
+        var stream = new CryptoStreamV3(resourceStream, -463041498, rsaParams);
+        var reader = new VMBinaryReader(stream);
+        var position = (int)(stream.Length - (length - decryptedPosition)) - 255;
+        
+        stream.DecryptBlock(position);
+        stream.Seek(position, SeekOrigin.Begin);
+
+        var first = reader.ReadInt32();
+        
         return true;
     }
 
