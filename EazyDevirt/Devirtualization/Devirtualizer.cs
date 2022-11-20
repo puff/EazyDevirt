@@ -10,7 +10,9 @@ internal class Devirtualizer
         Context = ctx;
         Pipeline = new List<Stage>
         {
-            new ResourceParser(ctx),
+            new ResourceParsing(ctx),
+            new MethodDiscovery(ctx),
+            
         };
     }
     

@@ -1,44 +1,38 @@
-﻿namespace EazyDevirt.Core.IO;
+﻿using EazyDevirt.Util;
+using Org.BouncyCastle.Math;
 
-internal class VMStream : Stream
+namespace EazyDevirt.Core.IO;
+
+internal class VMStream : MemoryStream
 {
-    public override int Read(byte[] buffer, int offset, int count)
-    {
-        throw new NotImplementedException();
-    }
+    /// <summary>
+    /// This is constant in the CryptoStream's ctor method.
+    /// </summary>
+    /// <remarks>
+    /// This value is -559030707 in two's complements.
+    /// </remarks>
+    private const uint KeyXor = 0xDEADDE4D;
+    
+    private BigInteger Modulus { get; }
+    private BigInteger Exponent { get; }
 
-    public override long Seek(long offset, SeekOrigin origin)
+    public VMStream(Stream stream, BigInteger mod, BigInteger exp)
     {
-        throw new NotImplementedException();
-    }
-
-    public override void SetLength(long value)
-    {
-        throw new NotImplementedException();
-    }
-
-    public override void Write(byte[] buffer, int offset, int count)
-    {
-        throw new NotImplementedException();
+        
     }
     
-    public override void Flush()
+    public VMStream(byte[] buffer, BigInteger mod, BigInteger exp) : base(buffer)
     {
+        Modulus = mod;
+        Exponent = exp;
     }
 
-    public override bool CanRead { get; }
-    public override bool CanSeek { get; }
-    public override bool CanWrite { get; }
-    public override long Length { get; }
-    public override long Position {
-        get
-        {
-            return 0;
-            //return this.str
-        }
-        set
-        {
-            
-        } 
+    public long DecodePositionString(string positionString, int positionKey)
+    {
+        var decoded = Ascii85.FromAscii85String(positionString);
+        positionKey = 846439026; // TODO: Get this automatically
+
+        var reader = new VMBinaryReader(new CryptoStreamV2(new MemoryStream(decoded), positionKey));
+        return reader.ReadInt64();
     }
 }

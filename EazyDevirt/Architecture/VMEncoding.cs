@@ -4,7 +4,6 @@ namespace EazyDevirt.Architecture;
 
 public class VMEncoding : UTF8Encoding
 {
-    
     public override int GetMaxByteCount(int charCount)
     {
         var max = base.GetMaxByteCount(charCount);

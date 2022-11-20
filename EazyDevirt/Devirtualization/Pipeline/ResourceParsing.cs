@@ -1,19 +1,18 @@
-﻿using System.Security.Cryptography;
-using AsmResolver;
+﻿using AsmResolver;
 using AsmResolver.DotNet;
 using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
-using EazyDevirt.Architecture;
 using EazyDevirt.Core.IO;
 using EazyDevirt.PatternMatching.Patterns;
+using Org.BouncyCastle.Math;
+
 #pragma warning disable CS8618
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
-internal class ResourceParser : Stage
+internal sealed class ResourceParsing : Stage
 {
-    // Rider won't shut up unless I make them nullable.
     private MethodDefinition? _resourceGetterMethod;
     private MethodDefinition? _resourceInitializationMethod;
     private MethodDefinition? _resourceModulusStringMethod;
@@ -62,7 +61,7 @@ internal class ResourceParser : Stage
             {
                 Ctx.Console.Success("Found vm resource!");
                 if (Ctx.Options.VeryVerbose)
-                    Ctx.Console.InfoStr("VM Resource", _resourceString);
+                    Ctx.Console.InfoStr("VM resource", _resourceString);
             }
 
             var a1 = (SerializedFieldDefinition)_resourceGetterMethod!.CilMethodBody!.Instructions[10].Operand!;
@@ -95,7 +94,7 @@ internal class ResourceParser : Stage
             }
         }
 
-        Ctx.VMResourceMdToken = _resourceGetterMethod!.MetadataToken;
+        Ctx.VMResourceGetterMdToken = _resourceGetterMethod!.MetadataToken;
 
         return found;
     }
@@ -110,35 +109,11 @@ internal class ResourceParser : Stage
         Buffer.BlockCopy(_keyBytes, 0, modulus2, 0, _keyBytes.Length);
         Buffer.BlockCopy(modulus1, 0, modulus2, _keyBytes.Length, modulus1.Length);
         
-        // this puts the bits in reverse compared to bouncy castle's implementation. might be nothing to worry about?
-        // var modulus = new BigInteger(modulus2, true, true);
-
-        var rsaParams = new RSAParameters
-        {
-            // rsaParams.Modulus = modulus.ToByteArray();
-            Modulus = modulus2,
-            Exponent = BitConverter.GetBytes(65537UL) // may need to be reversed
-        };
-
-        // Ctx.VMStream.Rsa = RSA.Create(rsaParams);
-        var Rsa = RSA.Create(rsaParams);
-
-        var resourceStream = new MemoryStream(_resource!.GetData()!);
-        var lengthStream = new CryptoStreamV3(resourceStream, 0);
+        var mod = new BigInteger(1, modulus2);
+        var exp = BigInteger.ValueOf(65537L);
         
-        var lengthReader = new VMBinaryReader(lengthStream);
-        var length = lengthReader.ReadInt32();
+        Ctx.VMResourceStream = new VMStream(_resource!.GetData()!, mod, exp);
 
-        var decryptedPosition = 0x2852;
-        var stream = new CryptoStreamV3(resourceStream, -463041498, rsaParams);
-        var reader = new VMBinaryReader(stream);
-        var position = (int)(stream.Length - (length - decryptedPosition)) - 255;
-        
-        stream.DecryptBlock(position);
-        stream.Seek(position, SeekOrigin.Begin);
-
-        var first = reader.ReadInt32();
-        
         return true;
     }
 
@@ -168,7 +143,7 @@ internal class ResourceParser : Stage
         return false;
     }
 
-    public ResourceParser(DevirtualizationContext ctx) : base(ctx)
+    public ResourceParsing(DevirtualizationContext ctx) : base(ctx)
     {
     }
 }

@@ -19,13 +19,13 @@ internal abstract class Stage
     /// Devirtualization Context.
     /// </summary>
     private protected DevirtualizationContext Ctx { get; }
-    
+
     /// <summary>
     /// Initializes the stage.
     /// </summary>
     /// <param name="ctx"></param>
     /// <returns>Whether initialization was successful.</returns>
-    private protected abstract bool Init();
+    private protected virtual bool Init() => true;
 
     /// <summary>
     /// Executes the stage.
