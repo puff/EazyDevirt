@@ -84,7 +84,7 @@ internal sealed class MethodDiscovery : Stage
                 {
                     var ins = instructions[i];
                     if (ins.OpCode != CilOpCodes.Call
-                        || ins.Operand!.GetType().FullName != typeof(SerializedMethodDefinition).FullName
+                        || ins.Operand!.GetType() != typeof(SerializedMethodDefinition)
                         || ((SerializedMethodDefinition)ins.Operand).MetadataToken != Ctx.VMResourceGetterMdToken)
                         continue;
                     index = i;

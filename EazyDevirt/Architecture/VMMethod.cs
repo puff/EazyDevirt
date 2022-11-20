@@ -2,10 +2,11 @@
 
 namespace EazyDevirt.Architecture;
 
-internal record VMMethod(MethodDefinition Parent, string EncodedPosition)
+internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
 {
     public MethodDefinition Parent { get; } = Parent;
-    public string EncodedPosition { get; } = EncodedPosition;
+    public string EncodedMethodKey { get; } = EncodedMethodKey;
+    public long MethodKey { get; set; }
     public VMMethodBody Body { get; } = new();
 }
 
