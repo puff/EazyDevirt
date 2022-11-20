@@ -1,6 +1,8 @@
 ﻿using System.Security.Cryptography;
 using AsmResolver.DotNet;
 using AsmResolver.PE.DotNet.Metadata.Tables;
+using EazyDevirt.Architecture;
+using EazyDevirt.Core.IO;
 using EazyDevirt.Devirtualization.Options;
 using EazyDevirt.Logging;
 using EazyDevirt.PatternMatching;
@@ -22,7 +24,10 @@ internal record DevirtualizationContext
     public PatternMatcher PatternMatcher { get; }
     public ConsoleLogger Console { get; }
     
-    public MetadataToken VMResourceMdToken { get; set; }
+    public MetadataToken VMResourceGetterMdToken { get; set; }
+    public VMStream VMResourceStream { get; set; }
     public int PositionCryptoKey { get; set; }
     public int MethodCryptoKey { get; set; }
+    
+    public List<VMMethod> VMMethods { get; set; }
 }
