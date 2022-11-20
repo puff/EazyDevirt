@@ -11,8 +11,9 @@ internal class Devirtualizer
         Pipeline = new List<Stage>
         {
             new ResourceParsing(ctx),
+            // TODO: add opcode mapping stage
             new MethodDiscovery(ctx),
-            
+            new MethodDisassembler(ctx),
         };
     }
     
