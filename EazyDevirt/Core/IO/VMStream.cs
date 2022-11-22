@@ -27,7 +27,7 @@ internal class VMStream : MemoryStream
         // Exponent = exp;
         var rsaEngine = new RsaEngine();
         Rsa = new Pkcs1Encoding(rsaEngine);
-        Rsa.Init(false, new RsaKeyParameters(false, mod, exp));
+        Rsa.Init(false, new RsaKeyParameters(true, mod, exp));
     }
 
     public bool RsaDecryptBlock(long position)
@@ -41,7 +41,6 @@ internal class VMStream : MemoryStream
         if (read != blockSize) return false;
 
         // var decrypted = RsaPublicCrypt(blockBuffer);
-        Console.WriteLine(Rsa.GetOutputBlockSize() + " " + Rsa.GetInputBlockSize());
         var decrypted = Rsa.ProcessBlock(blockBuffer, 0, blockSize);
         
         base.Position = position;

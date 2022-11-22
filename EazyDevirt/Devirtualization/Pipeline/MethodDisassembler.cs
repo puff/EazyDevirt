@@ -7,8 +7,8 @@ internal class MethodDisassembler : Stage
 {
     public override bool Run()
     {
-        var reader = new VMBinaryReader(new CryptoStreamV2(Ctx.VMResourceStream, Ctx.MethodCryptoKey));
-        var lengthReader = new VMBinaryReader(new CryptoStreamV2(Ctx.VMResourceStream, 0));
+        var reader = new VMBinaryReader(new CryptoStreamV2(Ctx.VMStream, Ctx.MethodCryptoKey));
+        var lengthReader = new VMBinaryReader(new CryptoStreamV2(Ctx.VMStream, 0));
         var length = lengthReader.ReadInt32();
 
         foreach (var vmMethod in Ctx.VMMethods)
@@ -17,14 +17,17 @@ internal class MethodDisassembler : Stage
 
             vmMethod.MethodKey = VMStream.DecodeMethodKey(vmMethod.EncodedMethodKey, Ctx.PositionCryptoKey);
             reader.SetMethodKey(vmMethod.MethodKey);
-            
-            var position = Ctx.VMResourceStream.Length - (length - vmMethod.MethodKey) - 0xFF;
-            Ctx.VMResourceStream.RsaDecryptBlock(position);
 
-            Ctx.VMResourceStream.Seek(position + 11 /* PKSC1 Header length */ + 0x20 /* 32 */ , SeekOrigin.Begin);
+            // if (vmMethod.MethodKey != 0x1C55) continue;
+            // var raw_position = Ctx.VMStream.Length - (length - vmMethod.MethodKey) - 0xFF;
+            // this is not exactly correct, MethodKey can be different. MD Token for debugging: 0x0600053E
+            var raw_position = (long)(4 + Math.Ceiling((double)vmMethod.MethodKey / 0xF5) * 0x100); 
+            // Ctx.VMStream.RsaDecryptBlock(raw_position);
+
+            // Ctx.VMStream.Seek(position + 11 /* PKSC1 Header length */ + 0x20 /* 32 */ , SeekOrigin.Begin);
             
             var first = reader.ReadInt32();
-            Ctx.Console.Info(first);
+            Ctx.Console.Info(vmMethod.MethodKey.ToString("X") + " " + raw_position.ToString("X"));
         }
 
         return false;
