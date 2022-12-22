@@ -2,10 +2,10 @@
 
 internal record DevirtualizationOptions
 {
+#pragma warning disable CS8618
  /// <summary>
  /// Target assembly info
  /// </summary>
-#pragma warning disable CS8618
  public FileInfo Assembly { get; init; }
 
  /// <summary>
@@ -18,9 +18,9 @@ internal record DevirtualizationOptions
  /// Verbosity level
  /// </summary>
  public int Verbosity { get; init; }
- 
+
+ /// TODO: update Verbose and VeryVerbose description
  /// <summary>
- /// TODO: update this and VeryVerbose description
  /// Shows useful debug information
  /// </summary>
  public bool Verbose => Verbosity >= 1;
