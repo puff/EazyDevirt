@@ -23,7 +23,7 @@ internal class VMStream : MemoryStream
     {
         var rsaEngine = new RsaEngine();
         Rsa = new Pkcs1Encoding(rsaEngine);
-        Rsa.Init(false, new RsaKeyParameters(false, mod, exp));
+        Rsa.Init(false, new RsaKeyParameters(false /* true */, mod, exp));
     }
 
     public bool RsaDecryptBlock(long position)
@@ -37,7 +37,6 @@ internal class VMStream : MemoryStream
         if (read != blockSize) return false;
 
         // var decrypted = RsaPublicCrypt(blockBuffer);
-        Console.WriteLine(Rsa.GetOutputBlockSize() + " " + Rsa.GetInputBlockSize());
         var decrypted = Rsa.ProcessBlock(blockBuffer, 0, blockSize);
         
         base.Position = position;
@@ -58,7 +57,6 @@ internal class VMStream : MemoryStream
     {
         var decoded = Ascii85.FromAscii85String(positionString);
 
-        // The usings may be totally unnecessary, I have no idea.
         using var reader = new VMBinaryReader(new CryptoStreamV3(new MemoryStream(decoded), positionKey));
         return reader.ReadInt64();
     }
