@@ -1,19 +1,23 @@
-﻿using System.Diagnostics;
-using System.Security.Cryptography;
-using Org.BouncyCastle.Math;
+﻿namespace EazyDevirt.Core.IO;
 
-namespace EazyDevirt.Core.IO;
-
-public class CryptoStreamV2 : Stream
+/// <summary>
+/// Stream used to read data about virtualized methods.
+/// </summary>
+public class CryptoStreamV3 : Stream
 {
-    private Stream Stream { get; }
-    private int Key { get; }
-    public long CurrentMethodKey { get; set; }
+    private Stream Stream;
+    private int Key;
+    private bool LeaveOpen;
 
-    public CryptoStreamV2(Stream stream, int key)
+
+    /// <param name="stream">Base stream</param>
+    /// <param name="key">Crypto key</param>
+    /// <param name="leaveOpen">Determines whether the base stream should be disposed.</param>
+    public CryptoStreamV3(Stream stream, int key, bool leaveOpen = false)
     {
         Stream = stream;
         Key = key ^ -559030707;
+        LeaveOpen = leaveOpen;
     }
 
     private byte Crypt(byte byte_0, uint uint_0)
@@ -24,7 +28,7 @@ public class CryptoStreamV2 : Stream
     
     public override int Read(byte[] buffer, int offset, int count)
     {
-        var num = (uint)CurrentMethodKey;// (uint)Stream.Position;
+        var num = (uint)Stream.Position;
         var num2 = Stream.Read(buffer, offset, count);
         var num3 = offset + num2;
         for (var i = offset; i < num3; i++)
@@ -61,7 +65,16 @@ public class CryptoStreamV2 : Stream
     {
         Stream.SetLength(value);
     }
+    
+    public override void Close()
+    {
+        if (!LeaveOpen)
+            Stream.Close();
 
+        Stream = null;
+        base.Close();
+    }
+    
     public override bool CanRead => Stream.CanRead;
 
     public override bool CanSeek => Stream.CanSeek;

@@ -25,7 +25,7 @@ internal sealed class MethodDiscovery : Stage
                 Ctx.MethodCryptoKey = getVMMethodCryptoKeyMethod.CilMethodBody!.Instructions[0].GetLdcI4Constant();
                 if (Ctx.Options.Verbose)
                 {
-                    Ctx.Console.Success("Found vm method crypto key!");
+                    Ctx.Console.Success("Found VM method crypto key!");
                     if (Ctx.Options.VeryVerbose)
                         Ctx.Console.InfoStr("VM Method Crypto Key", Ctx.MethodCryptoKey);
                 }
@@ -34,21 +34,21 @@ internal sealed class MethodDiscovery : Stage
                 var decryptVMPositionMethod = (SerializedMethodDefinition)m.CilMethodBody!.Instructions[15].Operand!;
                 if (!IsDecryptPositionMethod(decryptVMPositionMethod))
                 {
-                    Ctx.Console.Error("Failed to find vm position decrypt method.");
+                    Ctx.Console.Error("Failed to find VM position decrypt method.");
                     return false;
                 }
 
                 var getVMPositionCryptoKeyMethod = (SerializedMethodDefinition)decryptVMPositionMethod.CilMethodBody!.Instructions[6].Operand!;
                 if (!IsCryptoKeyMethod(getVMPositionCryptoKeyMethod))
                 {
-                    Ctx.Console.Error("Failed to find vm position crypto key.");
+                    Ctx.Console.Error("Failed to find VM position crypto key.");
                     return false;
                 }
 
                 Ctx.PositionCryptoKey = getVMPositionCryptoKeyMethod.CilMethodBody!.Instructions[0].GetLdcI4Constant();
                 if (Ctx.Options.Verbose)
                 {
-                    Ctx.Console.Success("Found vm position crypto key!");
+                    Ctx.Console.Success("Found VM position crypto key!");
                     if (Ctx.Options.VeryVerbose)
                         Ctx.Console.InfoStr("VM Position Crypto Key", Ctx.PositionCryptoKey);
                 }
@@ -100,9 +100,16 @@ internal sealed class MethodDiscovery : Stage
                     
                     continue;
                 }
+                
+                if (Ctx.Options.VeryVerbose)
+                    Ctx.Console.InfoStr("Virtualized method found", m.MetadataToken);
+                
                 Ctx.VMMethods.Add(new VMMethod(m, (string)instructions[index + 1].Operand!));
             }
         }
+
+        if (Ctx.Options.Verbose)
+            Ctx.Console.Success($"Discovered {Ctx.VMMethods.Count} virtualized methods!");
 
         return true;
     }
