@@ -112,7 +112,7 @@ internal sealed class ResourceParsing : Stage
         var mod = new BigInteger(1, modulus2);
         var exp = BigInteger.ValueOf(65537L);
         
-        Ctx.VMResourceStream = new VMStream(_resource!.GetData()!, mod, exp);
+        Ctx.VMStream = new VMStream(_resource!.GetData()!, mod, exp);
 
         return true;
     }
@@ -123,7 +123,7 @@ internal sealed class ResourceParsing : Stage
         {
             if (_resourceGetterMethod != null && _resourceInitializationMethod != null) return true;
             foreach (var method in type.Methods.Where(m =>
-                         m.Managed && m.IsPublic && m.IsStatic &&
+                         m is { Managed: true, IsPublic: true, IsStatic: true } &&
                          m.Signature?.ReturnType.FullName == typeof(Stream).FullName))
             {
                 if (_resourceGetterMethod != null && _resourceInitializationMethod != null) return true;

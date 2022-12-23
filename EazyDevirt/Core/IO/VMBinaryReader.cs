@@ -43,6 +43,19 @@ internal class VMBinaryReader : BinaryReader
         var bytes = ReadBytes(2);
         return (ushort)((bytes[0] << 8) | bytes[1]);
     }
+    
+    public override float ReadSingle()
+    {
+        var bytes = ReadBytes(4);
+        var array = new byte[4];
+        array[0] = bytes[3];
+        array[2] = bytes[1];
+        array[3] = bytes[0];
+        array[1] = bytes[2];
+        
+        using var reader = ToBinaryReader(array);
+        return reader.ReadSingle();
+    }
 
     public override double ReadDouble()
     {
