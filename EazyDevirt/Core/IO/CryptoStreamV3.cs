@@ -9,14 +9,13 @@ public class CryptoStreamV3 : Stream
     private int Key;
     private bool LeaveOpen;
 
-
     /// <param name="stream">Base stream</param>
     /// <param name="key">Crypto key</param>
     /// <param name="leaveOpen">Determines whether the base stream should be disposed.</param>
     public CryptoStreamV3(Stream stream, int key, bool leaveOpen = false)
     {
         Stream = stream;
-        Key = key ^ -559030707;
+        Key = key ^ -559030707; // 0xDEADDE4D in signed two's complements. This is consistent across every sample I've seen.
         LeaveOpen = leaveOpen;
     }
 

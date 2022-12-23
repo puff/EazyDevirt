@@ -1,63 +1,80 @@
-﻿using EazyDevirt.Util;
-using Org.BouncyCastle.Crypto.Encodings;
-using Org.BouncyCastle.Crypto.Engines;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Math;
+﻿using Org.BouncyCastle.Math;
 
 namespace EazyDevirt.Core.IO;
 
-internal class VMStream : MemoryStream
+/// <summary>
+/// Wrapper for the cipher stream that reads VM resource data.
+/// </summary>
+// TODO: Remove this todo. This is Stream1 in the sample.
+internal class VMStream : Stream
 {
-    /// <summary>
-    /// This is a constant in the CryptoStream's ctor method.
-    /// </summary>
-    /// <remarks>
-    /// This value is -559030707 in two's complements.
-    /// It is consistent across every sample I've looked at.
-    /// </remarks>
-    private const uint KeyXor = 0xDEADDE4D;
-
-    private Pkcs1Encoding Rsa { get; }
+    private int _length { get; set; }
+    private int _position { get; set; }
     
-    public VMStream(byte[] buffer, BigInteger mod, BigInteger exp) : base(buffer)
+    private VMCipherStream _cipherStream { get; }
+
+    public VMStream(byte[] buffer, BigInteger mod, BigInteger exp)
     {
-        var rsaEngine = new RsaEngine();
-        Rsa = new Pkcs1Encoding(rsaEngine);
-        Rsa.Init(false, new RsaKeyParameters(false /* true */, mod, exp));
+        _cipherStream = new VMCipherStream(buffer, mod, exp);
+    }
+    
+    public override int Read(byte[] buffer, int offset, int count)
+    {
+        throw new NotImplementedException();
     }
 
-    public bool RsaDecryptBlock(long position)
+    public override long Seek(long offset, SeekOrigin origin)
     {
-        const int blockSize = 0x100;
-
-        // var oldPos = base.Position;
-        base.Position = position;
-        var blockBuffer = new byte[blockSize];
-        var read = base.Read(blockBuffer, 0, blockSize);
-        if (read != blockSize) return false;
-
-        // var decrypted = RsaPublicCrypt(blockBuffer);
-        var decrypted = Rsa.ProcessBlock(blockBuffer, 0, blockSize);
+        if (_length - _position > 0 && origin == SeekOrigin.Current)
+            offset -= _length - _position;
         
-        base.Position = position;
-        var zeroLength = blockSize - decrypted.Length;
-        if (zeroLength > 0)
+        var position = Position;
+        var num = _cipherStream.Seek(offset, origin);
+        _position = (int)(num - (position - _position));
+        if (0 <= _position && _position < _length)
+            _cipherStream.Seek(_length - _position, SeekOrigin.Current);
+        else
+            _length = 0;
+            _position = 0;
+            
+        return num;
+    }
+
+    public override void Flush()
+    {
+    }
+    
+    public override void SetLength(long value)
+    {
+        throw new NotSupportedException();
+    }
+
+    public override void Write(byte[] buffer, int offset, int count)
+    {
+        throw new NotSupportedException();
+    }
+
+    public override bool CanRead => true;
+    public override bool CanSeek => true;
+    public override bool CanWrite => false;
+
+    public override long Length
+    {
+        get
         {
-            var zeroes = new byte[zeroLength];
-            Array.Fill(zeroes, (byte)0);
-            base.Write(zeroes, 0, zeroLength);
+            return Length;
         }
-        
-        base.Write(decrypted, 0, decrypted.Length);
-        
-        return true;
     }
-    
-    public static long DecodeMethodKey(string positionString, int positionKey)
-    {
-        var decoded = Ascii85.FromAscii85String(positionString);
 
-        using var reader = new VMBinaryReader(new CryptoStreamV3(new MemoryStream(decoded), positionKey));
-        return reader.ReadInt64();
+    public override long Position
+    {
+        get
+        {
+            return Position;
+        }
+        set
+        {
+            Position = value;
+        }
     }
 }

@@ -14,7 +14,7 @@ internal  class ConsoleLogger : ILogger
 
     public void InfoStr(object message, object message2) => WriteLineInfo(message, ConsoleColor.Red, message2);
     
-    public void ShowInfo(Version version)
+    public void ShowInfo(Version version, Version eazVersion)
     {
         Console.WriteLine();
         Console.WriteLine();
@@ -26,12 +26,17 @@ internal  class ConsoleLogger : ILogger
         WriteLineMiddle(@"          █                 ", ConsoleColor.DarkMagenta);
         WriteLineMiddle(@"         ▀                  ", ConsoleColor.DarkMagenta);
         WriteLineMiddle(@"                                            ", ConsoleColor.DarkMagenta);
-        WriteMiddle(@"Version - ", ConsoleColor.DarkMagenta);
         
+        WriteMiddle(@"Version - ", ConsoleColor.DarkMagenta);
         Console.ForegroundColor = ConsoleColor.White;
         Console.WriteLine(version);
         Console.ResetColor();
-
+        
+        WriteMiddle(@"Eazfuscator.NET Version - ", ConsoleColor.DarkMagenta);
+        Console.ForegroundColor = ConsoleColor.White;
+        Console.WriteLine(eazVersion);
+        Console.ResetColor();
+        
         WriteMiddle(@"Developers - ", ConsoleColor.DarkMagenta);
         
         Console.ForegroundColor = ConsoleColor.White;
