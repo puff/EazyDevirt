@@ -8,35 +8,37 @@ namespace EazyDevirt.Core.IO;
 // TODO: Remove this todo. This is Stream1 in the sample.
 internal class VMStream : Stream
 {
-    private int _length { get; set; }
-    private int _position { get; set; }
+    private int _Length { get; set; }
+    private int _Position { get; set; }
     
-    private VMCipherStream _cipherStream { get; }
+    private VMCipherStream CipherStream { get; }
 
     public VMStream(byte[] buffer, BigInteger mod, BigInteger exp)
     {
-        _cipherStream = new VMCipherStream(buffer, mod, exp);
+        CipherStream = new VMCipherStream(buffer, mod, exp);
     }
     
     public override int Read(byte[] buffer, int offset, int count)
     {
-        throw new NotImplementedException();
+        return CipherStream.Read(buffer, offset, count);
     }
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        if (_length - _position > 0 && origin == SeekOrigin.Current)
-            offset -= _length - _position;
+        if (_Length - _Position > 0 && origin == SeekOrigin.Current)
+            offset -= _Length - _Position;
         
         var position = Position;
-        var num = _cipherStream.Seek(offset, origin);
-        _position = (int)(num - (position - _position));
-        if (0 <= _position && _position < _length)
-            _cipherStream.Seek(_length - _position, SeekOrigin.Current);
+        var num = CipherStream.Seek(offset, origin);
+        _Position = (int)(num - (position - _Position));
+        if (0 <= _Position && _Position < _Length)
+            CipherStream.Seek(_Length - _Position, SeekOrigin.Current);
         else
-            _length = 0;
-            _position = 0;
-            
+        {
+            _Length = 0;
+            _Position = 0;
+        }
+
         return num;
     }
 
@@ -58,23 +60,11 @@ internal class VMStream : Stream
     public override bool CanSeek => true;
     public override bool CanWrite => false;
 
-    public override long Length
-    {
-        get
-        {
-            return Length;
-        }
-    }
+    public override long Length => CipherStream.Length;
 
     public override long Position
     {
-        get
-        {
-            return Position;
-        }
-        set
-        {
-            Position = value;
-        }
+        get => CipherStream.Position + (_Position - _Length);
+        set => Seek(value, SeekOrigin.Begin);
     }
 }

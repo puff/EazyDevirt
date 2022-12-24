@@ -114,7 +114,7 @@ internal class VMCipherStream : Stream
         
         var rsaEngine = new RsaEngine();
         Rsa = new Pkcs1Encoding(rsaEngine);
-        Rsa.Init(false, new RsaKeyParameters(false /* true */, mod, exp));
+        Rsa.Init(false, new RsaKeyParameters(true /* The key is public, but the PKSC1 encoding requires this to work correctly. */, mod, exp));
     }
     
     // TODO: Move this somewhere else.
@@ -200,11 +200,11 @@ internal class VMCipherStream : Stream
             var num2 = RsaBytesRead - PositionPart2;
             if (num2 > count)
             {
-                Buffer.BlockCopy(this.OutputBlockBuffer, PositionPart2, buffer, offset, count);
+                Buffer.BlockCopy(OutputBlockBuffer, PositionPart2, buffer, offset, count);
                 PositionPart2 += count;
                 return count;
             }
-            Buffer.BlockCopy(this.OutputBlockBuffer, PositionPart2, buffer, offset, count);
+            Buffer.BlockCopy(OutputBlockBuffer, PositionPart2, buffer, offset, count);
             PositionPart2 = RsaBytesRead;
             if (RsaReadFailed)
                 return num2;
