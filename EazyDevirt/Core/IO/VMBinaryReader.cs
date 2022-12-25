@@ -37,13 +37,13 @@ internal class VMBinaryReader : BinaryReader
         var bytes = ReadBytes(2);
         return (short)((bytes[1] << 8) | bytes[0]);
     }
-
+    
     public override ushort ReadUInt16()
     {
         var bytes = ReadBytes(2);
         return (ushort)((bytes[0] << 8) | bytes[1]);
     }
-    
+
     public override float ReadSingle()
     {
         var bytes = ReadBytes(4);
