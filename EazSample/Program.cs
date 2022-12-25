@@ -5,7 +5,7 @@ namespace EazSample
     internal class Program
     {
         [Obfuscation(Feature = "virtualization", Exclude = false)]
-        private static int _virtualizedInt;
+        private static int _virtualizedInt = 123;
 
         [Obfuscation(Feature = "virtualization", Exclude = false)]
         private static string? _virtualizedString;
@@ -28,6 +28,7 @@ namespace EazSample
         {
             Console.WriteLine(arg);
             var retCode = VirtualizedMethod(_virtualizedInt, _notVirtualizedUint);
+            Console.WriteLine(_virtualizedString);
             Console.WriteLine(retCode % 1337); // 490 0x1EA
             return retCode;
         }
