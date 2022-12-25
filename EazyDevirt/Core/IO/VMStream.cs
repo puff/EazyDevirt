@@ -5,9 +5,9 @@ namespace EazyDevirt.Core.IO;
 /// <summary>
 /// Wrapper for the cipher stream that reads VM resource data.
 /// </summary>
-// TODO: Remove this todo. This is Stream1 in the sample.
 internal class VMStream : Stream
 {
+    private byte[] _Buffer { get; set; }
     private int _Length { get; set; }
     private int _Position { get; set; }
     
@@ -18,8 +18,49 @@ internal class VMStream : Stream
         CipherStream = new VMCipherStream(buffer, mod, exp);
     }
     
+    // Modified MemoryStream read
+    private int ReadDefault(byte[] buffer, int offset, int count)
+    {
+        var num = _Length - _Position;
+        if (num <= 0)
+            return 0;
+
+        if (num > count)
+            num = count;
+        
+        Buffer.BlockCopy(_Buffer, _Position, buffer, offset, num);
+        _Position += num;
+        return num;
+    }
+    
     public override int Read(byte[] buffer, int offset, int count)
     {
+        if (buffer == null)
+            throw new ArgumentNullException(nameof(buffer));
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset), offset, "Less than 0");
+        if (count < 0)
+            throw new ArgumentOutOfRangeException(nameof(count), count, "Less than 0");
+        if (buffer.Length - offset < count)
+            throw new ArgumentOutOfRangeException(nameof(buffer), buffer.Length - offset, "Less than count with offset factored in");
+
+        var num = offset;
+        var num2 = ReadDefault(buffer, offset, count);
+        if (num2 == count)
+            return num2;
+
+        var num3 = num2;
+        if (num2 > 0)
+        {
+            count -= num2;
+            offset += num2;
+        }
+
+        _Length = 0;
+        _Position = 0;
+        
+        // TODO: The fun part begins here.
+        
         return CipherStream.Read(buffer, offset, count);
     }
 
