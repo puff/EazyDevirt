@@ -112,7 +112,7 @@ internal sealed class ResourceParsing : Stage
         var mod = new BigInteger(1, modulus2);
         var exp = BigInteger.ValueOf(65537L);
         
-        Ctx.VMStream = new VMStream(_resource!.GetData()!, mod, exp);
+        Ctx.VMStream = new VMCipherStream(_resource!.GetData()!, mod, exp);
 
         return true;
     }

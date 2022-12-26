@@ -23,7 +23,7 @@ internal record VMMethodInfo
     private List<VMLocal> VMLocals { get; }
     private List<VMParameter> VMParameters { get; }
 
-    public VMMethodInfo(VMBinaryReader reader)
+    public VMMethodInfo(BinaryReader reader)
     {
         DeclaringType = reader.ReadInt32();
         Name = reader.ReadString();
@@ -43,7 +43,7 @@ internal record VMMethodInfo
     {
         return $"DeclaringType: {DeclaringType} | Name: {Name} | BindingFlags: {BindingFlags} | " +
                $"DeclaredOnly: {DeclaredOnly} | IsInstance: {IsInstance} | IsStatic {IsStatic} | " +
-               $"ReturnType: {ReturnType} | VMLocals Count: {VMLocals.Count} | VM Parameters Count: {VMParameters.Count}";
+               $"ReturnType: {ReturnType} | VM Locals Count: {VMLocals.Count} | VM Parameters Count: {VMParameters.Count}";
     }
 }
 
