@@ -9,7 +9,10 @@ namespace EazyDevirt.Core.IO;
 /// <summary>
 /// Cipher stream used for reading VM resource data.
 /// </summary>
-// TODO: Make this into a modified CipherStream. In sample, this is the inner stream (Stream2). It looks very similar to a CipherStream.
+/// <remarks>
+/// This is the inner stream when you decompile. It appears to be a modified CipherStream from BouncyCastle.
+/// The outer stream seems to just be a wrapper with a cache.
+/// </remarks>
 internal class VMCipherStream : Stream
 {
     #region Fields
@@ -21,7 +24,7 @@ internal class VMCipherStream : Stream
     /// <summary>
     /// Rsa/PKSC1 output block size.
     /// </summary>
-    private const int OutputBlockSize = 0xF5; // TODO: Verify this value is correct.
+    private const int OutputBlockSize = 0xF5;
 
     /// <summary>
     /// Inner resource stream
@@ -67,9 +70,6 @@ internal class VMCipherStream : Stream
     /// <summary>
     /// Amount of bytes read in the Rsa read function.
     /// </summary>
-    /// <remarks>
-    /// TODO: find out if this is what it actually is. Probably not.
-    /// </remarks>
     private int RsaBytesRead { get; set; }
     
     /// <summary>
@@ -105,9 +105,6 @@ internal class VMCipherStream : Stream
     
     public VMCipherStream(byte[] buffer, BigInteger mod, BigInteger exp)
     {
-        // TODO: May want to move this to using an IBufferedCipher like CipherStream.
-        //       var rsaCipher = CipherUtilities.GetCipher("Rsa/ECB/PKCS1");
-
         ResourceStream = new MemoryStream(buffer);
         InputBlockBuffer = new byte[InputBlockSize];
         OutputBlockBuffer = new byte[OutputBlockSize];
@@ -126,7 +123,7 @@ internal class VMCipherStream : Stream
         return reader.ReadInt64();
     }
 
-    private bool ReadAndProcessRsaBlock(int int_8)
+    private bool ReadAndProcessRsaBlock(int int8)
     {
         var i = 0;
         while (i < InputBlockSize)
@@ -145,7 +142,7 @@ internal class VMCipherStream : Stream
         }
         OutputBlockBuffer = Rsa.ProcessBlock(InputBlockBuffer, 0, InputBlockSize);
         RsaBytesRead = OutputBlockBuffer.Length;
-        if (int_8 == LengthPart1)
+        if (int8 == LengthPart1)
             RsaBytesRead = LengthPart2;
         
         return true;   
@@ -154,19 +151,18 @@ internal class VMCipherStream : Stream
     private void ReadRsaBlock()
     {
         if (!LengthInitialized) InitializeLength();
-        if (!AlreadyReadRsa)
+        if (AlreadyReadRsa) return;
+        
+        AlreadyReadRsa = true;
+        RsaReadFailed = false;
+        var num = PositionPart1;
+        if (SetResourcePosition)
         {
-            AlreadyReadRsa = true;
-            RsaReadFailed = false;
-            var num = PositionPart1;
-            if (SetResourcePosition)
-            {
-                ResourceStream.Position = 4 + num * InputBlockSize;
-                SetResourcePosition = false;
-            }
-
-            ReadAndProcessRsaBlock(num);
+            ResourceStream.Position = 4 + num * InputBlockSize;
+            SetResourcePosition = false;
         }
+
+        ReadAndProcessRsaBlock(num);
     }
 
     private void ReadRsaBlockAndMore()
@@ -204,12 +200,21 @@ internal class VMCipherStream : Stream
                 PositionPart2 += count;
                 return count;
             }
-            Buffer.BlockCopy(OutputBlockBuffer, PositionPart2, buffer, offset, count);
-            PositionPart2 = RsaBytesRead;
-            if (RsaReadFailed)
-                return num2;
+
+            // most of the below part is a result of the wrapper stream's caching system.
+            // this took me too long to figure out. made a nice christmas gift to myself though, to finally get this shit working.
+            Buffer.BlockCopy(OutputBlockBuffer, PositionPart2, buffer, offset, num2);
             i -= num2;
             num += num2;
+            
+            Position += num2; // we hate Seek();
+            ReadRsaBlock();
+            
+            Buffer.BlockCopy(OutputBlockBuffer, offset, buffer, num, i);
+
+            Position += count - num2; // subtract num2 because it's added to position earlier
+
+            return count;
         }
 
         if (RsaReadFailed)

@@ -102,12 +102,7 @@ internal sealed class MethodDiscovery : Stage
                 }
                 
                 if (Ctx.Options.VeryVerbose)
-                    // if (instructions[index + 2].OpCode == CilOpCodes.Ldnull)
-                    //     Ctx.Console.InfoStr("Virtualized data found", m.MetadataToken);
-                    // else
-                    {
-                        Ctx.Console.InfoStr("Virtualized method found", m.MetadataToken);
-                    }
+                    Ctx.Console.InfoStr("Virtualized method found", m.MetadataToken);
 
                 Ctx.VMMethods.Add(new VMMethod(m, (string)instructions[index + 1].Operand!));
             }

@@ -16,7 +16,7 @@ internal record DevirtualizationContext
     public ConsoleLogger Console { get; }
     
     public MetadataToken VMResourceGetterMdToken { get; set; }
-    public VMStream VMStream { get; set; }
+    public VMCipherStream VMStream { get; set; }
     public int PositionCryptoKey { get; set; }
     public int MethodCryptoKey { get; set; }
     
