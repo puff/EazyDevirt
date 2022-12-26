@@ -11,6 +11,7 @@ internal class Devirtualizer
         Pipeline = new List<Stage>
         {
             new ResourceParsing(ctx),
+            // TODO: add binaryreader and field order matching stage
             // TODO: add opcode mapping stage
             new MethodDiscovery(ctx),
             new MethodDisassembler(ctx),

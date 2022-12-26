@@ -8,6 +8,7 @@ internal class VMBinaryReader : BinaryReader
         return (sbyte)bytes[0];
     }
 
+    // TODO: The order of the bytes are scrambled across samples (it could be different Eazfuscator versions). Make a pattern match for them.
     public override int ReadInt32()
     {
         var bytes = ReadBytes(4);

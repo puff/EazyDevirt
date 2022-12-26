@@ -25,6 +25,8 @@ internal record VMMethodInfo
 
     public VMMethodInfo(BinaryReader reader)
     {
+        // TODO: The order of these fields are scrambled across samples (it could be different Eazfuscator versions). Make patterns for the BinaryReader and each of the fields.
+        //       For the field patterns, pattern match where they are used in the VM runtime and match that to where they're set in the DeserializeVMMethodInfo() method.
         DeclaringType = reader.ReadInt32();
         Name = reader.ReadString();
         BindingFlags = reader.ReadByte();
@@ -42,8 +44,8 @@ internal record VMMethodInfo
     public override string ToString()
     {
         return $"DeclaringType: {DeclaringType} | Name: {Name} | BindingFlags: {BindingFlags} | " +
-               $"DeclaredOnly: {DeclaredOnly} | IsInstance: {IsInstance} | IsStatic {IsStatic} | " +
-               $"ReturnType: {ReturnType} | VM Locals Count: {VMLocals.Count} | VM Parameters Count: {VMParameters.Count}";
+               $"DeclaredOnly: {DeclaredOnly} | IsInstance: {IsInstance} | IsStatic: {IsStatic} | " +
+               $"ReturnType: {ReturnType} | VMLocals: {VMLocals.Count} | VMParameters: {VMParameters.Count}";
     }
 }
 
