@@ -10,7 +10,11 @@ internal class Devirtualizer
         Context = ctx;
         Pipeline = new List<Stage>
         {
-            new ResourceParser(ctx),
+            new ResourceParsing(ctx),
+            // TODO: add binaryreader and field order matching stage
+            // TODO: add opcode mapping stage
+            new MethodDiscovery(ctx),
+            new MethodDisassembler(ctx),
         };
     }
     

@@ -31,8 +31,8 @@
     
     <!-- Don't overwrite sample in Debug mode. Eazfuscator.NET only obfuscates in Release mode. -->
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(ConfigurationName)' == 'Release'">
-      <!-- <Exec Command="xcopy $(OutDir) ..\samples\EazSample /Y /I" /> -->
-        <Copy SourceFiles="@(_CopyItems)" DestinationFolder="../samples/EazSample" />
+       <!-- <Exec Command="xcopy $(OutDir) ..\samples\EazSample /Y /I" /> -->
+        <Copy SourceFiles="@(_CopyItems)" DestinationFolder="../samples/EazSample-new" />
     </Target>
 
 </Project>
