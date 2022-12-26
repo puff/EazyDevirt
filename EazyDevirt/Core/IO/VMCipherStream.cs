@@ -12,6 +12,7 @@ namespace EazyDevirt.Core.IO;
 /// <remarks>
 /// This is the inner stream when you decompile. It appears to be a modified CipherStream from BouncyCastle.
 /// The outer stream seems to just be a wrapper with a cache.
+/// Looks to be the same across Eazfuscator versions.
 /// </remarks>
 internal class VMCipherStream : Stream
 {
