@@ -1,19 +1,18 @@
-﻿using System.Security.Cryptography;
-using AsmResolver;
+﻿using AsmResolver;
 using AsmResolver.DotNet;
 using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
-using EazyDevirt.Architecture;
 using EazyDevirt.Core.IO;
 using EazyDevirt.PatternMatching.Patterns;
+using Org.BouncyCastle.Math;
+
 #pragma warning disable CS8618
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
-internal class ResourceParser : Stage
+internal sealed class ResourceParsing : Stage
 {
-    // Rider won't shut up unless I make them nullable.
     private MethodDefinition? _resourceGetterMethod;
     private MethodDefinition? _resourceInitializationMethod;
     private MethodDefinition? _resourceModulusStringMethod;
@@ -27,20 +26,20 @@ internal class ResourceParser : Stage
     {
         var found = FindVMStreamMethods();
         if (_resourceGetterMethod == null)
-            Ctx.Console.Error("Failed to find vm resource stream getter method.");
+            Ctx.Console.Error("Failed to find VM resource stream getter method.");
 
         if (_resourceInitializationMethod == null)
-            Ctx.Console.Error("Failed to find vm resource stream initialization method.");
+            Ctx.Console.Error("Failed to find VM resource stream initialization method.");
 
         if (_resourceModulusStringMethod == null || _resourceModulusStringMethod.CilMethodBody!.Instructions.All
                 (i => i.OpCode != CilOpCodes.Ldstr))
-            Ctx.Console.Error("Failed to find valid vm resource modulus string method. Have strings been decrypted?");
+            Ctx.Console.Error("Failed to find valid VM resource modulus string method. Have strings been decrypted?");
 
         if (found)
         {
             if (Ctx.Options.Verbose)
             {
-                Ctx.Console.Success("Found vm resource stream getter, initializer, and modulus string methods!");
+                Ctx.Console.Success("Found VM resource stream getter, initializer, and modulus string methods!");
 
                 if (Ctx.Options.VeryVerbose)
                 {
@@ -55,12 +54,12 @@ internal class ResourceParser : Stage
             _resource = Ctx.Module.Resources.FirstOrDefault(r => r.Name == _resourceString);
             if (_resource == null)
             {
-                Ctx.Console.Error("Failed to get resource");
+                Ctx.Console.Error("Failed to get VM resource");
                 found = false;
             }
             else if (Ctx.Options.Verbose)
             {
-                Ctx.Console.Success("Found vm resource!");
+                Ctx.Console.Success("Found VM resource!");
                 if (Ctx.Options.VeryVerbose)
                     Ctx.Console.InfoStr("VM Resource", _resourceString);
             }
@@ -68,14 +67,14 @@ internal class ResourceParser : Stage
             var a1 = (SerializedFieldDefinition)_resourceGetterMethod!.CilMethodBody!.Instructions[10].Operand!;
             if (!a1.HasFieldRva || a1.FieldRva!.GetType() != typeof(DataSegment))
             {
-                Ctx.Console.Error("Failed to get vm resource stream key byte array.");
+                Ctx.Console.Error("Failed to get VM resource stream key byte array.");
                 found = false;
             }
 
             _keyBytes = ((DataSegment)a1.FieldRva!).Data;
             if (Ctx.Options.Verbose)
             {
-                Ctx.Console.Success("Found vm resource stream key bytes!");
+                Ctx.Console.Success("Found VM resource stream key bytes!");
                 if (Ctx.Options.VeryVerbose)
                     Ctx.Console.InfoStr("VM Resource Stream Key Bytes", BitConverter.ToString(_keyBytes));
             }
@@ -84,18 +83,18 @@ internal class ResourceParser : Stage
                 (i => i.OpCode == CilOpCodes.Ldstr)?.Operand?.ToString()!;
             if (string.IsNullOrWhiteSpace(_modulusString))
             {
-                Ctx.Console.Error("VM Resource Modulus String is null.");
+                Ctx.Console.Error("VM resource modulus string is null.");
                 found = false;
             }
             else if (Ctx.Options.Verbose)
             {
-                Ctx.Console.Success("Found vm resource modulus string!");
+                Ctx.Console.Success("Found VM resource modulus string!");
                 if (Ctx.Options.VeryVerbose)
                     Ctx.Console.InfoStr("VM Resource Modulus String", _modulusString);
             }
         }
 
-        Ctx.VMResourceMdToken = _resourceGetterMethod!.MetadataToken;
+        Ctx.VMResourceGetterMdToken = _resourceGetterMethod!.MetadataToken;
 
         return found;
     }
@@ -110,35 +109,11 @@ internal class ResourceParser : Stage
         Buffer.BlockCopy(_keyBytes, 0, modulus2, 0, _keyBytes.Length);
         Buffer.BlockCopy(modulus1, 0, modulus2, _keyBytes.Length, modulus1.Length);
         
-        // this puts the bits in reverse compared to bouncy castle's implementation. might be nothing to worry about?
-        // var modulus = new BigInteger(modulus2, true, true);
-
-        var rsaParams = new RSAParameters
-        {
-            // rsaParams.Modulus = modulus.ToByteArray();
-            Modulus = modulus2,
-            Exponent = BitConverter.GetBytes(65537UL) // may need to be reversed
-        };
-
-        // Ctx.VMStream.Rsa = RSA.Create(rsaParams);
-        var Rsa = RSA.Create(rsaParams);
-
-        var resourceStream = new MemoryStream(_resource!.GetData()!);
-        var lengthStream = new CryptoStreamV3(resourceStream, 0);
+        var mod = new BigInteger(1, modulus2);
+        var exp = BigInteger.ValueOf(65537L);
         
-        var lengthReader = new VMBinaryReader(lengthStream);
-        var length = lengthReader.ReadInt32();
+        Ctx.VMStream = new VMCipherStream(_resource!.GetData()!, mod, exp);
 
-        var decryptedPosition = 0x2852;
-        var stream = new CryptoStreamV3(resourceStream, -463041498, rsaParams);
-        var reader = new VMBinaryReader(stream);
-        var position = (int)(stream.Length - (length - decryptedPosition)) - 255;
-        
-        stream.DecryptBlock(position);
-        stream.Seek(position, SeekOrigin.Begin);
-
-        var first = reader.ReadInt32();
-        
         return true;
     }
 
@@ -148,7 +123,7 @@ internal class ResourceParser : Stage
         {
             if (_resourceGetterMethod != null && _resourceInitializationMethod != null) return true;
             foreach (var method in type.Methods.Where(m =>
-                         m.Managed && m.IsPublic && m.IsStatic &&
+                         m is { Managed: true, IsPublic: true, IsStatic: true } &&
                          m.Signature?.ReturnType.FullName == typeof(Stream).FullName))
             {
                 if (_resourceGetterMethod != null && _resourceInitializationMethod != null) return true;
@@ -168,7 +143,7 @@ internal class ResourceParser : Stage
         return false;
     }
 
-    public ResourceParser(DevirtualizationContext ctx) : base(ctx)
+    public ResourceParsing(DevirtualizationContext ctx) : base(ctx)
     {
     }
 }
