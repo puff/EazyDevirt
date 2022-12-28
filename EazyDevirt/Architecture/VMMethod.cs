@@ -9,8 +9,14 @@ internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
     public string EncodedMethodKey { get; } = EncodedMethodKey;
     public long MethodKey { get; set; }
     public VMMethodInfo MethodInfo { get; set; }
+    public List<VMExceptionHandler> VMExceptionHandlers { get; set; }
+
+    public override string ToString() =>
+        $"Parent: 0x{Parent.MetadataToken.ToInt32():X} | EncodedMethodKey: {EncodedMethodKey} | MethodKey: 0x{MethodKey:X} | " +
+        $"MethodInfo:\n{MethodInfo} | VMExceptionHandlers: [{string.Join(", ", VMExceptionHandlers)}]";
 }
 
+// TODO: The order of these fields are scrambled across samples. See issue #3
 internal record VMMethodInfo
 {
     public int DeclaringType { get; }
@@ -25,8 +31,6 @@ internal record VMMethodInfo
 
     public VMMethodInfo(BinaryReader reader)
     {
-        // TODO: The order of these fields are scrambled across samples (it could be different Eazfuscator versions). Make patterns for the BinaryReader and each of the fields.
-        //       For the field patterns, pattern match where they are used in the VM runtime and match that to where they're set in the DeserializeVMMethodInfo() method.
         DeclaringType = reader.ReadInt32();
         Name = reader.ReadString();
         BindingFlags = reader.ReadByte();
@@ -41,21 +45,23 @@ internal record VMMethodInfo
             VMParameters.Add(new VMParameter(reader.ReadInt32(), reader.ReadBoolean()));
     }
 
-    public override string ToString()
-    {
-        return $"DeclaringType: {DeclaringType} | Name: {Name} | BindingFlags: {BindingFlags} | " +
-               $"DeclaredOnly: {DeclaredOnly} | IsInstance: {IsInstance} | IsStatic: {IsStatic} | " +
-               $"ReturnType: {ReturnType} | VMLocals: {VMLocals.Count} | VMParameters: {VMParameters.Count}";
-    }
+    public override string ToString() =>
+        $"DeclaringType: 0x{DeclaringType:X} | Name: {Name} | BindingFlags: {BindingFlags} | " +
+        $"DeclaredOnly: {DeclaredOnly} | IsInstance: {IsInstance} | IsStatic: {IsStatic} | " +
+        $"ReturnType: 0x{ReturnType:X} | VMLocals: [{string.Join(", ", VMLocals)}] | VMParameters: [{string.Join(", ", VMParameters)}]";
 }
 
 internal record VMLocal(int Type)
 {
     public int Type { get; } = Type;
+
+    public override string ToString() => $"Type: {Type}";
 }
 
 internal record VMParameter(int Type, bool In)
 {
     public int Type { get; } = Type;
     public bool In { get; } = In;
+    
+    public override string ToString() => $"Type: {Type} | In: {In}";
 }

@@ -1,5 +1,8 @@
-﻿namespace EazyDevirt.Core.IO;
+﻿using System.Text;
 
+namespace EazyDevirt.Core.IO;
+
+// TODO: The order of the bytes are scrambled across samples. See issue #4
 internal class VMBinaryReader : BinaryReader
 {
     public override sbyte ReadSByte()
@@ -8,7 +11,6 @@ internal class VMBinaryReader : BinaryReader
         return (sbyte)bytes[0];
     }
 
-    // TODO: The order of the bytes are scrambled across samples (it could be different Eazfuscator versions). Make a pattern match for them.
     public override int ReadInt32()
     {
         var bytes = ReadBytes(4);
@@ -110,7 +112,7 @@ internal class VMBinaryReader : BinaryReader
         return binaryReader;
     }
     
-    public VMBinaryReader(Stream input) : base(input)
+    public VMBinaryReader(Stream input, bool leaveOpen = false) : base(input, Encoding.UTF8, leaveOpen)
     {
     }
 }
