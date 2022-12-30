@@ -65,7 +65,7 @@ internal static class Program
         var keepTypesOption = new Option<bool>(new[] { "--keep-types", "-kt"}, "Keeps obfuscator types");
         keepTypesOption.SetDefaultValue(false);
         
-        var saveAnywayOption = new Option<bool>(new[] { "--save-anyway"}, "Keeps obfuscator types");
+        var saveAnywayOption = new Option<bool>(new[] { "--save-anyway"}, "Saves output of devirtualizer even if it fails");
         saveAnywayOption.SetDefaultValue(false);
         
         var rootCommand = new RootCommand("EazyDevirt is a tool to automatically restore the original IL code " +
