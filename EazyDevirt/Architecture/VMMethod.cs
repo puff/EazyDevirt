@@ -55,7 +55,7 @@ internal record VMLocal(int Type)
 {
     public int Type { get; } = Type;
 
-    public override string ToString() => $"Type: {Type}";
+    public override string ToString() => $"Type: 0x{Type:X}";
 }
 
 internal record VMParameter(int Type, bool In)
@@ -63,5 +63,5 @@ internal record VMParameter(int Type, bool In)
     public int Type { get; } = Type;
     public bool In { get; } = In;
     
-    public override string ToString() => $"Type: {Type} | In: {In}";
+    public override string ToString() => $"Type: 0x{Type:X} | In: {In}";
 }

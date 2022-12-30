@@ -9,7 +9,7 @@ internal class MethodDisassembler : Stage
     private CryptoStreamV3 VMStream { get; set; }
     private VMBinaryReader VMStreamReader { get; set; }
     
-    private int PreviousReadVMOpCode { get; set; }
+    // private int PreviousReadVMOpCode { get; set; }
     
     public override bool Run()
     {
@@ -43,16 +43,22 @@ internal class MethodDisassembler : Stage
             vmMethod.VMExceptionHandlers.Add(new VMExceptionHandler(VMStreamReader));
         
         // TODO: Resolve local and parameter types
+        
 
+        
+        ReadInstructions(vmMethod);
+    }
+
+    private void ReadInstructions(VMMethod vmMethod)
+    {
         var codeSize = VMStreamReader.ReadInt32();
         var finalPosition = VMStream.Position + codeSize;
         while (VMStream.Position < finalPosition)
         {
             var vmOpCode = VMStreamReader.ReadInt32();
-            PreviousReadVMOpCode = vmOpCode;
+            // PreviousReadVMOpCode = vmOpCode;
             // TODO: opcode matching
         }
-
     }
     
     public MethodDisassembler(DevirtualizationContext ctx) : base(ctx)
