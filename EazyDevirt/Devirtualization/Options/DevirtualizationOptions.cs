@@ -39,4 +39,9 @@ internal record DevirtualizationOptions
  /// Keeps all obfuscator types
  /// </summary>
  public bool KeepTypes { get; init; }
+ 
+ /// <summary>
+ /// Save output even if devirtualization fails
+ /// </summary>
+ public bool SaveAnyway { get; init; }
 }

@@ -21,15 +21,20 @@ internal class Devirtualizer
     private DevirtualizationContext Context { get; }
     private List<Stage> Pipeline { get; }
 
-    public void Run()
+    public bool Run()
     {
         foreach (var stage in Pipeline)
         {
             Context.Console.Info($"Executing {stage.Name}...");
             if (!stage.Run())
+            {
                 Context.Console.Error($"Failed executing {stage.Name}!");
+                return false;
+            }
             else
                 Context.Console.Success($"Executed {stage.Name}!");
         }
+
+        return true;
     }
 }

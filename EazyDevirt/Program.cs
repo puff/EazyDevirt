@@ -25,7 +25,12 @@ internal static class Program
         ctx.Console.ShowInfo(CurrentVersion, CurrentEazVersion);
         
         var devirtualizer = new Devirtualizer(ctx);
-        devirtualizer.Run();
+        if (!devirtualizer.Run())
+        {
+            ctx.Console.Error("Failed to devirtualize executable!");
+            if (!options.SaveAnyway)
+                return;
+        }
 
         ctx.Options.OutputPath.Create();
         var outputFilePath = ctx.Options.OutputPath.FullName + '\\' + Path.GetFileNameWithoutExtension(ctx.Options.Assembly.Name) +
@@ -33,7 +38,7 @@ internal static class Program
         ctx.Module.Write(outputFilePath,
             new ManagedPEImageBuilder(
                 new DotNetDirectoryFactory(
-                    ctx.Options.PreserveAll ? MetadataBuilderFlags.PreserveAll : MetadataBuilderFlags.PreserveMethodDefinitionIndices)));
+                    ctx.Options.PreserveAll ? MetadataBuilderFlags.PreserveAll : MetadataBuilderFlags.None)));
         ctx.Console.Success($"Saved file to {outputFilePath}");
     }
     
@@ -53,12 +58,15 @@ internal static class Program
         var verbosityOption = new Option<int>(new[] { "--verbose", "-v" }, "Level of verbosity output [1: Verbose, 2: Very Verbose]");
         verbosityOption.SetDefaultValue(0);
 
-        var preserveAllOption = new Option<bool>(new[] { "--preserve-all", "-p"}, "Preserves all metadata tokens");
+        var preserveAllOption = new Option<bool>(new[] { "--preserve-all"}, "Preserves all metadata tokens");
         preserveAllOption.SetDefaultValue(false);
 
         // TODO: Implement this in code or remove this option
         var keepTypesOption = new Option<bool>(new[] { "--keep-types", "-kt"}, "Keeps obfuscator types");
         keepTypesOption.SetDefaultValue(false);
+        
+        var saveAnywayOption = new Option<bool>(new[] { "--save-anyway"}, "Keeps obfuscator types");
+        saveAnywayOption.SetDefaultValue(false);
         
         var rootCommand = new RootCommand("EazyDevirt is a tool to automatically restore the original IL code " +
                                           "from an assembly virtualized with Eazfuscator.NET")
@@ -68,11 +76,12 @@ internal static class Program
             verbosityOption,
             preserveAllOption,
             keepTypesOption,
+            saveAnywayOption
         };
         
         rootCommand.SetHandler(Run, 
             new DevirtualizationOptionsBinder(inputArgument, outputArgument, verbosityOption,
-                preserveAllOption, keepTypesOption));
+                preserveAllOption, keepTypesOption, saveAnywayOption));
         
         return new CommandLineBuilder(rootCommand)
             .UseDefaults()
