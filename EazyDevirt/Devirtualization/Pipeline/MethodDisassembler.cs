@@ -62,13 +62,13 @@ internal class MethodDisassembler : Stage
         foreach (var local in vmMethod.MethodInfo.VMLocals)
         {
             var type = Resolver.ResolveType(local.Type);
-            Console.WriteLine($"[{vmMethod.MethodInfo.Name}] Local: {type.Name}");
+            Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {type.Name}");
         }
         
         foreach (var parameter in vmMethod.MethodInfo.VMParameters)
         {
             var type = Resolver.ResolveType(parameter.Type);
-            Console.WriteLine($"[{vmMethod.MethodInfo.Name}] Parameter: {type.Name}");
+            Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Parameter: {type.Name}");
         }
     }
 
