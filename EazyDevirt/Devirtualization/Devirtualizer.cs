@@ -12,7 +12,7 @@ internal class Devirtualizer
         {
             new ResourceParsing(ctx),
             // TODO: add binaryreader and field order matching stage
-            // TODO: add opcode mapping stage
+            new OpCodeMapping(ctx),
             new MethodDiscovery(ctx),
             new MethodDisassembler(ctx),
         };

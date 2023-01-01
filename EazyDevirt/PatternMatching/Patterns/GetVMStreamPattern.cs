@@ -1,11 +1,12 @@
 ﻿using AsmResolver.DotNet;
+using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
 
 namespace EazyDevirt.PatternMatching.Patterns;
 
-internal  record GetVMStreamPattern : IPattern
+internal record GetVMStreamPattern : IPattern
 {
     /// <summary>
     /// Pattern for the VM Resource Stream Getter / Initializer
@@ -31,10 +32,7 @@ internal  record GetVMStreamPattern : IPattern
         CilOpCodes.Ret          // 16	0049	ret
     };
     
-    public bool Verify(MethodDefinition method)
-    {
-        var instructions = method.CilMethodBody!.Instructions;
-        return ((SerializedMemberReference)instructions[6].Operand!).FullName 
-               == "System.IO.Stream System.Reflection.Assembly::GetManifestResourceStream(System.String)";
-    }
+    public bool Verify(CilInstructionCollection instructions) =>
+        ((SerializedMemberReference)instructions[6].Operand!).FullName 
+        == "System.IO.Stream System.Reflection.Assembly::GetManifestResourceStream(System.String)";
 }

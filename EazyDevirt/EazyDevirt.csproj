@@ -18,7 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="PatternMatching\Patterns\VMPatterns" />
+      <Folder Include="PatternMatching\Patterns\VMPatterns\OpCodes" />
     </ItemGroup>
-
+    
 </Project>

@@ -31,7 +31,8 @@ internal class MethodDisassembler : Stage
 
             ReadVMMethod(vmMethod);
 
-            Ctx.Console.Info(vmMethod);
+            if (Ctx.Options.VeryVeryVerbose)
+                Ctx.Console.Info(vmMethod);
         }
         
         VMStream.Dispose();
@@ -62,15 +63,17 @@ internal class MethodDisassembler : Stage
         foreach (var local in vmMethod.MethodInfo.VMLocals)
         {
             var type = Resolver.ResolveType(local.VMType);
-            
-            Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {type.Name}");
+         
+            if (Ctx.Options.VeryVeryVerbose)
+                Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {type.Name}");
         }
         
         foreach (var parameter in vmMethod.MethodInfo.VMParameters)
         {
             var type = Resolver.ResolveType(parameter.VMType);
             
-            Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Parameter: {type.Name}");
+            if (Ctx.Options.VeryVeryVerbose)
+                Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Parameter: {type.Name}");
         }
     }
 
