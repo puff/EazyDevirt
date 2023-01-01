@@ -136,6 +136,14 @@ internal sealed class ResourceParsing : Stage
                     (SerializedMethodDefinition)method.CilMethodBody!.Instructions[13].Operand!;
                 _resourceModulusStringMethod =
                     (SerializedMethodDefinition)method.CilMethodBody!.Instructions[12].Operand!;
+                var getVmInstanceMethod = type.Methods.First(m =>
+                    m.MetadataToken != _resourceGetterMethod.MetadataToken &&
+                    m.MetadataToken != _resourceModulusStringMethod.MetadataToken);
+
+                if (!getVmInstanceMethod.Signature!.ReturnsValue)
+                    throw new Exception("Failed to get VM Declaring type!");
+
+                Ctx.VMDeclaringType = (TypeDefinition)getVmInstanceMethod.Signature.ReturnType.ToTypeDefOrRef();
             }
 
         }

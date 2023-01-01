@@ -73,40 +73,39 @@ internal sealed class MethodDiscovery : Stage
         if (!Init()) return false;
 
         foreach (var t in Ctx.Module.GetAllTypes())
+        foreach (var m in t.Methods)
         {
-            foreach (var m in t.Methods)
+            if (m.CilMethodBody == null) continue;
+
+            var instructions = m.CilMethodBody.Instructions;
+            var index = -1;
+            for (var i = 0; i < instructions.Count; i++)
             {
-                if (m.CilMethodBody == null) continue;
-
-                var instructions = m.CilMethodBody.Instructions;
-                var index = -1;
-                for (var i = 0; i < instructions.Count; i++)
-                {
-                    var ins = instructions[i];
-                    if (ins.OpCode != CilOpCodes.Call
-                        || ins.Operand!.GetType() != typeof(SerializedMethodDefinition)
-                        || ((SerializedMethodDefinition)ins.Operand).MetadataToken != Ctx.VMResourceGetterMdToken)
-                        continue;
-                    index = i;
-                    break;
-                }
-                if (index == -1)
+                var ins = instructions[i];
+                if (ins.OpCode != CilOpCodes.Call
+                    || ins.Operand!.GetType() != typeof(SerializedMethodDefinition)
+                    || ((SerializedMethodDefinition)ins.Operand).MetadataToken != Ctx.VMResourceGetterMdToken)
                     continue;
-
-                if (instructions[index + 1].OpCode != CilOpCodes.Ldstr)
-                {
-                    if (Ctx.Options.Verbose)
-                        Ctx.Console.Error($"Expected ldstr on instruction {index + 1} for method {m.MetadataToken}");
-                    
-                    continue;
-                }
-                
-                if (Ctx.Options.VeryVerbose)
-                    Ctx.Console.InfoStr("Virtualized method found", m.MetadataToken);
-
-                Ctx.VMMethods.Add(new VMMethod(m, (string)instructions[index + 1].Operand!));
+                index = i;
+                break;
             }
+            if (index == -1)
+                continue;
+
+            if (instructions[index + 1].OpCode != CilOpCodes.Ldstr)
+            {
+                if (Ctx.Options.Verbose)
+                    Ctx.Console.Error($"Expected ldstr on instruction {index + 1} for method {m.MetadataToken}");
+                
+                continue;
+            }
+            
+            if (Ctx.Options.VeryVerbose)
+                Ctx.Console.InfoStr("Virtualized method found", m.MetadataToken);
+
+            Ctx.VMMethods.Add(new VMMethod(m, (string)instructions[index + 1].Operand!));
         }
+        
 
         if (Ctx.Options.Verbose)
             Ctx.Console.Success($"Discovered {Ctx.VMMethods.Count} virtualized methods!");
