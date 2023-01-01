@@ -10,7 +10,7 @@ internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
     public long MethodKey { get; set; }
     public VMMethodInfo MethodInfo { get; set; }
     public List<VMExceptionHandler> VMExceptionHandlers { get; set; }
-
+    
     public override string ToString() =>
         $"Parent: 0x{Parent.MetadataToken.ToInt32():X} | EncodedMethodKey: {EncodedMethodKey} | MethodKey: 0x{MethodKey:X} | " +
         $"MethodInfo: [{MethodInfo}] | VMExceptionHandlers: [{string.Join(", ", VMExceptionHandlers)}]";
@@ -51,17 +51,17 @@ internal record VMMethodInfo
         $"ReturnType: 0x{ReturnType:X} | VMLocals: [{string.Join(", ", VMLocals)}] | VMParameters: [{string.Join(", ", VMParameters)}]";
 }
 
-internal record VMLocal(int Type)
+internal record VMLocal(int VMType)
 {
-    public int Type { get; } = Type;
-
-    public override string ToString() => $"Type: 0x{Type:X}";
+    public int VMType { get; } = VMType;
+    
+    public override string ToString() => $"VMType: 0x{VMType:X}";
 }
 
-internal record VMParameter(int Type, bool In)
+internal record VMParameter(int VMType, bool In)
 {
-    public int Type { get; } = Type;
+    public int VMType { get; } = VMType;
     public bool In { get; } = In;
     
-    public override string ToString() => $"Type: 0x{Type:X} | In: {In}";
+    public override string ToString() => $"VMType: 0x{VMType:X} | In: {In}";
 }
