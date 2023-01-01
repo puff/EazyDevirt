@@ -23,6 +23,7 @@ internal enum ValueType
 /// </summary>
 /// <remarks>
 /// TODO: These change across samples.
+///       These indexes can be found in the vmethod_0 override for each operand type's struct.
 /// </remarks>
 internal enum VMInlineOperandType
 {
