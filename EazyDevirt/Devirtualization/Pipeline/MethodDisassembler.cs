@@ -6,20 +6,17 @@ namespace EazyDevirt.Devirtualization.Pipeline;
 
 internal class MethodDisassembler : Stage
 {
-    private CryptoStreamV3 VMStream { get; set; }
-    private VMBinaryReader VMStreamReader { get; set; }
+    private CryptoStreamV3 VMStream { get; }
+    private VMBinaryReader VMStreamReader { get; }
     
-    private Resolver Resolver { get; set; }
+    private Resolver Resolver { get; }
     
-    // private int PreviousReadVMOpCode { get; set; }
+    // private int PreviousReadVMOpCode { get; private set; }
     
     public override bool Run()
     {
         if (!Init()) return false;
         
-        VMStream = new CryptoStreamV3(Ctx.VMStream, Ctx.MethodCryptoKey, true);
-        VMStreamReader = new VMBinaryReader(VMStream, true);
-        Resolver = new Resolver(Ctx);
         foreach (var vmMethod in Ctx.VMMethods)
         { 
             // if (vmMethod.EncodedMethodKey != @"5<]fEBf\76") continue;
@@ -86,5 +83,8 @@ internal class MethodDisassembler : Stage
     
     public MethodDisassembler(DevirtualizationContext ctx) : base(ctx)
     {
+        VMStream = new CryptoStreamV3(Ctx.VMStream, Ctx.MethodCryptoKey, true);
+        VMStreamReader = new VMBinaryReader(VMStream, true);
+        Resolver = new Resolver(Ctx);
     }
 }
