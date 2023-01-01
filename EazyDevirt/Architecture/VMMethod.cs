@@ -13,7 +13,7 @@ internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
 
     public override string ToString() =>
         $"Parent: 0x{Parent.MetadataToken.ToInt32():X} | EncodedMethodKey: {EncodedMethodKey} | MethodKey: 0x{MethodKey:X} | " +
-        $"MethodInfo:\n{MethodInfo} | VMExceptionHandlers: [{string.Join(", ", VMExceptionHandlers)}]";
+        $"MethodInfo: [{MethodInfo}] | VMExceptionHandlers: [{string.Join(", ", VMExceptionHandlers)}]";
 }
 
 // TODO: The order of these fields are scrambled across samples. See issue #3
@@ -26,8 +26,8 @@ internal record VMMethodInfo
     public bool IsInstance => (BindingFlags & 4) > 0;
     public bool IsStatic => (BindingFlags & 8) > 0;
     public int ReturnType { get; }
-    private List<VMLocal> VMLocals { get; }
-    private List<VMParameter> VMParameters { get; }
+    public List<VMLocal> VMLocals { get; }
+    public List<VMParameter> VMParameters { get; }
 
     public VMMethodInfo(BinaryReader reader)
     {
