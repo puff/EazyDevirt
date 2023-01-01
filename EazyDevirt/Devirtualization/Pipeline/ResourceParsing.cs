@@ -4,6 +4,7 @@ using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
 using EazyDevirt.Core.IO;
+using EazyDevirt.PatternMatching;
 using EazyDevirt.PatternMatching.Patterns;
 using Org.BouncyCastle.Math;
 
@@ -129,7 +130,7 @@ internal sealed class ResourceParsing : Stage
                 if (_resourceGetterMethod != null && _resourceInitializationMethod != null) return true;
                 // TODO: make a better way of using non-vm patterns
                 if (_resourceGetterMethod != null ||
-                    !Ctx.PatternMatcher.MatchesPattern(new GetVMStreamPattern(), method)) continue;
+                    !PatternMatcher.MatchesPattern(new GetVMStreamPattern(), method)) continue;
                 
                 _resourceGetterMethod = method;
                 _resourceInitializationMethod =

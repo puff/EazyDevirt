@@ -31,6 +31,11 @@ internal record DevirtualizationOptions
  public bool VeryVerbose => Verbosity > 1;
  
  /// <summary>
+ /// Shows even more verbose information
+ /// </summary>
+ public bool VeryVeryVerbose => Verbosity > 2;
+ 
+ /// <summary>
  /// Preserves all metadata tokens
  /// </summary>
  public bool PreserveAll { get; init; }
