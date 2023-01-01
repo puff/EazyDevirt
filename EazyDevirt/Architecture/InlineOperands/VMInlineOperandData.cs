@@ -2,6 +2,8 @@
 
 namespace EazyDevirt.Architecture.InlineOperands;
 
+// thank you to saneki
+
 /// <summary>
 /// Operand data.
 /// </summary>
