@@ -22,10 +22,16 @@ internal class OpCodeMapping : Stage
         TypeDefinition containerType = null!;
         foreach (var op in dictAddOperations)
         {
-            var instructionField = op[7].Operand as SerializedFieldDefinition;
+            var instructionField = op[2].Operand as SerializedFieldDefinition;
+            var instructionField2 = op[7].Operand as SerializedFieldDefinition;
             var opCodeDelegate = op[9].Operand as SerializedMethodDefinition;
             // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
             containerType ??= instructionField!.DeclaringType!;
+
+            // Thread.MemoryBarrier() opcode
+            // in example, this is the 0x040001D2 and 0x040001C0 opcode structs.
+            if (instructionField != instructionField2)
+                vmOpCodes.Add(new VMOpCode(instructionField2!, opCodeDelegate!));
 
             vmOpCodes.Add(new VMOpCode(instructionField!, opCodeDelegate!));
         }
@@ -44,16 +50,19 @@ internal class OpCodeMapping : Stage
             var opCode = opCodeFieldInstrs[1].GetLdcI4Constant();
             var operandType = opCodeFieldInstrs[2].GetLdcI4Constant();
             
-            var vmOpCode = vmOpCodes.FirstOrDefault(x => x.SerializedInstructionField == opCodeFieldInstrs[4].Operand);
-            if (vmOpCode == null && Ctx.Options.VeryVerbose)
+            var matchingVMOpCodes = vmOpCodes.Where(x => x.SerializedInstructionField == opCodeFieldInstrs[4].Operand);
+            if (vmOpCodes.Count <= 0 && Ctx.Options.VeryVerbose)
             {
                 Ctx.Console.InfoStr("Unknown OpCode", $"{opCode}, {operandType}");
                 continue;
             }
-
-            vmOpCode!.HasVirtualCode = true;
-            vmOpCode.VirtualCode = opCode;
-            vmOpCode.VirtualOperandType = operandType;
+            
+            foreach (var vmOpCode in matchingVMOpCodes)
+            {
+                vmOpCode.HasVirtualCode = true;
+                vmOpCode.VirtualCode = opCode;
+                vmOpCode.VirtualOperandType = operandType;
+            }
         }
         
         return true;
