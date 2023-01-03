@@ -2,6 +2,7 @@
 using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
+using EazyDevirt.Core.IO;
 
 namespace EazyDevirt.PatternMatching;
 
@@ -9,14 +10,21 @@ internal class PatternMatcher
 {
     public PatternMatcher()
     {
-        VMPatterns = new List<IVMPattern>();
+        OpCodes = new Dictionary<int, VMOpCode>();
+        OpCodePatterns = new List<IOpCodePattern>();
         foreach (var type in typeof(PatternMatcher).Assembly.GetTypes())
-            if (type.GetInterface(nameof(IVMPattern)) != null)
-                if (Activator.CreateInstance(type) is IVMPattern instance)
-                    VMPatterns.Add(instance);
+            if (type.GetInterface(nameof(IOpCodePattern)) != null)
+                if (Activator.CreateInstance(type) is IOpCodePattern instance)
+                    OpCodePatterns.Add(instance);
     }
     
-    private List<IVMPattern> VMPatterns { get; }
+    private Dictionary<int, VMOpCode> OpCodes { get; }
+    private List<IOpCodePattern> OpCodePatterns { get; }
+    
+    public void SetOpCodeValue(int value, VMOpCode opCode) => OpCodes[value] = opCode;
+
+    public VMOpCode GetOpCodeValue(int value) => OpCodes.TryGetValue(value, out var opc) ? opc : new VMOpCode(null!, null!);
+
 
     /// <summary>
     /// Checks if pattern matches a method's instructions body
