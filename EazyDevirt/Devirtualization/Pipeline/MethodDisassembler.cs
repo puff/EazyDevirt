@@ -11,7 +11,7 @@ internal class MethodDisassembler : Stage
     
     private Resolver Resolver { get; set; }
     
-    // private int PreviousReadVMOpCode { get; set; }
+    // private VMOpCode PreviousReadVMOpCode { get; set; }
     
     public override bool Run()
     {
@@ -30,9 +30,6 @@ internal class MethodDisassembler : Stage
             VMStream.Seek(vmMethod.MethodKey, SeekOrigin.Begin);
 
             ReadVMMethod(vmMethod);
-
-            if (Ctx.Options.VeryVeryVerbose)
-                Ctx.Console.Info(vmMethod);
         }
         
         VMStream.Dispose();
@@ -48,17 +45,16 @@ internal class MethodDisassembler : Stage
         for (var i = 0; i < vmMethod.VMExceptionHandlers.Capacity; i++)
             vmMethod.VMExceptionHandlers.Add(new VMExceptionHandler(VMStreamReader));
         
+        if (Ctx.Options.VeryVeryVerbose)
+            Ctx.Console.Info(vmMethod);
+        
         // TODO: may need to add SortVMExceptionHandlers
         
-        var instructionsPosition = VMStream.Position;
-        
-        ResolveLocalsAndParamters(vmMethod);
-
-        VMStream.Seek(instructionsPosition, SeekOrigin.Begin);
+        ResolveLocalsAndParameters(vmMethod);
         ReadInstructions(vmMethod);
     }
 
-    private void ResolveLocalsAndParamters(VMMethod vmMethod)
+    private void ResolveLocalsAndParameters(VMMethod vmMethod)
     {
         foreach (var local in vmMethod.MethodInfo.VMLocals)
         {
@@ -83,13 +79,17 @@ internal class MethodDisassembler : Stage
         var finalPosition = VMStream.Position + codeSize;
         while (VMStream.Position < finalPosition)
         {
-            var vmOpCode = VMStreamReader.ReadInt32();
-            // PreviousReadVMOpCode = vmOpCode;
             // TODO: opcode matching
+            var virtualOpCode = VMStreamReader.ReadInt32();
+            var vmOpCode = Ctx.PatternMatcher.GetOpCodeValue(virtualOpCode);
+            // PreviousReadVMOpCode = vmOpCode;
+            break;
         }
     }
     
+#pragma warning disable CS8618
     public MethodDisassembler(DevirtualizationContext ctx) : base(ctx)
     {
     }
+#pragma warning restore CS8618
 }

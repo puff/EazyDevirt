@@ -16,9 +16,5 @@
     <ItemGroup>
       <ProjectReference Include="..\libs\AsmResolver\src\AsmResolver.DotNet\AsmResolver.DotNet.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="PatternMatching\Patterns\VMPatterns\OpCodes" />
-    </ItemGroup>
     
 </Project>

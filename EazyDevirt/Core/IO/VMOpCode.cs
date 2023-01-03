@@ -33,4 +33,8 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField, S
     /// Whether or not the virtual instruction was identified with a legitimate CIL opcode.
     /// </summary>
     public bool IsIdentified { get; set; }
+
+    public override string ToString() =>
+        $"VirtualCode: {VirtualCode} | VirtualOperandType: {VirtualOperandType} | " +
+        $"SerializedInstructionField: {SerializedInstructionField.MetadataToken} | SerializedDelegateMethod: {SerializedDelegateMethod.MetadataToken}";
 }
