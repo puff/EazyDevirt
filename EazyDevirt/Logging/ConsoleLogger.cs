@@ -18,14 +18,14 @@ internal  class ConsoleLogger : ILogger
     {
         Console.WriteLine();
         Console.WriteLine();
-        WriteLineMiddle(@"▄███▄   ██   ▄▄▄▄▄▄ ▀▄    ▄ ", ConsoleColor.DarkMagenta);
-        WriteLineMiddle(@"█▀   ▀  █ █ ▀   ▄▄▀   █  █  ", ConsoleColor.DarkMagenta);
-        WriteLineMiddle(@"██▄▄    █▄▄█ ▄▀▀   ▄▀  ▀█   ", ConsoleColor.DarkMagenta);
-        WriteLineMiddle(@"█▄   ▄▀ █  █ ▀▀▀▀▀▀    █    ", ConsoleColor.DarkMagenta);
-        WriteLineMiddle(@"▀███▀      █         ▄▀     ", ConsoleColor.DarkMagenta);
-        WriteLineMiddle(@"          █                 ", ConsoleColor.DarkMagenta);
-        WriteLineMiddle(@"         ▀                  ", ConsoleColor.DarkMagenta);
-        WriteLineMiddle(@"                                            ", ConsoleColor.DarkMagenta);
+        WriteLineMiddle(@"                ▄███▄   ██   ▄▄▄▄▄▄ ▀▄    ▄                              ", ConsoleColor.DarkMagenta);
+        WriteLineMiddle(@"                █▀   ▀  █ █ ▀   ▄▄▀   █  █                               ", ConsoleColor.DarkMagenta);
+        WriteLineMiddle(@"                ██▄▄    █▄▄█ ▄▀▀   ▄▀  ▀█        _            _      _   ", ConsoleColor.DarkMagenta);
+        WriteLineMiddle(@"                █▄   ▄▀ █  █ ▀▀▀▀▀▀    █      __| | _____   _(_)_ __| |_ ", ConsoleColor.DarkMagenta);
+        WriteLineMiddle(@"                ▀███▀      █         ▄▀      / _` |/ _ \ \ / / | '__| __|", ConsoleColor.DarkMagenta);
+        WriteLineMiddle(@"                          █                 | (_| |  __/\ V /| | |  | |_ ", ConsoleColor.DarkMagenta);
+        WriteLineMiddle(@"                         ▀                   \__,_|\___| \_/ |_|_|   \__|", ConsoleColor.DarkMagenta);
+        Console.WriteLine();
         
         WriteMiddle(@"Version - ", ConsoleColor.DarkMagenta);
         Console.ForegroundColor = ConsoleColor.White;
