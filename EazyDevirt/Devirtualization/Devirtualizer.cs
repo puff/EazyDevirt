@@ -7,7 +7,7 @@ internal class Devirtualizer
 {
     public Devirtualizer(DevirtualizationContext ctx)
     {
-        Context = ctx;
+        Ctx = ctx;
         Pipeline = new List<Stage>
         {
             new ResourceParsing(ctx),
@@ -18,21 +18,21 @@ internal class Devirtualizer
         };
     }
     
-    private DevirtualizationContext Context { get; }
+    private DevirtualizationContext Ctx { get; }
     private List<Stage> Pipeline { get; }
 
     public bool Run()
     {
         foreach (var stage in Pipeline)
         {
-            Context.Console.Info($"Executing {stage.Name}...");
+            Ctx.Console.Info($"Executing {stage.Name}...");
             if (!stage.Run())
             {
-                Context.Console.Error($"Failed executing {stage.Name}!");
+                Ctx.Console.Error($"Failed executing {stage.Name}!");
                 return false;
             }
-            else
-                Context.Console.Success($"Executed {stage.Name}!");
+            
+            Ctx.Console.Success($"Executed {stage.Name}!");
         }
 
         return true;

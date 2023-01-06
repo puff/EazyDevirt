@@ -26,7 +26,7 @@ internal record DevirtualizationContext
     public DevirtualizationContext(DevirtualizationOptions opts)
     {
         Options = opts;
-        Module = ModuleDefinition.FromFile(Options!.Assembly.FullName);
+        Module = ModuleDefinition.FromFile(Options.Assembly.FullName);
         PatternMatcher = new PatternMatcher();
         Console = new ConsoleLogger();
     }

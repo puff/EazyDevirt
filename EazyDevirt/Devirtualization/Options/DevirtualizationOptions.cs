@@ -19,14 +19,13 @@ internal record DevirtualizationOptions
  /// </summary>
  public int Verbosity { get; init; }
 
- /// TODO: update Verbose and VeryVerbose description
  /// <summary>
  /// Shows useful debug information
  /// </summary>
  public bool Verbose => Verbosity >= 1;
 
  /// <summary>
- /// Shows verbose information and more useful debugging information
+ /// Shows more verbose information
  /// </summary>
  public bool VeryVerbose => Verbosity > 1;
  

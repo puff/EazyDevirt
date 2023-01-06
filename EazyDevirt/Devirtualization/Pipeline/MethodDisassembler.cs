@@ -26,9 +26,9 @@ internal class MethodDisassembler : Stage
             // if (vmMethod.EncodedMethodKey != @"5<_4mf/boO") continue;
             
             vmMethod.MethodKey = VMCipherStream.DecodeMethodKey(vmMethod.EncodedMethodKey, Ctx.PositionCryptoKey);
-
+            
             VMStream.Seek(vmMethod.MethodKey, SeekOrigin.Begin);
-
+            
             ReadVMMethod(vmMethod);
         }
         
@@ -36,11 +36,11 @@ internal class MethodDisassembler : Stage
         VMStreamReader.Dispose();
         return false;
     }
-
+    
     private void ReadVMMethod(VMMethod vmMethod)
     {
         vmMethod.MethodInfo = new VMMethodInfo(VMStreamReader);
-
+        
         vmMethod.VMExceptionHandlers = new List<VMExceptionHandler>(VMStreamReader.ReadInt16());
         for (var i = 0; i < vmMethod.VMExceptionHandlers.Capacity; i++)
             vmMethod.VMExceptionHandlers.Add(new VMExceptionHandler(VMStreamReader));
@@ -53,7 +53,7 @@ internal class MethodDisassembler : Stage
         ResolveLocalsAndParameters(vmMethod);
         ReadInstructions(vmMethod);
     }
-
+    
     private void ResolveLocalsAndParameters(VMMethod vmMethod)
     {
         foreach (var local in vmMethod.MethodInfo.VMLocals)
@@ -72,7 +72,7 @@ internal class MethodDisassembler : Stage
                 Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Parameter: {type.Name}");
         }
     }
-
+    
     private void ReadInstructions(VMMethod vmMethod)
     {
         var codeSize = VMStreamReader.ReadInt32();
