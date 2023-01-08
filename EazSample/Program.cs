@@ -22,6 +22,7 @@ namespace EazSample
             _virtualizedString = "100% not a virtualized string";
             var retCode = ClearMethod(_virtualizedString);
             Console.WriteLine("Return code: " + retCode);
+            HomomorphicEncryption();
         }
 
         private static long ClearMethod(string? arg)
@@ -37,6 +38,16 @@ namespace EazSample
         private static long VirtualizedMethod(int arg1, uint arg2)
         {
             return arg1 + arg2; // 3223173240 0xC01DB878
+        }
+
+        [Obfuscation(Feature = "virtualization", Exclude = false)]
+        private static void HomomorphicEncryption()
+        {
+            if (Console.ReadLine() == "constant")
+            {
+                Console.Write("constant");
+                Console.WriteLine("This should invoke homomorphic encryption");
+            }
         }
     }
 }

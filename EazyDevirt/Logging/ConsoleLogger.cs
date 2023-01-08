@@ -54,13 +54,13 @@ internal  class ConsoleLogger : ILogger
         Console.ForegroundColor = ConsoleColor.White;
         Console.WriteLine("clifford for helping with Eazfuscator.NET's VM."); 
         
-        // 55 = ("saneki for his well-documented eazdevirt project.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
+        // 55 = ("saneki for the well-documented eazdevirt project.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
         Console.WriteLine(string.Format("{0," + (Console.WindowWidth / 2
-                                                 + 55 + "}"), "saneki for his well-documented eazdevirt project."));
+                                                 + 55 + "}"), "saneki for the well-documented eazdevirt project."));
         
-        // 55 = ("TobitoFatitoRE for the amazing HexDevirt project.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
+        // 47 = ("TobitoFatitoRE for the amazing HexDevirt project.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
         Console.WriteLine(string.Format("{0," + (Console.WindowWidth / 2 
-                                                 + 55 + "}"), "TobitoFatitoRE for the amazing HexDevirt project."));
+                                                 + 47 + "}"), "TobitoFatitoRE for the HexDevirt project."));
         
         // 54 = ("Washi1337 for the wonderful AsmResolver library.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
         Console.WriteLine(string.Format("{0," + (Console.WindowWidth / 2
