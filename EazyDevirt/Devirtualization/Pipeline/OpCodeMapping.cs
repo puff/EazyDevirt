@@ -22,7 +22,7 @@ internal class OpCodeMapping : Stage
         }
 
         if (Ctx.Options.VeryVerbose)
-            Ctx.Console.InfoStr(dictMethod.MetadataToken, "VM OpCode dictionary method");
+            Ctx.Console.InfoStr("VM OpCode dictionary method", dictMethod.MetadataToken);
 
         var dictAddOperations =
             PatternMatcher.GetAllMatchingInstructions(new OpCodeDictionaryAddPattern(), dictMethod, 2);
@@ -45,7 +45,7 @@ internal class OpCodeMapping : Stage
         }
         
         if (Ctx.Options.VeryVerbose)
-            Ctx.Console.InfoStr(vmOpCodes.Count, "VM OpCodes with handlers");
+            Ctx.Console.InfoStr("VM OpCodes with handlers", vmOpCodes.Count);
 
         if (containerType == null)
         {
@@ -64,7 +64,7 @@ internal class OpCodeMapping : Stage
 
         var containerCtorOpCodes = PatternMatcher.GetAllMatchingInstructions(containerCtorPattern, containerCtor);
         if (Ctx.Options.VeryVerbose)
-            Ctx.Console.InfoStr(containerCtorOpCodes.Count, "VM OpCodes found");
+            Ctx.Console.InfoStr("Total VM OpCodes found", containerCtorOpCodes.Count);
         
         foreach (var opCodeFieldInstrs in containerCtorOpCodes)
         {
@@ -74,7 +74,7 @@ internal class OpCodeMapping : Stage
             var matchingVMOpCodes = vmOpCodes.Where(x => x.SerializedInstructionField == opCodeFieldInstrs[4].Operand).ToList();
             if (matchingVMOpCodes.Count <= 0 && Ctx.Options.VeryVerbose)
             {
-                Ctx.Console.InfoStr("Unused VM OpCode", $"{opCode}, {operandType}");
+                Ctx.Console.InfoStr("Unhandled VM OpCode", $"{opCode}, {operandType}");
                 continue;
             }
             

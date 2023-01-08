@@ -1,6 +1,7 @@
 ﻿using EazyDevirt.Abstractions;
 using EazyDevirt.Architecture;
 using EazyDevirt.Core.IO;
+using Org.BouncyCastle.Crypto.Digests;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
@@ -45,12 +46,16 @@ internal class MethodDisassembler : Stage
         for (var i = 0; i < vmMethod.VMExceptionHandlers.Capacity; i++)
             vmMethod.VMExceptionHandlers.Add(new VMExceptionHandler(VMStreamReader));
         
-        if (Ctx.Options.VeryVeryVerbose)
-            Ctx.Console.Info(vmMethod);
-        
+        vmMethod.MethodInfo.DeclaringType = Resolver.ResolveType(vmMethod.MethodInfo.VMDeclaringType);
+        vmMethod.MethodInfo.ReturnType = Resolver.ResolveType(vmMethod.MethodInfo.VMReturnType);
+
         // TODO: may need to add SortVMExceptionHandlers
         
         ResolveLocalsAndParameters(vmMethod);
+        
+        if (Ctx.Options.VeryVeryVerbose)
+            Ctx.Console.Info(vmMethod);
+        
         ReadInstructions(vmMethod);
     }
     
@@ -58,18 +63,18 @@ internal class MethodDisassembler : Stage
     {
         foreach (var local in vmMethod.MethodInfo.VMLocals)
         {
-            var type = Resolver.ResolveType(local.VMType);
+            local.Type = Resolver.ResolveType(local.VMType);
          
-            if (Ctx.Options.VeryVeryVerbose)
-                Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {type.Name}");
+            // if (Ctx.Options.VeryVeryVerbose)
+            //     Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {local.Type.Name}");
         }
         
         foreach (var parameter in vmMethod.MethodInfo.VMParameters)
         {
-            var type = Resolver.ResolveType(parameter.VMType);
+            parameter.Type = Resolver.ResolveType(parameter.VMType);
             
-            if (Ctx.Options.VeryVeryVerbose)
-                Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Parameter: {type.Name}");
+            // if (Ctx.Options.VeryVeryVerbose)
+            //     Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Parameter: {parameter.Type.Name}");
         }
     }
     
