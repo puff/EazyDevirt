@@ -31,7 +31,7 @@ internal record GetVMStreamPattern : IPattern
         CilOpCodes.Ret          // 16	0049	ret
     };
     
-    public bool Verify(CilInstructionCollection instructions) =>
+    public bool Verify(CilInstructionCollection instructions, int index) =>
         ((SerializedMemberReference)instructions[6].Operand!).FullName 
         == "System.IO.Stream System.Reflection.Assembly::GetManifestResourceStream(System.String)";
 }
