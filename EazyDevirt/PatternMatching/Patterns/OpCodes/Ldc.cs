@@ -4,6 +4,9 @@ using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
 using EazyDevirt.Architecture;
 using EazyDevirt.Core.IO;
+// ReSharper disable UnassignedGetOnlyAutoProperty
+// ReSharper disable UnusedType.Global
+// ReSharper disable InconsistentNaming
 
 namespace EazyDevirt.PatternMatching.Patterns.OpCodes;
 
