@@ -1,4 +1,6 @@
 ﻿using AsmResolver.DotNet.Serialized;
+using AsmResolver.PE.DotNet.Cil;
+using EazyDevirt.Architecture;
 
 namespace EazyDevirt.Core.IO;
 
@@ -20,7 +22,7 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField, S
     public int VirtualCode { get; set; } 
     
     /// <summary>
-    /// The operand type, set when the instruction field is constructed.
+    /// The virtual operand type, set when the instruction field is constructed.
     /// </summary>
     public int VirtualOperandType { get; set; }
     
@@ -30,11 +32,27 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField, S
     public bool HasVirtualCode { get; set; }
 
     /// <summary>
-    /// Whether or not the virtual instruction was identified with a legitimate CIL opcode.
+    /// Associated CIL opcode.
+    /// </summary>
+    public CilOpCode CilOpCode { get; set; }
+    
+    /// <summary>
+    /// Associated special opcode.
+    /// </summary>
+    public SpecialOpCode SpecialOpCode { get; set; }
+    
+    /// <summary>
+    /// Whether or not the virtual instruction was identified with a legitimate CIL or special opcode.
     /// </summary>
     public bool IsIdentified { get; set; }
+    
+    /// <summary>
+    /// Whether or not the associated opcode is a special opcode.
+    /// </summary>
+    public bool IsSpecial { get; set; }
 
     public override string ToString() =>
         $"VirtualCode: {VirtualCode} | VirtualOperandType: {VirtualOperandType} | " +
+        $"CilOpCode: {CilOpCode} | SpecialOpCode {SpecialOpCode} |" +
         $"SerializedInstructionField: {SerializedInstructionField.MetadataToken} | SerializedDelegateMethod: {SerializedDelegateMethod.MetadataToken}";
 }

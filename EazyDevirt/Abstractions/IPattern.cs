@@ -17,11 +17,18 @@ internal interface IPattern
     bool InterchangeLdcOpCodes => false;
 
     /// <summary>
-    /// Additional verification to be sure the match is valid.
+    /// Additional verification to ensure the match is valid.
     /// </summary>
     /// <param name="method">Method to match Pattern against</param>
+    /// <param name="index">Index of the pattern</param>
     /// <returns>Whether verification is successful</returns>
-    bool Verify(MethodDefinition method) => Verify(method.CilMethodBody!.Instructions);
+    bool Verify(MethodDefinition method, int index = 0) => Verify(method.CilMethodBody!.Instructions, index);
 
-    bool Verify(CilInstructionCollection instructions) => true;
+    /// <summary>
+    /// Additional verification to ensure the match is valid.
+    /// </summary>
+    /// <param name="instructions">CIL instruction body to match Pattern against</param>
+    /// <param name="index">Index of the pattern</param>
+    /// <returns>Whether verification is successful</returns>
+    bool Verify(CilInstructionCollection instructions, int index = 0) => true;
 }

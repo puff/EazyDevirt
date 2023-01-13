@@ -25,7 +25,38 @@ internal class PatternMatcher
 
     public VMOpCode GetOpCodeValue(int value) => OpCodes.TryGetValue(value, out var opc) ? opc : new VMOpCode(null!, null!);
 
+    public IOpCodePattern FindOpCode(VMOpCode vmOpCode, int index = 0)
+    {
+        if (!vmOpCode.SerializedDelegateMethod.HasMethodBody) return null!;
+        
+        foreach (var pat in OpCodePatterns)
+        {
+            if (!Matches(pat, vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions, index) || !pat.Verify(vmOpCode, index)) continue;
+            
+            // if (!pattern.ExpectsMultiple)
+            OpCodePatterns.Remove(pat);
+            return pat;
+        }
 
+        return null!;
+    }
+
+    private static bool Matches(IPattern pattern, CilInstructionCollection instructions, int index)
+    {
+        var pat = pattern.Pattern;
+        if (index + pat.Count > instructions.Count) return false;
+        
+        for (var i = 0; i < pat.Count; i++)
+        {
+            if (pat[i] == CilOpCodes.Nop)
+                continue;
+            if (instructions[i + index].OpCode != pat[i] && (!pattern.InterchangeLdcOpCodes || !instructions[i + index].IsLdcI4()))
+                return false;
+        }
+
+        return true;
+    }
+    
     /// <summary>
     /// Checks if pattern matches a method's instructions body
     /// </summary>
@@ -33,7 +64,14 @@ internal class PatternMatcher
     /// <param name="method">Method to match body against</param>
     /// <param name="index">Index of method's instruction body to start matching at</param>
     /// <returns>Whether the pattern matches method's instruction body</returns>
-    public static bool MatchesPattern(IPattern pattern, MethodDefinition method, int index = 0) => method.HasMethodBody && MatchesPattern(pattern, method.CilMethodBody!.Instructions, index);
+    public static bool MatchesPattern(IPattern pattern, MethodDefinition method, int index = 0)
+    {
+        if (!method.HasMethodBody) return false;
+        var instructions = method.CilMethodBody!.Instructions;
+
+        return Matches(pattern, instructions, index) && pattern.Verify(method);
+    }
+        
 
     /// <summary>
     /// Checks if pattern matches a method's instructions body.
@@ -42,14 +80,7 @@ internal class PatternMatcher
     /// <param name="instructions">Instructions to match body against</param>
     /// <param name="index">Index of the instructions collection to start matching at</param>
     /// <returns>Whether the pattern matches the given instructions</returns>
-    public static bool MatchesPattern(IPattern pattern, CilInstructionCollection instructions, int index = 0)
-    {
-        var pat = pattern.Pattern;
-        if (index + pat.Count > instructions.Count) return false;
-        
-        return !pat.Where((t, i) => t != CilOpCodes.Nop && ((instructions[i + index].OpCode != t && (!instructions[i + index].IsLdcI4() || !pattern.InterchangeLdcOpCodes))
-                                                            || !pattern.Verify(instructions))).Any();
-    }
+    public static bool MatchesPattern(IPattern pattern, CilInstructionCollection instructions, int index = 0) => Matches(pattern, instructions, index) && pattern.Verify(instructions);
 
     /// <summary>
     /// Gets all matching instruction sets in a method's instructions body.

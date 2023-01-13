@@ -1,5 +1,6 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Serialized;
+using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
 using EazyDevirt.Core.IO;
 using EazyDevirt.PatternMatching;
@@ -95,9 +96,24 @@ internal class OpCodeMapping : Stage
                 continue;
             }
 
+            var opCodePat = Ctx.PatternMatcher.FindOpCode(vmOpCode);
+            if (opCodePat == null)
+                Ctx.Console.Warning($"Failed to find vm opcode [{vmOpCode.VirtualCode}, {vmOpCode.VirtualOperandType}]");
+            else
+            {
+                vmOpCode.IsIdentified = true;
+                vmOpCode.IsSpecial = vmOpCode.IsSpecial;
+                if (vmOpCode.IsSpecial)
+                    vmOpCode.SpecialOpCode = opCodePat.SpecialOpCode;
+                else
+                    vmOpCode.CilOpCode = opCodePat.CilOpCode;
+            }
+
             Ctx.PatternMatcher.SetOpCodeValue(vmOpCode.VirtualCode, vmOpCode);
 
             if (Ctx.Options.VeryVeryVerbose)
+                Ctx.Console.Info(vmOpCode);
+            else if (Ctx.Options.VeryVerbose && vmOpCode.IsIdentified)
                 Ctx.Console.Info(vmOpCode);
         }
         
