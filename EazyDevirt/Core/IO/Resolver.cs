@@ -30,14 +30,26 @@ internal class Resolver
             throw new Exception("VM inline operand expected to have type data!");
         
         var typeDefOrRef = TypeNameParser.Parse(Ctx.Module, data.Name).ToTypeDefOrRef();
-        var resolvedTypeDef = typeDefOrRef.Resolve();
+
+        var assembly = typeDefOrRef.Scope?.GetAssembly()!;
+        var assemblyResolver = Ctx.Module.MetadataResolver.AssemblyResolver;
+        if (!assemblyResolver.HasCached(assembly))
+        {
+            var assemblyDefinition = assemblyResolver.Resolve(assembly);
+            if (assemblyDefinition == null)
+            {
+                Ctx.Console.Error("Failed resolving assembly " + assembly.FullName);
+                return null!;
+            }
+        }
+        
+        var resolvedTypeDef = typeDefOrRef.Resolve() ?? typeDefOrRef;
         
         if (!data.HasGenericTypes)
-            return resolvedTypeDef ?? typeDefOrRef;
+            return resolvedTypeDef;
         
-        // this looks like it's working, not 100% sure though.
         var generics = data.GenericTypes.Select(g => ResolveType(g.Position)).Select(gtype => gtype.ToTypeSignature()).ToArray();
-        return typeDefOrRef.MakeGenericInstanceType(generics).ToTypeDefOrRef();
+        return resolvedTypeDef.MakeGenericInstanceType(generics).ToTypeDefOrRef();
     }
     
     public FieldDefinition ResolveField(int position)
@@ -80,6 +92,10 @@ internal class Resolver
         var declaringType = ResolveType(data.DeclaringType.Position);
         if (declaringType == null)
             throw new Exception("Unable to resolve vm method declaring type");
+
+        // this most likely means it is a generic type
+        if (declaringType is TypeSpecification spec)
+            declaringType = declaringType.Resolve() ?? declaringType;
         
         if (declaringType is TypeDefinition definition)
             return definition.Methods.First(f => f.Name == data.Name);
@@ -87,7 +103,7 @@ internal class Resolver
         // TODO: verify if this ever happens, and fix it if it does
         if (declaringType is TypeReference reference)
             throw new Exception("VM method declaring type is a TypeRef!");
-        
+
         throw new Exception("VM method declaring type neither TypeDef nor TypeRef!");
     }
 

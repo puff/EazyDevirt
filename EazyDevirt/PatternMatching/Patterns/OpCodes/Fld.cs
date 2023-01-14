@@ -52,7 +52,9 @@ internal record Ldflda : IOpCodePattern
 
     public bool Verify(VMOpCode vmOpCode, int index)
     {
-        var method = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[29].Operand as SerializedMethodDefinition;
+        var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
+        if (instructions.Count < 29) return false;
+        var method = instructions[29].Operand as SerializedMethodDefinition;
         return method!.Parameters.Count == 3 && method.Parameters[0].ParameterType.FullName == "System.Reflection.FieldInfo";
     }
 }
@@ -118,5 +120,51 @@ internal record Ldsflda : IOpCodePattern
 #endregion Ld
 
 #region St
+internal record Stfld : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloc_2,     // 36	005E	ldloc.2
+        CilOpCodes.Ldloc_0,     // 37	005F	ldloc.0
+        CilOpCodes.Ldloc_S,     // 38	0060	ldloc.s	V_5 (5)
+        CilOpCodes.Callvirt,    // 39	0062	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 40	0067	callvirt	instance void [mscorlib]System.Reflection.FieldInfo::SetValue(object, object)
+        CilOpCodes.Ldloc_1,     // 41	006C	ldloc.1
+    };
 
+    public CilOpCode CilOpCode => CilOpCodes.Stfld;
+
+    public bool MatchEntireBody => false;
+
+    public bool Verify(VMOpCode vmOpCode, int index)
+    {
+        var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
+        if (instructions.Count < 40) return false;
+        return (instructions[40].Operand as SerializedMemberReference)!.FullName == "System.Void System.Reflection.FieldInfo::SetValue(System.Object, System.Object)";
+    }
+}
+
+internal record Stsfld : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloc_1,     // 15	002B	ldloc.1
+        CilOpCodes.Ldnull,      // 16	002C	ldnull
+        CilOpCodes.Ldloc_2,     // 17	002D	ldloc.2
+        CilOpCodes.Callvirt,    // 18	002E	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 19	0033	callvirt	instance void [mscorlib]System.Reflection.FieldInfo::SetValue(object, object)
+        CilOpCodes.Ret          // 20	0038	ret
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Stsfld;
+
+    public bool MatchEntireBody => false;
+
+    public bool Verify(VMOpCode vmOpCode, int index)
+    {
+        var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
+        if (instructions.Count < 19) return false;
+        return (instructions[19].Operand as SerializedMemberReference)!.FullName == "System.Void System.Reflection.FieldInfo::SetValue(System.Object, System.Object)";
+    }
+}
 #endregion St
