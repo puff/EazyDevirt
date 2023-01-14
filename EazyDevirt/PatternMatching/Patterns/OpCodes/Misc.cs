@@ -31,3 +31,34 @@ internal record Ldstr : IOpCodePattern
     public bool Verify(VMOpCode vmOpCode, int index) => (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[6].Operand as SerializedMethodDefinition)!.Signature!.ReturnType.FullName 
                                                         == "System.String";
 }
+
+#region Return
+
+internal record EnableReturnFromVMMethodPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Ldc_I4_1,    // 1	0001	ldc.i4.1
+        CilOpCodes.Stfld,       // 2	0002	stfld	bool VM::ReturnFromVMMethod
+        CilOpCodes.Ret          // 3	0007	ret
+    };
+}
+
+internal record Ret : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance void VM::method_103()
+        CilOpCodes.Ret          // 2	0006	ret
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Ret;
+
+    public bool Verify(VMOpCode vmOpCode, int index) =>
+        PatternMatcher.MatchesPattern(new EnableReturnFromVMMethodPattern(),
+            (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[1].Operand as SerializedMethodDefinition)!);
+}
+#endregion Return
+
