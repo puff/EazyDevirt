@@ -96,9 +96,7 @@ internal class OpCodeMapping : Stage
             }
 
             var opCodePat = Ctx.PatternMatcher.FindOpCode(vmOpCode);
-            if (opCodePat == null)
-                Ctx.Console.Warning($"Failed to identify vm opcode [{vmOpCode.VirtualCode}, {vmOpCode.CilOperandType} ({vmOpCode.VirtualOperandType})");
-            else
+            if (opCodePat != null)
             {
                 vmOpCode.IsIdentified = true;
                 vmOpCode.IsSpecial = vmOpCode.IsSpecial;
@@ -107,12 +105,12 @@ internal class OpCodeMapping : Stage
                 else
                     vmOpCode.CilOpCode = opCodePat.CilOpCode;
             }
+            else if (Ctx.Options.VeryVeryVerbose)
+                Ctx.Console.Warning($"Failed to identify vm opcode [{vmOpCode}]");
 
             Ctx.PatternMatcher.SetOpCodeValue(vmOpCode.VirtualCode, vmOpCode);
-
-            if (Ctx.Options.VeryVeryVerbose)
-                Ctx.Console.Info(vmOpCode);
-            else if (Ctx.Options.VeryVerbose && vmOpCode.IsIdentified)
+            
+            if (vmOpCode.IsIdentified && Ctx.Options.VeryVeryVerbose)
                 Ctx.Console.Info(vmOpCode);
         }
         
