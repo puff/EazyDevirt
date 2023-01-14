@@ -33,7 +33,6 @@ internal record Ldstr : IOpCodePattern
 }
 
 #region Return
-
 internal record EnableReturnFromVMMethodPattern : IPattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -50,7 +49,7 @@ internal record Ret : IOpCodePattern
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     {
         CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
-        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance void VM::method_103()
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance void VM::EnableReturnFromVMMethod()
         CilOpCodes.Ret          // 2	0006	ret
     };
 
