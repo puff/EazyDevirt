@@ -98,7 +98,15 @@ internal class MethodDisassembler : Stage
                 break;
             }
 
-            var operand = ReadOperand(vmOpCode, vmMethod);
+            object? operand;
+            if (vmOpCode.IsSpecial)
+            {
+                ResolveSpecialCilOpCode(vmOpCode);
+                operand = ReadSpecialOperand(vmOpCode, vmMethod);
+            }
+            else
+                operand = ReadOperand(vmOpCode, vmMethod);
+
 
             // TODO: When adding resolved instructions, make sure to set cil opcode to Nop and operand to null if !vmOpCode.IsIdentified
 
@@ -117,7 +125,13 @@ internal class MethodDisassembler : Stage
             CilOperandType.InlineVar => IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, VMStreamReader.ReadUInt16()) : GetLocal(vmMethod, VMStreamReader.ReadUInt16()),
             CilOperandType.ShortInlineVar => IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, VMStreamReader.ReadByte()) : GetLocal(vmMethod, VMStreamReader.ReadByte()),
             CilOperandType.InlineTok => ResolveInlineTok(vmOpCode),
-            
+            _ => null
+        };
+
+    private object? ReadSpecialOperand(VMOpCode vmOpCode, VMMethod method) =>
+        vmOpCode.SpecialOpCode switch
+        {
+            // SpecialOpCode.EazCall => Resolver.ResolveEazCall(VMStreamReader.ReadInt32Special()),
             _ => null
         };
 
@@ -125,10 +139,16 @@ internal class MethodDisassembler : Stage
         vmOpCode.CilOpCode.OperandType switch
         {
             CilOperandType.InlineString => Resolver.ResolveString(VMStreamReader.ReadInt32Special()),
-            
             _ => Resolver.ResolveToken(VMStreamReader.ReadInt32Special())
         };
 
+    private static void ResolveSpecialCilOpCode(VMOpCode vmOpCode) =>
+        vmOpCode.CilOpCode = vmOpCode.SpecialOpCode switch
+        {
+            SpecialOpCode.EazCall => CilOpCodes.Call,
+            _ => vmOpCode.CilOpCode
+        };
+    
     private static ITypeDefOrRef GetArgument(VMMethod vmMethod, int index) => (index < vmMethod.MethodInfo.VMParameters.Count ? vmMethod.MethodInfo.VMParameters[index].Type : null)!;
 
     private static ITypeDefOrRef GetLocal(VMMethod vmMethod, int index) => (index < vmMethod.MethodInfo.VMLocals.Count ? vmMethod.MethodInfo.VMLocals[index].Type : null)!;
