@@ -31,7 +31,10 @@ internal class PatternMatcher
         
         foreach (var pat in OpCodePatterns)
         {
-            if (!Matches(pat, vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions, index) || !pat.Verify(vmOpCode, index)) continue;
+            if ((pat.MatchEntireBody 
+                    ? !Matches(pat, vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions, index) 
+                    : GetAllMatchingInstructions(pat, vmOpCode.SerializedDelegateMethod, index).Count <= 0)
+                      || !pat.Verify(vmOpCode, index)) continue;
             
             // if (!pattern.ExpectsMultiple)
             OpCodePatterns.Remove(pat);
@@ -44,7 +47,7 @@ internal class PatternMatcher
     private static bool Matches(IPattern pattern, CilInstructionCollection instructions, int index)
     {
         var pat = pattern.Pattern;
-        if (index + pat.Count > instructions.Count || pattern.MatchEntireBody && pat.Count != instructions.Count) return false;
+        if (index + pat.Count > instructions.Count || (pattern.MatchEntireBody && pat.Count != instructions.Count)) return false;
         
         for (var i = 0; i < pat.Count; i++)
         {
@@ -98,7 +101,7 @@ internal class PatternMatcher
         if (index + pat.Count > instructions.Count) return new List<CilInstruction[]>();
 
         var matchingInstructions = new List<CilInstruction[]>();
-        for (var i = index; i < instructions.Count; i += pat.Count)
+        for (var i = index; i < instructions.Count; i++)
         {
             var current = new List<CilInstruction>();
 

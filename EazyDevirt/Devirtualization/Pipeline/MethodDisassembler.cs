@@ -91,8 +91,7 @@ internal class MethodDisassembler : Stage
             if (!vmOpCode.HasVirtualCode)
             {
                 if (Ctx.Options.VeryVerbose)
-                    Ctx.Console.Error($"Method {vmMethod.Parent} {vmMethod.EncodedMethodKey}, VM opcode [{vmOpCode}] not identified!");
-                
+                    Ctx.Console.Error($"Method {vmMethod.Parent} {vmMethod.EncodedMethodKey}, VM opcode [{vmOpCode}] not found!");
                 break;
             }
 
@@ -105,6 +104,9 @@ internal class MethodDisassembler : Stage
             else
                 operand = ReadOperand(vmOpCode, vmMethod);
 
+            if (!vmOpCode.IsIdentified && Ctx.Options.VeryVerbose)
+                Ctx.Console.Warning($"Instruction {vmMethod.Instructions.Count} vm opcode not identified [{vmOpCode}]");
+            
             var instruction = new CilInstruction(vmOpCode.CilOpCode, vmOpCode.IsIdentified ? operand : operand); // TODO: remember to switch the alternate to null
             vmMethod.Instructions.Add(instruction);
 

@@ -92,6 +92,7 @@ internal record EazCall : IOpCodePattern
         CilOpCodes.Cgt_Un,      // 8	0014	cgt.un
         CilOpCodes.Ldloc_0,     // 9	0016	ldloc.0
         CilOpCodes.Ldc_I4,      // 10	0017	ldc.i4	0x40000000
+                                // ...
     };
 
     public CilOpCode CilOpCode => CilOpCodes.Call;
