@@ -30,7 +30,7 @@ internal enum VMInlineOperandType
     Type = 0,
     Field = 1,
     Method = 2,
-    UnknownType = 3,
+    EazCall = 3,
     UserString = 4
 }
 

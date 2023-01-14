@@ -1,5 +1,6 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Signatures.Types.Parsing;
+using EazyDevirt.Architecture;
 using EazyDevirt.Architecture.InlineOperands;
 using EazyDevirt.Devirtualization;
 
@@ -78,7 +79,7 @@ internal class Resolver
         
         var declaringType = ResolveType(data.DeclaringType.Position);
         if (declaringType == null)
-            throw new Exception("Unable to resolve vm field type as TypeDef or TypeRef");
+            throw new Exception("Unable to resolve vm method declaring type");
         
         if (declaringType is TypeDefinition definition)
             return definition.Methods.First(f => f.Name == data.Name);
@@ -106,12 +107,34 @@ internal class Resolver
             VMInlineOperandType.Type => ResolveType(position),
             VMInlineOperandType.Field => ResolveField(position),
             VMInlineOperandType.Method => ResolveMethod(position),
-            _ => throw new ArgumentOutOfRangeException(nameof(inlineOperand.Data.Type), inlineOperand.Data.Type, "VM inline operand data is neither Type, Field, nor Method.")
+            _ => throw new ArgumentOutOfRangeException(nameof(inlineOperand.Data.Type), inlineOperand.Data.Type, "VM inline operand data is neither Type, Field, nor Method!")
         };
     }
     
-    // TODO: ResolveUnknownType (eaz call)
-    
+    public MethodDefinition ResolveEazCall(int value)
+    {
+        // var noGenericVars = (value & 0x80000000) != 0; 
+        // var forceResolveGenericVars = (value & 0x40000000) != 0;
+        var position = value & 0x3FFFFFFF;
+
+        Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
+        
+        var methodInfo = new VMMethodInfo(VMStreamReader);
+        
+        var declaringType = ResolveType(methodInfo.VMDeclaringType);
+        if (declaringType == null)
+            throw new Exception("Unable to resolve vm eaz call declaring type");
+        
+        if (declaringType is TypeDefinition definition)
+            return definition.Methods.First(f => f.Name == methodInfo.Name);
+        
+        // TODO: verify if this ever happens, and fix it if it does
+        if (declaringType is TypeReference reference)
+            throw new Exception("VM eaz call declaring type is a TypeRef!");
+        
+        throw new Exception("VM eaz call method declaring type neither TypeDef nor TypeRef!");
+    }
+
     public string ResolveString(int position)
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);

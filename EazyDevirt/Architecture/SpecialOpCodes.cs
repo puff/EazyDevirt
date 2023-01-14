@@ -3,7 +3,7 @@
 /// <summary>
 /// These opcodes pertain to actions within the vm itself.
 /// </summary>
-internal enum SpecialOpCode : uint
+internal enum SpecialOpCodes : uint
 {
     /// <summary>
     /// Used when calling a virtualized method from within another virtualized method.

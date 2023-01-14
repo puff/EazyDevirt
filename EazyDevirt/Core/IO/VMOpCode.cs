@@ -70,7 +70,7 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField = 
     /// <summary>
     /// Associated special opcode.
     /// </summary>
-    public SpecialOpCode? SpecialOpCode { get; set; }
+    public SpecialOpCodes? SpecialOpCode { get; set; }
     
     /// <summary>
     /// Whether or not the virtual instruction was identified with a legitimate CIL or special opcode.
@@ -84,6 +84,6 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField = 
 
     public override string ToString() =>
         $"VirtualCode: {VirtualCode} | OperandType: {CilOperandType} ({VirtualOperandType}) | " +
-        $"CilOpCode: {CilOpCode} | SpecialOpCode: {SpecialOpCode} | " +
+        $"CilOpCode: {CilOpCode} | SpecialOpCodes: {SpecialOpCode} | " +
         $"SerializedInstructionField: {SerializedInstructionField.MetadataToken} | SerializedDelegateMethod: {SerializedDelegateMethod.MetadataToken}";
 }

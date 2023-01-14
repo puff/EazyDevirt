@@ -28,7 +28,7 @@ internal abstract record VMInlineOperandData(VMInlineOperandType Type)
             VMInlineOperandType.Field => new VMFieldData(reader),
             VMInlineOperandType.Method => new VMMethodData(reader),
             VMInlineOperandType.UserString => new VMStringData(reader),
-            VMInlineOperandType.UnknownType => new VMUnknownTypeData(reader),
+            VMInlineOperandType.EazCall => new VMEazCallData(reader),
             _ => throw new ArgumentOutOfRangeException(nameof(operandType), "Not a valid inline operand type!")
         };
     }
@@ -148,14 +148,21 @@ internal record VMStringData : VMInlineOperandData
     }
 }
 
-internal record VMUnknownTypeData : VMInlineOperandData
+internal record VMEazCallData : VMInlineOperandData
 {
-    public int Unknown1 { get; }
-    public int Unknown2 { get; }
+    /// <summary>
+    /// Contains the flags and position of the vm method contained.
+    /// </summary>
+    public int EazCallValue { get; }
+    
+    /// <summary>
+    /// The dictionary key for the method resolver cache.
+    /// </summary>
+    public int CacheKey { get; }
 
-    public VMUnknownTypeData(BinaryReader reader) : base(VMInlineOperandType.UnknownType)
+    public VMEazCallData(BinaryReader reader) : base(VMInlineOperandType.EazCall)
     {
-        Unknown1 = reader.ReadInt32();
-        Unknown2 = reader.ReadInt32();
+        EazCallValue = reader.ReadInt32();
+        CacheKey = reader.ReadInt32();
     }
 }
