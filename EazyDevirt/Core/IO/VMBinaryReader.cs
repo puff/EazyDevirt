@@ -2,7 +2,7 @@
 
 namespace EazyDevirt.Core.IO;
 
-// TODO: The order of the bytes are scrambled across samples. See issue #4
+// TODO: The endianness is scrambled across samples. See issue #4
 internal class VMBinaryReader : BinaryReader
 {
     public override sbyte ReadSByte()
@@ -15,6 +15,19 @@ internal class VMBinaryReader : BinaryReader
     {
         var bytes = ReadBytes(4);
         return (bytes[2] << 8) | (bytes[3] << 16) | bytes[1] | (bytes[0] << 24);
+    }
+    
+    /// <summary>
+    /// Used in reading code instructions.
+    /// </summary>
+    /// <remarks>
+    /// This is from a separate stream, called VMMemoryStream in the sample.
+    /// The endianness of this is also scrambled across samples, see #4.
+    /// </remarks>
+    public int ReadInt32Special()
+    {
+        var bytes = ReadBytes(4);
+        return (bytes[3] << 16) | (bytes[2] << 8) | bytes[1] | (bytes[0] << 24);
     }
 
     public override uint ReadUInt32()

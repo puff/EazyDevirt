@@ -4,8 +4,10 @@ using EazyDevirt.Architecture;
 
 namespace EazyDevirt.Core.IO;
 
-internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField, SerializedMethodDefinition SerializedDelegateMethod)
+internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField = null!, SerializedMethodDefinition SerializedDelegateMethod = null!)
 {
+    public static  VMOpCode DefaultNopOpCode { get; } = new();
+    
     /// <summary>
     /// Instruction field. These are all initialized in the .ctor of the container.
     /// </summary>
@@ -22,9 +24,38 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField, S
     public int VirtualCode { get; set; } 
     
     /// <summary>
-    /// The virtual operand type, set when the instruction field is constructed.
+    /// The virtual operand type integer, set when the instruction field is constructed.
     /// </summary>
     public int VirtualOperandType { get; set; }
+    
+    /// <summary>
+    /// The CIL operand type.
+    /// </summary>
+    // TODO: Implement pattern matching for operand types
+    public CilOperandType CilOperandType
+    {
+        get
+        {
+            return VirtualOperandType switch
+            {
+                0 => CilOperandType.InlineTok,
+                5 => CilOperandType.InlineI,
+                1 => CilOperandType.InlineSwitch,
+                2 => CilOperandType.InlineVar,              // used for both locals and arguments
+                11 => CilOperandType.InlineArgument,        // this doesn't seem to be used, might not be correct 
+                3 => CilOperandType.ShortInlineR,
+                4 => CilOperandType.ShortInlineVar,         // used for both locals and arguments
+                7 => CilOperandType.ShortInlineArgument,    // this doesn't seem to be used, might not be correct
+                6 => CilOperandType.ShortInlineI,
+                8 => CilOperandType.InlineI8,
+                9 => CilOperandType.InlineNone,
+                10 => CilOperandType.InlineBrTarget,        // in eazfuscator, this is unsigned
+                12 => CilOperandType.InlineR,
+
+                _ => throw new ArgumentOutOfRangeException(nameof(VirtualOperandType), VirtualOperandType, "Unknown operand type")
+            };
+        }
+    }
     
     /// <summary>
     /// Whether or not the virtual opcode was successfully extracted from the container .ctor method.
@@ -34,12 +65,12 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField, S
     /// <summary>
     /// Associated CIL opcode.
     /// </summary>
-    public CilOpCode CilOpCode { get; set; }
+    public CilOpCode CilOpCode { get; set; } = CilOpCodes.Nop;
     
     /// <summary>
     /// Associated special opcode.
     /// </summary>
-    public SpecialOpCode SpecialOpCode { get; set; }
+    public SpecialOpCode? SpecialOpCode { get; set; }
     
     /// <summary>
     /// Whether or not the virtual instruction was identified with a legitimate CIL or special opcode.
@@ -52,7 +83,7 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField, S
     public bool IsSpecial { get; set; }
 
     public override string ToString() =>
-        $"VirtualCode: {VirtualCode} | VirtualOperandType: {VirtualOperandType} | " +
-        $"CilOpCode: {CilOpCode} | SpecialOpCode {SpecialOpCode} |" +
+        $"VirtualCode: {VirtualCode} | OperandType: {CilOperandType} ({VirtualOperandType}) | " +
+        $"CilOpCode: {CilOpCode} | SpecialOpCode {SpecialOpCode} | " +
         $"SerializedInstructionField: {SerializedInstructionField.MetadataToken} | SerializedDelegateMethod: {SerializedDelegateMethod.MetadataToken}";
 }

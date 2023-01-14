@@ -6,13 +6,13 @@ namespace EazyDevirt.Abstractions;
 
 internal interface IOpCodePattern : IPattern
 {
-    CilOpCode CilOpCode { get; }
-    SpecialOpCode SpecialOpCode { get; }
-    
+    CilOpCode CilOpCode => CilOpCodes.Nop;
+    SpecialOpCode? SpecialOpCode => null;
+
     /// <summary>
     /// Whether the pattern can translate to CIL opcodes or is a special vm action
     /// </summary>
-    bool IsSpecial { get; }
+    bool IsSpecial => false;
 
     bool Verify(VMOpCode vmOpCode, int index = 0) => Verify(vmOpCode.SerializedDelegateMethod, index);
 }

@@ -30,7 +30,7 @@ internal class VMCipherStream : Stream
     /// <summary>
     /// Inner resource stream
     /// </summary>
-    private MemoryStream ResourceStream { get; }
+    public MemoryStream ResourceStream { get; }
 
     /// <summary>
     /// Rsa/PKSC1 engine for decrypting data.

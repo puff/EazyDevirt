@@ -1,7 +1,7 @@
-﻿using EazyDevirt.Abstractions;
+﻿using AsmResolver.PE.DotNet.Cil;
+using EazyDevirt.Abstractions;
 using EazyDevirt.Architecture;
 using EazyDevirt.Core.IO;
-using Org.BouncyCastle.Crypto.Digests;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
@@ -12,14 +12,13 @@ internal class MethodDisassembler : Stage
     
     private Resolver Resolver { get; set; }
     
-    // private VMOpCode PreviousReadVMOpCode { get; set; }
-    
     public override bool Run()
     {
         if (!Init()) return false;
         
         VMStream = new CryptoStreamV3(Ctx.VMStream, Ctx.MethodCryptoKey, true);
-        VMStreamReader = new VMBinaryReader(VMStream, true);
+        VMStreamReader = new VMBinaryReader(VMStream);
+        
         Resolver = new Resolver(Ctx);
         foreach (var vmMethod in Ctx.VMMethods)
         { 
@@ -33,7 +32,6 @@ internal class MethodDisassembler : Stage
             ReadVMMethod(vmMethod);
         }
         
-        VMStream.Dispose();
         VMStreamReader.Dispose();
         return false;
     }
@@ -45,6 +43,8 @@ internal class MethodDisassembler : Stage
         vmMethod.VMExceptionHandlers = new List<VMExceptionHandler>(VMStreamReader.ReadInt16());
         for (var i = 0; i < vmMethod.VMExceptionHandlers.Capacity; i++)
             vmMethod.VMExceptionHandlers.Add(new VMExceptionHandler(VMStreamReader));
+
+        var codePosition = VMStream.Position;
         
         vmMethod.MethodInfo.DeclaringType = Resolver.ResolveType(vmMethod.MethodInfo.VMDeclaringType);
         vmMethod.MethodInfo.ReturnType = Resolver.ResolveType(vmMethod.MethodInfo.VMReturnType);
@@ -56,6 +56,7 @@ internal class MethodDisassembler : Stage
         if (Ctx.Options.VeryVeryVerbose)
             Ctx.Console.Info(vmMethod);
         
+        VMStream.Seek(codePosition, SeekOrigin.Begin);
         ReadInstructions(vmMethod);
     }
     
@@ -81,17 +82,40 @@ internal class MethodDisassembler : Stage
     private void ReadInstructions(VMMethod vmMethod)
     {
         var codeSize = VMStreamReader.ReadInt32();
+        
         var finalPosition = VMStream.Position + codeSize;
         while (VMStream.Position < finalPosition)
         {
-            // TODO: opcode matching
-            var virtualOpCode = VMStreamReader.ReadInt32();
+            var virtualOpCode = VMStreamReader.ReadInt32Special();
             var vmOpCode = Ctx.PatternMatcher.GetOpCodeValue(virtualOpCode);
-            // PreviousReadVMOpCode = vmOpCode;
-            break;
+            if (!vmOpCode.HasVirtualCode)
+            {
+                if (Ctx.Options.VeryVerbose)
+                    Ctx.Console.Error($"Method {vmMethod.Parent} {vmMethod.EncodedMethodKey}, VM opcode [{vmOpCode}] not identified!");
+                
+                break;
+            }
+
+            var operand = ReadOperand(vmOpCode);
+
+            // TODO: When adding resolved instructions, make sure to set cil opcode to Nop and operand to null if !vmOpCode.IsIdentified
+
+            break; // This is only here because not all operand types have been handled yet, so the stream position won't be set properly
         }
     }
-    
+
+    private object? ReadOperand(VMOpCode vmOpCode) =>
+        vmOpCode.CilOperandType switch
+        {
+            CilOperandType.InlineI => VMStreamReader.ReadInt32Special(),
+            CilOperandType.ShortInlineI => VMStreamReader.ReadSByte(),
+            CilOperandType.InlineI8 => VMStreamReader.ReadInt64(),
+            CilOperandType.InlineR => VMStreamReader.ReadDouble(),
+            CilOperandType.ShortInlineR => VMStreamReader.ReadSingle(),
+
+            _ => null
+        };
+
 #pragma warning disable CS8618
     public MethodDisassembler(DevirtualizationContext ctx) : base(ctx)
     {
