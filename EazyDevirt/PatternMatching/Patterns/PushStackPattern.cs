@@ -21,4 +21,6 @@ internal record PushStackPattern : IPattern
         CilOpCodes.Br,          // 11	0019	br	168 (0208) ldarg.0 
                                 // ...
     };
+    
+    public bool MatchEntireBody => false;
 }

@@ -23,5 +23,8 @@ internal record OpCodeDictionaryAddPattern : IPattern
         CilOpCodes.Newobj,      // 12	0026	newobj	instance void VM/Delegate21::.ctor(object, native int)
         CilOpCodes.Newobj,      // 13	002B	newobj	instance void VM/VMOperand::.ctor(valuetype VMOpCode, class VM/Delegate21)
         CilOpCodes.Callvirt,    // 14	0030	callvirt	instance void class [mscorlib]System.Collections.Generic.Dictionary`2<int32, valuetype VM/VMOperand>::Add(!0, !1)
+                                // ...
     };
+    
+    public bool MatchEntireBody => false;
 }

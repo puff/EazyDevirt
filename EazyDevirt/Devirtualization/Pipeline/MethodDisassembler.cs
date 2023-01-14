@@ -1,7 +1,9 @@
-﻿using AsmResolver.PE.DotNet.Cil;
+﻿using AsmResolver.DotNet;
+using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
 using EazyDevirt.Architecture;
 using EazyDevirt.Core.IO;
+using EazyDevirt.PatternMatching.Patterns.OpCodes;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
@@ -44,7 +46,7 @@ internal class MethodDisassembler : Stage
         for (var i = 0; i < vmMethod.VMExceptionHandlers.Capacity; i++)
             vmMethod.VMExceptionHandlers.Add(new VMExceptionHandler(VMStreamReader));
 
-        var codePosition = VMStream.Position;
+        // var codePosition = VMStream.Position;
         
         vmMethod.MethodInfo.DeclaringType = Resolver.ResolveType(vmMethod.MethodInfo.VMDeclaringType);
         vmMethod.MethodInfo.ReturnType = Resolver.ResolveType(vmMethod.MethodInfo.VMReturnType);
@@ -56,7 +58,7 @@ internal class MethodDisassembler : Stage
         if (Ctx.Options.VeryVeryVerbose)
             Ctx.Console.Info(vmMethod);
         
-        VMStream.Seek(codePosition, SeekOrigin.Begin);
+        // VMStream.Seek(codePosition, SeekOrigin.Begin);
         ReadInstructions(vmMethod);
     }
     
@@ -96,7 +98,7 @@ internal class MethodDisassembler : Stage
                 break;
             }
 
-            var operand = ReadOperand(vmOpCode);
+            var operand = ReadOperand(vmOpCode, vmMethod);
 
             // TODO: When adding resolved instructions, make sure to set cil opcode to Nop and operand to null if !vmOpCode.IsIdentified
 
@@ -104,7 +106,7 @@ internal class MethodDisassembler : Stage
         }
     }
 
-    private object? ReadOperand(VMOpCode vmOpCode) =>
+    private object? ReadOperand(VMOpCode vmOpCode, VMMethod vmMethod) =>
         vmOpCode.CilOperandType switch
         {
             CilOperandType.InlineI => VMStreamReader.ReadInt32Special(),
@@ -112,9 +114,26 @@ internal class MethodDisassembler : Stage
             CilOperandType.InlineI8 => VMStreamReader.ReadInt64(),
             CilOperandType.InlineR => VMStreamReader.ReadDouble(),
             CilOperandType.ShortInlineR => VMStreamReader.ReadSingle(),
-
+            CilOperandType.InlineVar => IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, VMStreamReader.ReadUInt16()) : GetLocal(vmMethod, VMStreamReader.ReadUInt16()),
+            CilOperandType.ShortInlineVar => IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, VMStreamReader.ReadByte()) : GetLocal(vmMethod, VMStreamReader.ReadByte()),
+            CilOperandType.InlineTok => ResolveInlineTok(vmOpCode),
+            
             _ => null
         };
+
+    private object? ResolveInlineTok(VMOpCode vmOpCode) =>
+        vmOpCode.CilOpCode.OperandType switch
+        {
+            CilOperandType.InlineString => Resolver.ResolveString(VMStreamReader.ReadInt32Special()),
+            
+            _ => Resolver.ResolveToken(VMStreamReader.ReadInt32Special())
+        };
+
+    private static ITypeDefOrRef GetArgument(VMMethod vmMethod, int index) => (index < vmMethod.MethodInfo.VMParameters.Count ? vmMethod.MethodInfo.VMParameters[index].Type : null)!;
+
+    private static ITypeDefOrRef GetLocal(VMMethod vmMethod, int index) => (index < vmMethod.MethodInfo.VMLocals.Count ? vmMethod.MethodInfo.VMLocals[index].Type : null)!;
+
+    private static bool IsInlineArgument(CilOpCode opCode) => opCode.OperandType is CilOperandType.InlineArgument or CilOperandType.ShortInlineArgument;
 
 #pragma warning disable CS8618
     public MethodDisassembler(DevirtualizationContext ctx) : base(ctx)

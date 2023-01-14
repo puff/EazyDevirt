@@ -18,6 +18,7 @@ internal record DevirtualizationContext
     public MetadataToken VMResourceGetterMdToken { get; set; }
     public TypeDefinition VMDeclaringType { get; set; }
     public VMCipherStream VMStream { get; set; }
+    public VMCipherStream VMResolverStream { get; set; }
     public int PositionCryptoKey { get; set; }
     public int MethodCryptoKey { get; set; }
     

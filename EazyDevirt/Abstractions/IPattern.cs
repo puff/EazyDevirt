@@ -17,6 +17,11 @@ internal interface IPattern
     bool InterchangeLdcOpCodes => false;
 
     /// <summary>
+    /// Whether the body should only be the pattern.
+    /// </summary>
+    bool MatchEntireBody => true;
+    
+    /// <summary>
     /// Additional verification to ensure the match is valid.
     /// </summary>
     /// <param name="method">Method to match Pattern against</param>

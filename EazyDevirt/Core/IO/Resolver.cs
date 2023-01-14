@@ -10,19 +10,16 @@ internal class Resolver
     public Resolver(DevirtualizationContext ctx)
     {
         Ctx = ctx;
-        // TODO: Maybe make a copy of VMStream just for resolver
-        VMStream = new CryptoStreamV3(Ctx.VMStream, Ctx.MethodCryptoKey, true);
-        VMStreamReader = new VMBinaryReader(VMStream);
+        VMStreamReader = new VMBinaryReader(new CryptoStreamV3(Ctx.VMResolverStream, Ctx.MethodCryptoKey, true));
     }
     
     private DevirtualizationContext Ctx { get; }
     
-    private CryptoStreamV3 VMStream { get; }
     private VMBinaryReader VMStreamReader { get; }
     
     public ITypeDefOrRef ResolveType(int position)
     {
-        VMStream.Seek(position, SeekOrigin.Begin);
+        Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
         
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
@@ -44,7 +41,7 @@ internal class Resolver
     
     public FieldDefinition ResolveField(int position)
     {
-        VMStream.Seek(position, SeekOrigin.Begin);
+        Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
         
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
@@ -70,7 +67,7 @@ internal class Resolver
     
     public MethodDefinition ResolveMethod(int position)
     {
-        VMStream.Seek(position, SeekOrigin.Begin);
+        Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
         
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
@@ -92,12 +89,32 @@ internal class Resolver
         
         throw new Exception("VM method declaring type neither TypeDef nor TypeRef!");
     }
+
+    public IMetadataMember ResolveToken(int position)
+    {
+        Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
+        
+        var inlineOperand = new VMInlineOperand(VMStreamReader);
+        if (inlineOperand.IsToken)
+            return Ctx.Module.LookupMember(inlineOperand.Token);
+
+        if (!inlineOperand.HasData)
+            throw new Exception("VM inline operand expected to have data!");
+
+        return inlineOperand.Data.Type switch
+        {
+            VMInlineOperandType.Type => ResolveType(position),
+            VMInlineOperandType.Field => ResolveField(position),
+            VMInlineOperandType.Method => ResolveMethod(position),
+            _ => throw new ArgumentOutOfRangeException(nameof(inlineOperand.Data.Type), inlineOperand.Data.Type, "VM inline operand data is neither Type, Field, nor Method.")
+        };
+    }
     
-    // TODO: ResolveUnknownType
+    // TODO: ResolveUnknownType (eaz call)
     
     public string ResolveString(int position)
     {
-        VMStream.Seek(position, SeekOrigin.Begin);
+        Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
         
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
