@@ -1,5 +1,5 @@
 ﻿using AsmResolver.DotNet;
-using EazyDevirt.Core.IO;
+using AsmResolver.DotNet.Code.Cil;
 
 namespace EazyDevirt.Architecture;
 
@@ -11,9 +11,13 @@ internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
     public VMMethodInfo MethodInfo { get; set; }
     public List<VMExceptionHandler> VMExceptionHandlers { get; set; }
     
+    public List<CilExceptionHandler> ExceptionHandlers { get; set; }
+    public CilInstructionCollection Instructions { get; set; }
+    
     public override string ToString() =>
         $"Parent: {Parent.MetadataToken} | EncodedMethodKey: {EncodedMethodKey} | MethodKey: 0x{MethodKey:X} | " +
-        $"MethodInfo: [{MethodInfo}] | VMExceptionHandlers: [{string.Join(", ", VMExceptionHandlers)}]";
+        $"MethodInfo: [{MethodInfo}] | VMExceptionHandlers: [{string.Join(", ", VMExceptionHandlers)}] | " +
+        $"Instructions: {Instructions?.Count}";
 }
 
 // TODO: The order of these fields are scrambled across samples. See issue #3

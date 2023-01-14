@@ -7,7 +7,7 @@ namespace EazyDevirt.Abstractions;
 internal interface IOpCodePattern : IPattern
 {
     CilOpCode CilOpCode => CilOpCodes.Nop;
-    SpecialOpCode? SpecialOpCode => null;
+    SpecialOpCodes? SpecialOpCode => null;
 
     /// <summary>
     /// Whether the pattern can translate to CIL opcodes or is a special vm action.

@@ -99,11 +99,9 @@ internal class OpCodeMapping : Stage
             if (opCodePat != null)
             {
                 vmOpCode.IsIdentified = true;
-                vmOpCode.IsSpecial = vmOpCode.IsSpecial;
-                if (vmOpCode.IsSpecial)
-                    vmOpCode.SpecialOpCode = opCodePat.SpecialOpCode;
-                else
-                    vmOpCode.CilOpCode = opCodePat.CilOpCode;
+                vmOpCode.CilOpCode = opCodePat.CilOpCode;
+                vmOpCode.SpecialOpCode = opCodePat.SpecialOpCode;
+                vmOpCode.IsSpecial = opCodePat.IsSpecial;
             }
             else if (Ctx.Options.VeryVeryVerbose)
                 Ctx.Console.Warning($"Failed to identify vm opcode [{vmOpCode}]");
