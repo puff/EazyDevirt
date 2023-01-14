@@ -84,6 +84,6 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField = 
 
     public override string ToString() =>
         $"VirtualCode: {VirtualCode} | OperandType: {CilOperandType} ({VirtualOperandType}) | " +
-        $"CilOpCode: {CilOpCode} | SpecialOpCode {SpecialOpCode} | " +
+        $"CilOpCode: {CilOpCode} | SpecialOpCode: {SpecialOpCode} | " +
         $"SerializedInstructionField: {SerializedInstructionField.MetadataToken} | SerializedDelegateMethod: {SerializedDelegateMethod.MetadataToken}";
 }

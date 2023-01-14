@@ -1,4 +1,5 @@
-﻿using AsmResolver.DotNet.Serialized;
+﻿using AsmResolver.DotNet;
+using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
 using EazyDevirt.Core.IO;
@@ -26,11 +27,12 @@ internal record Call : IOpCodePattern
 
     public CilOpCode CilOpCode => CilOpCodes.Call;
 
-    public bool Verify(VMOpCode vmOpCode, int index) => (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[6].Operand as SerializedMethodDefinition)!.Signature!.ReturnType.FullName 
-                                                        == "System.Reflection.MethodBase";
+    public bool Verify(VMOpCode vmOpCode, int index) => 
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[6].Operand as SerializedMethodDefinition)!
+        .Signature!.ReturnType.FullName == "System.Reflection.MethodBase";
 }
 
-internal record Callvirt : IOpCodePattern
+internal record CallvirtInnerPattern : IPattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     {
@@ -47,11 +49,26 @@ internal record Callvirt : IOpCodePattern
         CilOpCodes.Brfalse_S,   // 10	001C	brfalse.s	63 (0081) ldarg.0
                                 // ...
     };
-    
-    public CilOpCode CilOpCode => CilOpCodes.Callvirt;
 
     public bool MatchEntireBody => false;
 
-    public bool Verify(VMOpCode vmOpCode, int index) => (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[6].Operand as SerializedMethodDefinition)!.Signature!.ReturnType.FullName 
-                                                        == "System.Reflection.MethodBase";
+    public bool Verify(MethodDefinition method, int index) => 
+        (method.CilMethodBody!.Instructions[6].Operand as SerializedMethodDefinition)!
+        .Signature!.ReturnType.FullName == "System.Reflection.MethodBase";
+}
+
+internal record Callvirt : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Ldarg_1,     // 1	0001	ldarg.1
+        CilOpCodes.Callvirt,    // 2	0002	callvirt	instance void VM::method_40(class VMOperandType)
+        CilOpCodes.Ret          // 3	0007	ret
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Callvirt;
+
+    public bool Verify(VMOpCode vmOpCode, int index) =>
+        PatternMatcher.MatchesPattern(new CallvirtInnerPattern(), (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
 }
