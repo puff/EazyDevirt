@@ -1,7 +1,7 @@
 ﻿namespace EazyDevirt.Architecture;
 
 /// <summary>
-/// These opcodes pertain to actions within the vm itself.
+/// These opcodes typically pertain to actions within the vm itself.
 /// </summary>
 internal enum SpecialOpCodes : uint
 {
