@@ -18,4 +18,6 @@ internal record OpCodeCtorPattern : IPattern
     };
 
     public bool InterchangeLdcOpCodes => true;
+    
+    public bool MatchEntireBody => false;
 }

@@ -44,7 +44,7 @@ internal class PatternMatcher
     private static bool Matches(IPattern pattern, CilInstructionCollection instructions, int index)
     {
         var pat = pattern.Pattern;
-        if (index + pat.Count > instructions.Count) return false;
+        if (index + pat.Count > instructions.Count || pattern.MatchEntireBody && pat.Count != instructions.Count) return false;
         
         for (var i = 0; i < pat.Count; i++)
         {
