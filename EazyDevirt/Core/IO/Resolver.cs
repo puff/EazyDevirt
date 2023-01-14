@@ -10,8 +10,9 @@ internal class Resolver
     public Resolver(DevirtualizationContext ctx)
     {
         Ctx = ctx;
+        // TODO: Maybe make a copy of VMStream just for resolver
         VMStream = new CryptoStreamV3(Ctx.VMStream, Ctx.MethodCryptoKey, true);
-        VMStreamReader = new VMBinaryReader(VMStream, true);
+        VMStreamReader = new VMBinaryReader(VMStream);
     }
     
     private DevirtualizationContext Ctx { get; }

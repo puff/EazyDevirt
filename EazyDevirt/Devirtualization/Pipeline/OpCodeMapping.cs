@@ -1,6 +1,5 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Serialized;
-using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
 using EazyDevirt.Core.IO;
 using EazyDevirt.PatternMatching;
@@ -23,7 +22,7 @@ internal class OpCodeMapping : Stage
         }
 
         if (Ctx.Options.VeryVerbose)
-            Ctx.Console.InfoStr("VM OpCode dictionary method", dictMethod.MetadataToken);
+            Ctx.Console.InfoStr("VM opcode dictionary method", dictMethod.MetadataToken);
 
         var dictAddOperations =
             PatternMatcher.GetAllMatchingInstructions(new OpCodeDictionaryAddPattern(), dictMethod, 2);
@@ -46,11 +45,11 @@ internal class OpCodeMapping : Stage
         }
         
         if (Ctx.Options.VeryVerbose)
-            Ctx.Console.InfoStr("VM OpCodes with handlers", vmOpCodes.Count);
+            Ctx.Console.InfoStr("VM opcodes with handlers", vmOpCodes.Count);
 
         if (containerType == null)
         {
-            Ctx.Console.Error("VM OpCode container type cannot be null");
+            Ctx.Console.Error("VM opcode container type cannot be null");
             return false;
         }
 
@@ -59,13 +58,13 @@ internal class OpCodeMapping : Stage
         if (!containerCtor.HasMethodBody || containerCtor.CilMethodBody!.Instructions.Count <
             vmOpCodes.Count * containerCtorPattern.Pattern.Count)
         {
-            Ctx.Console.Error("VM OpCode container .ctor is invalid or too small");
+            Ctx.Console.Error("VM opcode container .ctor is invalid or too small");
             return false;
         }
 
         var containerCtorOpCodes = PatternMatcher.GetAllMatchingInstructions(containerCtorPattern, containerCtor);
         if (Ctx.Options.VeryVerbose)
-            Ctx.Console.InfoStr("Total VM OpCodes found", containerCtorOpCodes.Count);
+            Ctx.Console.InfoStr("Total VM opcode found", containerCtorOpCodes.Count);
         
         foreach (var opCodeFieldInstrs in containerCtorOpCodes)
         {
@@ -75,7 +74,7 @@ internal class OpCodeMapping : Stage
             var matchingVMOpCodes = vmOpCodes.Where(x => x.SerializedInstructionField == opCodeFieldInstrs[4].Operand).ToList();
             if (matchingVMOpCodes.Count <= 0 && Ctx.Options.VeryVerbose)
             {
-                Ctx.Console.InfoStr("Unhandled VM OpCode", $"{opCode}, {operandType}");
+                Ctx.Console.InfoStr("Unhandled VM opcode", $"{opCode}, {operandType}");
                 continue;
             }
             
@@ -92,13 +91,13 @@ internal class OpCodeMapping : Stage
         {
             if (!vmOpCode.HasVirtualCode)
             {
-                Ctx.Console.Warning($"VM OpCode [{vmOpCode}] does not have a virtual code!");
+                Ctx.Console.Warning($"VM opcode [{vmOpCode}] does not have a virtual code!");
                 continue;
             }
 
             var opCodePat = Ctx.PatternMatcher.FindOpCode(vmOpCode);
             if (opCodePat == null)
-                Ctx.Console.Warning($"Failed to find vm opcode [{vmOpCode.VirtualCode}, {vmOpCode.VirtualOperandType}]");
+                Ctx.Console.Warning($"Failed to identify vm opcode [{vmOpCode.VirtualCode}, {vmOpCode.CilOperandType} ({vmOpCode.VirtualOperandType})");
             else
             {
                 vmOpCode.IsIdentified = true;
