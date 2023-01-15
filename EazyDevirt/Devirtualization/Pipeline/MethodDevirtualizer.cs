@@ -35,7 +35,7 @@ internal class MethodDisassembler : Stage
         }
         
         VMStreamReader.Dispose();
-        return false;
+        return true;
     }
     
     private void ReadVMMethod(VMMethod vmMethod)
@@ -52,7 +52,23 @@ internal class MethodDisassembler : Stage
         // TODO: may need to add SortVMExceptionHandlers
         
         ResolveLocalsAndParameters(vmMethod);
+        
         ReadInstructions(vmMethod);
+        
+        // TODO: resolve branch targets
+        
+        // TODO: resolve exception handlers
+
+        vmMethod.Parent.CilMethodBody!.LocalVariables.Clear();
+        vmMethod.Locals.ForEach(x => vmMethod.Parent.CilMethodBody.LocalVariables.Add(x));
+
+        vmMethod.Parent.CilMethodBody!.ExceptionHandlers.Clear();
+        vmMethod.ExceptionHandlers.ForEach(x => vmMethod.Parent.CilMethodBody.ExceptionHandlers.Add(x));
+
+        // vmMethod.Parent.CilMethodBody!.VerifyLabelsOnBuild = false;
+        // vmMethod.Parent.CilMethodBody!.ComputeMaxStackOnBuild = false;
+        vmMethod.Parent.CilMethodBody.Instructions.Clear();
+        vmMethod.Instructions.ForEach(x => vmMethod.Parent.CilMethodBody.Instructions.Add(x));
         
         if (Ctx.Options.VeryVeryVerbose)
             Ctx.Console.Info(vmMethod);
@@ -60,24 +76,22 @@ internal class MethodDisassembler : Stage
     
     private void ResolveLocalsAndParameters(VMMethod vmMethod)
     {
-        vmMethod.Parent.CilMethodBody!.LocalVariables.Clear();
         foreach (var local in vmMethod.MethodInfo.VMLocals)
         {
             var type = Resolver.ResolveType(local.VMType)!;
-            // local.Type = Resolver.ResolveType(local.VMType)!;
             vmMethod.Parent.CilMethodBody!.LocalVariables.Add(new CilLocalVariable(type));
 
             // if (Ctx.Options.VeryVeryVerbose)
             //     Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {local.Type.Name}");
         }
         
-        // hopefully the parameters are already in the correct order so we don't need to resolve those
+        // the parameters should already be the correct types and in the correct order so we don't need to resolve those
     }
     
     private void ReadInstructions(VMMethod vmMethod)
     {
-        vmMethod.Instructions = new CilInstructionCollection(vmMethod.Parent.CilMethodBody!);
-        
+        vmMethod.Instructions = new List<CilInstruction>();
+
         var codeSize = VMStreamReader.ReadInt32();
         
         var finalPosition = VMStream.Position + codeSize;
@@ -106,14 +120,7 @@ internal class MethodDisassembler : Stage
             
             var instruction = new CilInstruction(vmOpCode.CilOpCode, vmOpCode.IsIdentified ? operand : operand); // TODO: remember to switch the alternate to null
             vmMethod.Instructions.Add(instruction);
-
-            // break; // This is only here because not all operand types have been handled yet, so the stream position won't be set properly
         }
-
-        // vmMethod.Parent.CilMethodBody!.VerifyLabelsOnBuild = false;
-        // vmMethod.Parent.CilMethodBody!.ComputeMaxStackOnBuild = false;
-        // vmMethod.Parent.CilMethodBody.Instructions.Clear();
-        // vmMethod.Instructions.ToList().ForEach(x => vmMethod.Parent.CilMethodBody.Instructions.Add(x));
     }
 
     private object? ReadOperand(VMOpCode vmOpCode, VMMethod vmMethod) =>
@@ -166,10 +173,9 @@ internal class MethodDisassembler : Stage
     //     };
     
     private static Parameter GetArgument(VMMethod vmMethod, int index) => (index < vmMethod.Parent.Parameters.Count ? vmMethod.Parent.Parameters[index] : null)!;
-    // private static TypeSignature GetArgument(VMMethod vmMethod, int index) => (index < vmMethod.MethodInfo.VMParameters.Count ? vmMethod.MethodInfo.VMParameters[index].Type : null)!;
+    // private static TypeSignature GetArgument(VMMethod vmMethod, int index) => (index < vmMethod.Parameters.Count ? vmMethod.Parameters[index] : null)!;
 
-    private static CilLocalVariable GetLocal(VMMethod vmMethod, int index) => (index < vmMethod.Parent.CilMethodBody!.LocalVariables.Count ? vmMethod.Parent.CilMethodBody.LocalVariables[index] : null)!;
-    // private static TypeSignature GetLocal(VMMethod vmMethod, int index) => (index < vmMethod.MethodInfo.VMLocals.Count ? vmMethod.MethodInfo.VMLocals[index].Type : null)!;
+    private static CilLocalVariable GetLocal(VMMethod vmMethod, int index) => (index < vmMethod.Locals.Count ? vmMethod.Locals[index] : null)!;
 
     private static bool IsInlineArgument(CilOpCode opCode) => opCode.OperandType is CilOperandType.InlineArgument or CilOperandType.ShortInlineArgument;
 

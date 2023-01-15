@@ -1,7 +1,7 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Code.Cil;
-using AsmResolver.DotNet.Collections;
 using AsmResolver.DotNet.Signatures.Types;
+using AsmResolver.PE.DotNet.Cil;
 
 namespace EazyDevirt.Architecture;
 
@@ -13,12 +13,15 @@ internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
     public VMMethodInfo MethodInfo { get; set; }
     public List<VMExceptionHandler> VMExceptionHandlers { get; set; }
     
-    public CilInstructionCollection Instructions { get; set; }
     public List<CilExceptionHandler> ExceptionHandlers { get; set; }
+    // public List<Parameter> Parameters { get; set; }
+    public List<CilLocalVariable> Locals { get; set; }
+    public List<CilInstruction> Instructions { get; set; }
     
     public override string ToString() =>
         $"Parent: {Parent.MetadataToken} | EncodedMethodKey: {EncodedMethodKey} | MethodKey: 0x{MethodKey:X} | " +
         $"MethodInfo: [{MethodInfo}] | VMExceptionHandlers: [{string.Join(", ", VMExceptionHandlers)}] | " +
+        $"ExceptionHandlers: [{string.Join(", ", ExceptionHandlers)} | Locals: {string.Join(", ", Locals)} |" +
         $"Instructions: {Instructions?.Count}";
 }
 
@@ -65,9 +68,7 @@ internal record VMLocal(int VMType)
 {
     public int VMType { get; } = VMType;
     
-    // public TypeSignature Type { get; set; }
-    
-    public override string ToString() => $"VMType: 0x{VMType:X}"; // | Type: {Type.FullName}
+    public override string ToString() => $"VMType: 0x{VMType:X}";
 }
 
 internal record VMParameter(int VMType, bool In)
@@ -75,7 +76,5 @@ internal record VMParameter(int VMType, bool In)
     public int VMType { get; } = VMType;
     public bool In { get; } = In;
     
-    // public TypeSignature Type { get; set; }
-
-    public override string ToString() => $"VMType: 0x{VMType:X} | In: {In}"; // | Type: {Type.FullName}
+    public override string ToString() => $"VMType: 0x{VMType:X} | In: {In}";
 }
