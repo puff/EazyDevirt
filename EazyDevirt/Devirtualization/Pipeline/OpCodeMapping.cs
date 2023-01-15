@@ -64,7 +64,7 @@ internal class OpCodeMapping : Stage
         var dictMethod = FindOpCodeMethod();
         if (dictMethod == null)
         {
-            Ctx.Console.Error("Unable to find dictionary method");
+            Ctx.Console.Error("Unable to find vm opcode dictionary method.");
             return false;
         }
 
@@ -96,7 +96,7 @@ internal class OpCodeMapping : Stage
 
         if (containerType == null)
         {
-            Ctx.Console.Error("VM opcode container type cannot be null");
+            Ctx.Console.Error("VM opcode container type is null.");
             return false;
         }
 
@@ -111,7 +111,7 @@ internal class OpCodeMapping : Stage
 
         var containerCtorOpCodes = PatternMatcher.GetAllMatchingInstructions(containerCtorPattern, containerCtor);
         if (Ctx.Options.VeryVerbose)
-            Ctx.Console.InfoStr("Total VM opcode found", containerCtorOpCodes.Count);
+            Ctx.Console.InfoStr("Total VM opcodes found", containerCtorOpCodes.Count);
         
         foreach (var opCodeFieldInstrs in containerCtorOpCodes)
         {
@@ -133,12 +133,13 @@ internal class OpCodeMapping : Stage
                 vmOpCode.VirtualOperandType = operandType;
             }
         }
-        
+
+        var identified = 0f;
         foreach (var vmOpCode in vmOpCodes)
         {
             if (!vmOpCode.HasVirtualCode)
             {
-                Ctx.Console.Warning($"VM opcode [{vmOpCode}] does not have a virtual code!");
+                Ctx.Console.Warning($"VM opcode [{vmOpCode}] does not have a virtual opcode!");
                 continue;
             }
 
@@ -151,14 +152,19 @@ internal class OpCodeMapping : Stage
                 vmOpCode.IsSpecial = opCodePat.IsSpecial;
             }
             else if (Ctx.Options.VeryVeryVerbose)
-                Ctx.Console.Warning($"Failed to identify vm opcode [{vmOpCode}]");
+                Ctx.Console.Warning($"Failed to identify VM opcode [{vmOpCode}]");
 
             Ctx.PatternMatcher.SetOpCodeValue(vmOpCode.VirtualCode, vmOpCode);
-            
-            if (vmOpCode.IsIdentified && Ctx.Options.VeryVeryVerbose)
+
+            if (!vmOpCode.IsIdentified) continue;
+            identified++;
+            if (Ctx.Options.VeryVeryVerbose)
                 Ctx.Console.Info(vmOpCode);
         }
         
+        if (Ctx.Options.VeryVerbose)
+            Ctx.Console.InfoStr($"VM opcodes identified ({identified / vmOpCodes.Count:P0})", identified);
+                
         return true;
     }
 
