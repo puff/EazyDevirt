@@ -15,6 +15,7 @@ internal class Devirtualizer
             new OpCodeMapping(ctx),
             new MethodDiscovery(ctx),
             new MethodDevirtualizer(ctx),
+            // TODO: add data devirtualizer
         };
     }
     

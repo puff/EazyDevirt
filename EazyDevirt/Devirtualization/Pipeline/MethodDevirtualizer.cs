@@ -63,8 +63,11 @@ internal class MethodDevirtualizer : Stage
         // vmMethod.Parent.CilMethodBody!.ExceptionHandlers.Clear();
         // vmMethod.ExceptionHandlers.ForEach(x => vmMethod.Parent.CilMethodBody.ExceptionHandlers.Add(x));
 
-        // vmMethod.Parent.CilMethodBody!.VerifyLabelsOnBuild = false;
-        // vmMethod.Parent.CilMethodBody!.ComputeMaxStackOnBuild = false;
+
+        // TODO: Remove this when all opcodes are properly handled
+        vmMethod.Parent.CilMethodBody!.VerifyLabelsOnBuild = false;
+        vmMethod.Parent.CilMethodBody!.ComputeMaxStackOnBuild = false;
+
         vmMethod.Parent.CilMethodBody.Instructions.Clear();
         vmMethod.Instructions.ForEach(x => vmMethod.Parent.CilMethodBody.Instructions.Add(x));
         
