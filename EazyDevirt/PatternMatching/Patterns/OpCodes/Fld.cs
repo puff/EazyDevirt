@@ -5,7 +5,7 @@ using EazyDevirt.Core.IO;
 
 namespace EazyDevirt.PatternMatching.Patterns.OpCodes;
 
-#region Ld
+#region Ldfld
 internal record Ldfld : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -28,8 +28,8 @@ internal record Ldfld : IOpCodePattern
     public bool Verify(VMOpCode vmOpCode, int index)
     {
         var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
-        if (instructions.Count < 30) return false;
-        return (instructions[30].Operand as SerializedMemberReference)!.FullName == "System.Object System.Reflection.FieldInfo::GetValue(System.Object)";
+        if (instructions.Count < index + 3) return false;
+        return (instructions[index + 3].Operand as SerializedMemberReference)?.FullName == "System.Object System.Reflection.FieldInfo::GetValue(System.Object)";
     }
 }
 
@@ -53,9 +53,9 @@ internal record Ldflda : IOpCodePattern
     public bool Verify(VMOpCode vmOpCode, int index)
     {
         var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
-        if (instructions.Count < 29) return false;
-        var method = instructions[29].Operand as SerializedMethodDefinition;
-        return method!.Parameters.Count == 3 && method.Parameters[0].ParameterType.FullName == "System.Reflection.FieldInfo";
+        if (instructions.Count < index + 4) return false;
+        var method = instructions[index + 4].Operand as SerializedMethodDefinition;
+        return method?.Parameters.Count == 3 && method.Parameters[0].ParameterType.FullName == "System.Reflection.FieldInfo";
     }
 }
 
@@ -84,7 +84,7 @@ internal record Ldsfld : IOpCodePattern
 
     public CilOpCode CilOpCode => CilOpCodes.Ldsfld;
     
-    public bool Verify(VMOpCode vmOpCode, int index) => (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[11].Operand as SerializedMemberReference)!
+    public bool Verify(VMOpCode vmOpCode, int index) => (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[11].Operand as SerializedMemberReference)?
         .FullName == "System.Object System.Reflection.FieldInfo::GetValue(System.Object)";
 }
 
@@ -106,7 +106,6 @@ internal record Ldsflda : IOpCodePattern
         CilOpCodes.Newobj,      // 11	0017	newobj	instance void Class43::.ctor(class [mscorlib]System.Reflection.FieldInfo, object)
         CilOpCodes.Callvirt,    // 12	001C	callvirt	instance void VM::PushStack(class VMOperandType)
         CilOpCodes.Ret          // 13	0021	ret
-
     };
 
     public CilOpCode CilOpCode => CilOpCodes.Ldsflda;
@@ -114,12 +113,12 @@ internal record Ldsflda : IOpCodePattern
     public bool Verify(VMOpCode vmOpCode, int index)
     {
         var method = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[11].Operand as SerializedMethodDefinition;
-        return method!.Parameters.Count == 2 && method.Parameters[0].ParameterType.FullName == "System.Reflection.FieldInfo";
+        return method?.Parameters.Count == 2 && method.Parameters[0].ParameterType.FullName == "System.Reflection.FieldInfo";
     }
 }
-#endregion Ld
+#endregion Ldfld
 
-#region St
+#region Stfld
 internal record Stfld : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -139,8 +138,8 @@ internal record Stfld : IOpCodePattern
     public bool Verify(VMOpCode vmOpCode, int index)
     {
         var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
-        if (instructions.Count < 40) return false;
-        return (instructions[40].Operand as SerializedMemberReference)!.FullName == "System.Void System.Reflection.FieldInfo::SetValue(System.Object, System.Object)";
+        if (instructions.Count < index + 4) return false;
+        return (instructions[index + 4].Operand as SerializedMemberReference)?.FullName == "System.Void System.Reflection.FieldInfo::SetValue(System.Object, System.Object)";
     }
 }
 
@@ -163,8 +162,8 @@ internal record Stsfld : IOpCodePattern
     public bool Verify(VMOpCode vmOpCode, int index)
     {
         var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
-        if (instructions.Count < 19) return false;
-        return (instructions[19].Operand as SerializedMemberReference)!.FullName == "System.Void System.Reflection.FieldInfo::SetValue(System.Object, System.Object)";
+        if (instructions.Count < index + 4) return false;
+        return (instructions[index + 4].Operand as SerializedMemberReference)?.FullName == "System.Void System.Reflection.FieldInfo::SetValue(System.Object, System.Object)";
     }
 }
-#endregion St
+#endregion Stfld
