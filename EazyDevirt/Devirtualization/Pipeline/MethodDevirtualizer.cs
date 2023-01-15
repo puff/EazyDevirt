@@ -7,7 +7,7 @@ using EazyDevirt.Core.IO;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
-internal class MethodDisassembler : Stage
+internal class MethodDevirtualizer : Stage
 {
     private CryptoStreamV3 VMStream { get; set; }
     private VMBinaryReader VMStreamReader { get; set; }
@@ -201,7 +201,7 @@ internal class MethodDisassembler : Stage
     private static bool IsInlineArgument(CilOpCode opCode) => opCode.OperandType is CilOperandType.InlineArgument or CilOperandType.ShortInlineArgument;
 
 #pragma warning disable CS8618
-    public MethodDisassembler(DevirtualizationContext ctx) : base(ctx)
+    public MethodDevirtualizer(DevirtualizationContext ctx) : base(ctx)
     {
     }
 #pragma warning restore CS8618
