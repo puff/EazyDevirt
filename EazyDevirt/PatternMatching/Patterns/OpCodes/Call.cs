@@ -49,7 +49,6 @@ internal record CallvirtInnerPattern : IPattern
         CilOpCodes.Ldarg_0,     // 8	0016	ldarg.0
         CilOpCodes.Ldfld,       // 9	0017	ldfld	class [mscorlib]System.Type VM::type_2
         CilOpCodes.Brfalse_S,   // 10	001C	brfalse.s	63 (0081) ldarg.0
-                                // ...
     };
 
     public bool MatchEntireBody => false;
