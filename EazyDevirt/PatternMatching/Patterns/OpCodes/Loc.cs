@@ -99,14 +99,16 @@ internal record PushLocalVarAddressToStackPattern : IPattern
         var localVarIndexOperandCtor = instructions[1].Operand as SerializedMethodDefinition;
         if (localVarIndexOperandCtor?.Name != ".ctor") return false;
 
-        var baseType = localVarIndexOperandCtor.DeclaringType!.BaseType?.Resolve();
-        if (baseType == null || baseType.Methods.Count <= 0) return false;
-
-        if (baseType.Methods.Any(m => m.Name != ".ctor" && (m.CilMethodBody?.Instructions.Count != 2 ||
-                                                            m.CilMethodBody?.Instructions[1].OpCode !=
-                                                            CilOpCodes.Throw)))
-            return false;
-        return true;
+        var declaringType = localVarIndexOperandCtor.DeclaringType!;
+        if (declaringType.Fields.Count != 1 ||
+            declaringType.Fields[0].Signature!.FieldType.FullName != "System.Int32") return false;
+        
+        var baseType = declaringType.BaseType?.Resolve();
+        
+        return baseType is { Methods.Count: > 0 } && !baseType.Methods.All(m => m.Name != ".ctor" &&
+            (m.CilMethodBody?.Instructions.Count == 2 ||
+             m.CilMethodBody?.Instructions[1].OpCode ==
+             CilOpCodes.Throw));
     }
 }
 

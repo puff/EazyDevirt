@@ -41,29 +41,27 @@ internal class MethodDisassembler : Stage
     private void ReadVMMethod(VMMethod vmMethod)
     {
         vmMethod.MethodInfo = new VMMethodInfo(VMStreamReader);
-        
-        vmMethod.VMExceptionHandlers = new List<VMExceptionHandler>(VMStreamReader.ReadInt16());
-        for (var i = 0; i < vmMethod.VMExceptionHandlers.Capacity; i++)
-            vmMethod.VMExceptionHandlers.Add(new VMExceptionHandler(VMStreamReader));
+
+        ReadExceptionHandlers(vmMethod);
         
         vmMethod.MethodInfo.DeclaringType = Resolver.ResolveType(vmMethod.MethodInfo.VMDeclaringType)!;
         vmMethod.MethodInfo.ReturnType = Resolver.ResolveType(vmMethod.MethodInfo.VMReturnType)!;
 
-        // TODO: may need to add SortVMExceptionHandlers
+        // may need to add SortVMExceptionHandlers
         
         ResolveLocalsAndParameters(vmMethod);
         
         ReadInstructions(vmMethod);
-        
-        // TODO: resolve branch targets
-        
-        // TODO: resolve exception handlers
+
+        ResolveBranchTargets(vmMethod);
+
+        ResolveExceptionHandlers(vmMethod);
 
         vmMethod.Parent.CilMethodBody!.LocalVariables.Clear();
         vmMethod.Locals.ForEach(x => vmMethod.Parent.CilMethodBody.LocalVariables.Add(x));
 
-        vmMethod.Parent.CilMethodBody!.ExceptionHandlers.Clear();
-        vmMethod.ExceptionHandlers.ForEach(x => vmMethod.Parent.CilMethodBody.ExceptionHandlers.Add(x));
+        // vmMethod.Parent.CilMethodBody!.ExceptionHandlers.Clear();
+        // vmMethod.ExceptionHandlers.ForEach(x => vmMethod.Parent.CilMethodBody.ExceptionHandlers.Add(x));
 
         // vmMethod.Parent.CilMethodBody!.VerifyLabelsOnBuild = false;
         // vmMethod.Parent.CilMethodBody!.ComputeMaxStackOnBuild = false;
@@ -74,12 +72,25 @@ internal class MethodDisassembler : Stage
             Ctx.Console.Info(vmMethod);
     }
     
+    private void ReadExceptionHandlers(VMMethod vmMethod)
+    {
+        vmMethod.VMExceptionHandlers = new List<VMExceptionHandler>(VMStreamReader.ReadInt16());
+        for (var i = 0; i < vmMethod.VMExceptionHandlers.Capacity; i++)
+            vmMethod.VMExceptionHandlers.Add(new VMExceptionHandler(VMStreamReader));
+
+        vmMethod.VMExceptionHandlers.Sort((first, second) =>
+            first.HandlerStart == second.HandlerStart
+                ? second.HandlerStart.CompareTo(first.FilterStart)
+                : first.HandlerStart.CompareTo(second.HandlerStart));
+    }
+    
     private void ResolveLocalsAndParameters(VMMethod vmMethod)
     {
+        vmMethod.Locals = new List<CilLocalVariable>();
         foreach (var local in vmMethod.MethodInfo.VMLocals)
         {
             var type = Resolver.ResolveType(local.VMType)!;
-            vmMethod.Parent.CilMethodBody!.LocalVariables.Add(new CilLocalVariable(type));
+            vmMethod.Locals.Add(new CilLocalVariable(type));
 
             // if (Ctx.Options.VeryVeryVerbose)
             //     Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {local.Type.Name}");
@@ -91,10 +102,9 @@ internal class MethodDisassembler : Stage
     private void ReadInstructions(VMMethod vmMethod)
     {
         vmMethod.Instructions = new List<CilInstruction>();
-
         var codeSize = VMStreamReader.ReadInt32();
-        
         var finalPosition = VMStream.Position + codeSize;
+        
         while (VMStream.Position < finalPosition)
         {
             var virtualOpCode = VMStreamReader.ReadInt32Special();
@@ -121,6 +131,17 @@ internal class MethodDisassembler : Stage
             var instruction = new CilInstruction(vmOpCode.CilOpCode, vmOpCode.IsIdentified ? operand : operand); // TODO: remember to switch the alternate to null
             vmMethod.Instructions.Add(instruction);
         }
+    }
+
+    private void ResolveBranchTargets(VMMethod vmMethod)
+    {
+        // TODO: resolve branch targets
+    }
+    
+    private void ResolveExceptionHandlers(VMMethod vmMethod)
+    {
+        vmMethod.ExceptionHandlers = new List<CilExceptionHandler>();
+        // TODO: resolve cil exception handlers from vm exception handlers
     }
 
     private object? ReadOperand(VMOpCode vmOpCode, VMMethod vmMethod) =>
