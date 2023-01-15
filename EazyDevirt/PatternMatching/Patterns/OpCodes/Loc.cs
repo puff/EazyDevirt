@@ -4,6 +4,7 @@ using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
 using EazyDevirt.Core.IO;
 using EazyDevirt.Devirtualization;
+// ReSharper disable InconsistentNaming
 
 namespace EazyDevirt.PatternMatching.Patterns.OpCodes;
 
