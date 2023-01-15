@@ -148,6 +148,9 @@ internal record VMStringData : VMInlineOperandData
     }
 }
 
+/// <summary>
+/// Eaz call operand data.
+/// </summary>
 internal record VMEazCallData : VMInlineOperandData
 {
     /// <summary>

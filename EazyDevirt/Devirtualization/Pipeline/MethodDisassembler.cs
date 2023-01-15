@@ -1,5 +1,5 @@
-﻿using AsmResolver.DotNet;
-using AsmResolver.DotNet.Code.Cil;
+﻿using AsmResolver.DotNet.Code.Cil;
+using AsmResolver.DotNet.Collections;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Abstractions;
 using EazyDevirt.Architecture;
@@ -46,8 +46,8 @@ internal class MethodDisassembler : Stage
         for (var i = 0; i < vmMethod.VMExceptionHandlers.Capacity; i++)
             vmMethod.VMExceptionHandlers.Add(new VMExceptionHandler(VMStreamReader));
         
-        vmMethod.MethodInfo.DeclaringType = Resolver.ResolveType(vmMethod.MethodInfo.VMDeclaringType);
-        vmMethod.MethodInfo.ReturnType = Resolver.ResolveType(vmMethod.MethodInfo.VMReturnType);
+        vmMethod.MethodInfo.DeclaringType = Resolver.ResolveType(vmMethod.MethodInfo.VMDeclaringType)!;
+        vmMethod.MethodInfo.ReturnType = Resolver.ResolveType(vmMethod.MethodInfo.VMReturnType)!;
 
         // TODO: may need to add SortVMExceptionHandlers
         
@@ -60,21 +60,18 @@ internal class MethodDisassembler : Stage
     
     private void ResolveLocalsAndParameters(VMMethod vmMethod)
     {
+        vmMethod.Parent.CilMethodBody!.LocalVariables.Clear();
         foreach (var local in vmMethod.MethodInfo.VMLocals)
         {
-            local.Type = Resolver.ResolveType(local.VMType);
-         
+            var type = Resolver.ResolveType(local.VMType)!;
+            // local.Type = Resolver.ResolveType(local.VMType)!;
+            vmMethod.Parent.CilMethodBody!.LocalVariables.Add(new CilLocalVariable(type));
+
             // if (Ctx.Options.VeryVeryVerbose)
             //     Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {local.Type.Name}");
         }
         
-        foreach (var parameter in vmMethod.MethodInfo.VMParameters)
-        {
-            parameter.Type = Resolver.ResolveType(parameter.VMType);
-            
-            // if (Ctx.Options.VeryVeryVerbose)
-            //     Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Parameter: {parameter.Type.Name}");
-        }
+        // hopefully the parameters are already in the correct order so we don't need to resolve those
     }
     
     private void ReadInstructions(VMMethod vmMethod)
@@ -112,6 +109,11 @@ internal class MethodDisassembler : Stage
 
             // break; // This is only here because not all operand types have been handled yet, so the stream position won't be set properly
         }
+
+        // vmMethod.Parent.CilMethodBody!.VerifyLabelsOnBuild = false;
+        // vmMethod.Parent.CilMethodBody!.ComputeMaxStackOnBuild = false;
+        // vmMethod.Parent.CilMethodBody.Instructions.Clear();
+        // vmMethod.Instructions.ToList().ForEach(x => vmMethod.Parent.CilMethodBody.Instructions.Add(x));
     }
 
     private object? ReadOperand(VMOpCode vmOpCode, VMMethod vmMethod) =>
@@ -163,9 +165,11 @@ internal class MethodDisassembler : Stage
     //         _ => vmOpCode.CilOpCode
     //     };
     
-    private static ITypeDefOrRef GetArgument(VMMethod vmMethod, int index) => (index < vmMethod.MethodInfo.VMParameters.Count ? vmMethod.MethodInfo.VMParameters[index].Type : null)!;
+    private static Parameter GetArgument(VMMethod vmMethod, int index) => (index < vmMethod.Parent.Parameters.Count ? vmMethod.Parent.Parameters[index] : null)!;
+    // private static TypeSignature GetArgument(VMMethod vmMethod, int index) => (index < vmMethod.MethodInfo.VMParameters.Count ? vmMethod.MethodInfo.VMParameters[index].Type : null)!;
 
-    private static ITypeDefOrRef GetLocal(VMMethod vmMethod, int index) => (index < vmMethod.MethodInfo.VMLocals.Count ? vmMethod.MethodInfo.VMLocals[index].Type : null)!;
+    private static CilLocalVariable GetLocal(VMMethod vmMethod, int index) => (index < vmMethod.Parent.CilMethodBody!.LocalVariables.Count ? vmMethod.Parent.CilMethodBody.LocalVariables[index] : null)!;
+    // private static TypeSignature GetLocal(VMMethod vmMethod, int index) => (index < vmMethod.MethodInfo.VMLocals.Count ? vmMethod.MethodInfo.VMLocals[index].Type : null)!;
 
     private static bool IsInlineArgument(CilOpCode opCode) => opCode.OperandType is CilOperandType.InlineArgument or CilOperandType.ShortInlineArgument;
 
