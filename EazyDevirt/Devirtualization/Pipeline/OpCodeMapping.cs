@@ -163,7 +163,7 @@ internal class OpCodeMapping : Stage
         }
         
         if (Ctx.Options.VeryVerbose)
-            Ctx.Console.InfoStr($"VM opcodes identified ({identified / vmOpCodes.Count:P0})", identified);
+            Ctx.Console.InfoStr($"VM opcodes identified ({identified / vmOpCodes.Count:P})", identified);
                 
         return true;
     }

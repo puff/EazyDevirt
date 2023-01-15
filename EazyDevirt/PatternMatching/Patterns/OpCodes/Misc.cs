@@ -89,3 +89,24 @@ internal record Ldnull : IOpCodePattern
     }
 }
 #endregion Ldnull
+
+internal record Dup : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PeekStack()
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Ldloc_0,     // 4	0008	ldloc.0
+        CilOpCodes.Callvirt,    // 5	0009	callvirt	instance class VMOperandType VMOperandType::vmethod_3()
+        CilOpCodes.Callvirt,    // 6	000E	callvirt	instance void VM::PushStack(class VMOperandType)
+        CilOpCodes.Ret          // 7	0013	ret
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Dup;
+
+    public bool Verify(VMOpCode vmOpCode, int index) =>
+        PatternMatcher.MatchesPattern(new PeekStackPattern(),
+            (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[1].Operand as SerializedMethodDefinition)!);
+}
