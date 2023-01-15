@@ -4,12 +4,59 @@ using EazyDevirt.Abstractions;
 using EazyDevirt.Core.IO;
 using EazyDevirt.PatternMatching;
 using EazyDevirt.PatternMatching.Patterns;
+using EazyDevirt.PatternMatching.Patterns.OpCodes;
+
 // ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
 internal class OpCodeMapping : Stage
 {
+    private protected override bool Init()
+    {
+        var executeVMMethodPattern = new ExecuteVMMethodPattern();
+        var executeVMMethod =
+            Ctx.VMDeclaringType.Methods.FirstOrDefault(method =>
+                PatternMatcher.GetAllMatchingInstructions(executeVMMethodPattern, method).Count >= 1);
+        
+        if (executeVMMethod == null)
+        {
+            Ctx.Console.Error("Failed to find ExecuteVMMethod method!");
+            return false;
+        }
+
+        Ctx.VMExecuteVMMethod = executeVMMethod;
+
+        var argumentFieldMatches =
+            PatternMatcher.GetAllMatchingInstructions(new ArgumentFieldPattern(), executeVMMethod);
+        if (argumentFieldMatches.Count <= 0)
+        {
+            Ctx.Console.Error("Failed to find VM Arguments field!");
+            return false;
+        }
+
+        if (argumentFieldMatches.First()[1].Operand is not SerializedFieldDefinition argumentField)
+        {
+            Ctx.Console.Error("VM Arguments field is not correct!");
+            return false;
+        }
+
+        Ctx.VMArgumentsField = argumentField;
+
+        var localField = Ctx.VMDeclaringType.Fields.FirstOrDefault(field =>
+            field != argumentField &&
+            field.Signature!.FieldType.FullName == argumentField.Signature!.FieldType.FullName);
+        
+        if (localField == null)
+        {
+            Ctx.Console.Error("Failed to find VM Locals field!");
+            return false;
+        }
+        
+        Ctx.VMLocalsField = localField;
+        return true;
+    }
+
     public override bool Run()
     {
         if (!Init()) return false;
