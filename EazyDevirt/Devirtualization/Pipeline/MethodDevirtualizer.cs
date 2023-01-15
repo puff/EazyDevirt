@@ -35,7 +35,7 @@ internal class MethodDevirtualizer : Stage
         }
         
         VMStreamReader.Dispose();
-        return true;
+        return false;
     }
     
     private void ReadVMMethod(VMMethod vmMethod)
