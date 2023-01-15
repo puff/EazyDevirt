@@ -18,6 +18,7 @@ internal record DevirtualizationContext
     public ModuleDefinition Module { get; }
     public PatternMatcher PatternMatcher { get; }
     public ConsoleLogger Console { get; }
+    public ReferenceImporter Importer { get; }
     
     public MetadataToken VMResourceGetterMdToken { get; set; }
     
@@ -48,5 +49,6 @@ internal record DevirtualizationContext
         Module = ModuleDefinition.FromFile(Options.Assembly.FullName);
         PatternMatcher = new PatternMatcher();
         Console = new ConsoleLogger();
+        Importer = new ReferenceImporter(Module);
     }
 }
