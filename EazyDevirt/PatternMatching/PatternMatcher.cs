@@ -86,41 +86,6 @@ internal class PatternMatcher
     public static bool MatchesPattern(IPattern pattern, CilInstructionCollection instructions, int index = 0) => Matches(pattern, instructions, index) && pattern.Verify(instructions);
 
     /// <summary>
-    /// Gets all matching instruction sets in a vm opcode delegate method instructions body.
-    /// </summary>
-    /// <param name="pattern">Pattern to match instructions against.</param>
-    /// <param name="vmOpCode">VM Opcode to match body against</param>
-    /// <param name="index">Index of method's instruction body to start matching at.</param>
-    /// <returns>List of matching instruction sets</returns>
-    public static List<CilInstruction[]> GetAllMatchingInstructions(IOpCodePattern pattern, VMOpCode vmOpCode, int index = 0)
-    {
-        if (!vmOpCode.SerializedDelegateMethod.HasMethodBody) return new List<CilInstruction[]>();
-        var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
-        
-        var pat = pattern.Pattern;
-        if (index + pat.Count > instructions.Count) return new List<CilInstruction[]>();
-
-        var matchingInstructions = new List<CilInstruction[]>();
-        for (var i = index; i < instructions.Count; i++)
-        {
-            var current = new List<CilInstruction>();
-
-            for(int j = i, k = 0; j < instructions.Count && k < pat.Count; j++, k++)
-            {
-                var instruction = instructions[j];
-                if (instruction.OpCode != pat[k] && (!instruction.IsLdcI4() || !pattern.InterchangeLdcOpCodes))
-                    break;
-                current.Add(instructions[j]);
-            }
-
-            if (current.Count == pat.Count && pattern.Verify(vmOpCode, index + i))
-                matchingInstructions.Add(current.ToArray());
-        }
-
-        return matchingInstructions;
-    }
-    
-    /// <summary>
     /// Gets all matching instruction sets in a method's instructions body.
     /// </summary>
     /// <param name="pattern">Pattern to match instructions against.</param>
@@ -149,6 +114,41 @@ internal class PatternMatcher
             }
 
             if (current.Count == pat.Count && pattern.Verify(method, index + i))
+                matchingInstructions.Add(current.ToArray());
+        }
+
+        return matchingInstructions;
+    }
+    
+    /// <summary>
+    /// Gets all matching instruction sets in a vm opcode delegate method instructions body.
+    /// </summary>
+    /// <param name="pattern">Pattern to match instructions against.</param>
+    /// <param name="vmOpCode">VM Opcode to match body against</param>
+    /// <param name="index">Index of method's instruction body to start matching at.</param>
+    /// <returns>List of matching instruction sets</returns>
+    public static List<CilInstruction[]> GetAllMatchingInstructions(IOpCodePattern pattern, VMOpCode vmOpCode, int index = 0)
+    {
+        if (!vmOpCode.SerializedDelegateMethod.HasMethodBody) return new List<CilInstruction[]>();
+        var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
+        
+        var pat = pattern.Pattern;
+        if (index + pat.Count > instructions.Count) return new List<CilInstruction[]>();
+
+        var matchingInstructions = new List<CilInstruction[]>();
+        for (var i = index; i < instructions.Count; i++)
+        {
+            var current = new List<CilInstruction>();
+
+            for(int j = i, k = 0; j < instructions.Count && k < pat.Count; j++, k++)
+            {
+                var instruction = instructions[j];
+                if (instruction.OpCode != pat[k] && (!instruction.IsLdcI4() || !pattern.InterchangeLdcOpCodes))
+                    break;
+                current.Add(instructions[j]);
+            }
+
+            if (current.Count == pat.Count && pattern.Verify(vmOpCode, index + i))
                 matchingInstructions.Add(current.ToArray());
         }
 
