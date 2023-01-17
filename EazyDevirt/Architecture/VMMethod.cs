@@ -21,7 +21,7 @@ internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
     public override string ToString() =>
         $"Parent: {Parent.MetadataToken} | EncodedMethodKey: {EncodedMethodKey} | MethodKey: 0x{MethodKey:X} | " +
         $"MethodInfo: [{MethodInfo}] | VMExceptionHandlers: [{string.Join(", ", VMExceptionHandlers)}] | " +
-        $"ExceptionHandlers: [{string.Join(", ", ExceptionHandlers)} | Locals: {string.Join(", ", Locals)} |" +
+        $"ExceptionHandlers: [{string.Join(", ", ExceptionHandlers)}] | Locals: [{string.Join(", ", Locals)}] | " +
         $"Instructions: {Instructions?.Count}";
 }
 
