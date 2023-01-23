@@ -53,7 +53,10 @@ internal class PatternMatcher
         {
             if (pat[i] == CilOpCodes.Nop)
                 continue;
-            if (instructions[i + index].OpCode != pat[i] && (!pattern.InterchangeLdcOpCodes || !instructions[i + index].IsLdcI4()))
+            if (instructions[i + index].OpCode != pat[i] 
+                && (!pattern.InterchangeLdcOpCodes || !instructions[i + index].IsLdcI4())
+                && (!pattern.InterchangeLdlocOpCodes || !instructions[i + index].IsLdloc())
+                && (!pattern.InterchangeStlocOpCodes || !instructions[i + index].IsStloc()))
                 return false;
         }
 
