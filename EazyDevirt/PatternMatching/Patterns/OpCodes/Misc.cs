@@ -162,3 +162,27 @@ internal record Newobj : IOpCodePattern
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
 }
 #endregion Newobj
+
+#region Pop
+
+internal record Pop : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class Class20 VM::PopStack()
+        CilOpCodes.Pop,         // 2	0006	pop
+        CilOpCodes.Ret          // 3	0007	ret
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Pop;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0)
+    {
+        var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions;
+        return instructions![2].OpCode == CilOpCodes.Pop && PatternMatcher.GetAllMatchingInstructions(
+            new PopStackPattern(),
+            (instructions[1].Operand as SerializedMethodDefinition)!).Count == 1;
+    }
+}
+#endregion Pop
