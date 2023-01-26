@@ -49,6 +49,8 @@ internal record DevirtualizationContext
         Module = ModuleDefinition.FromFile(Options.Assembly.FullName);
         PatternMatcher = new PatternMatcher();
         Console = new ConsoleLogger();
-        Importer = new ReferenceImporter(Module);
+        Importer = Module.DefaultImporter;
+        // hacky fix for resolved types within current assembly / module
+        Importer.ImportScope(new AssemblyReference(Module.Assembly!));
     }
 }
