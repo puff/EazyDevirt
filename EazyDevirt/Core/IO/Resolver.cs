@@ -37,28 +37,28 @@ internal class Resolver
             return null;
         }
 
-        var assembly = typeSignature.Scope?.GetAssembly()!;
-        var assemblyResolver = Ctx.Module.MetadataResolver.AssemblyResolver;
-        if (!assemblyResolver.HasCached(assembly))
-        {
-            if (assembly.FullName == Ctx.Module.Assembly!.FullName)
-            {
-                // it works, okay?
-                assemblyResolver.AddToCache(assembly, Ctx.Module.Assembly);
-                assembly.ImportWith(Ctx.Importer);
-            }
-            else
-            {
-                var assemblyDefinition = assemblyResolver.Resolve(assembly);
-
-                if (assemblyDefinition == null)
-                {
-                    Ctx.Console.Error("Failed resolving assembly " + assembly.FullName);
-                    return null;
-                }
-            }
-        }
-
+        // var assembly = typeSignature.Scope?.GetAssembly()!;
+        // var assemblyResolver = Ctx.Module.MetadataResolver.AssemblyResolver;
+        // if (!assemblyResolver.HasCached(assembly))
+        // {
+        //     if (assembly.FullName == Ctx.Module.Assembly!.FullName)
+        //     {
+        //         // it works, okay?
+        //         assemblyResolver.AddToCache(assembly, Ctx.Module.Assembly);
+        //         assembly.ImportWith(Ctx.Importer);
+        //     }
+        //     else
+        //     {
+        //         var assemblyDefinition = assemblyResolver.Resolve(assembly);
+        //
+        //         if (assemblyDefinition == null)
+        //         {
+        //             Ctx.Console.Error("Failed resolving assembly " + assembly.FullName);
+        //             return null;
+        //         }
+        //     }
+        // }
+        
         if (!data.HasGenericTypes)
             return typeSignature;
 
