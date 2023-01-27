@@ -1,8 +1,8 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Signatures.Types;
 using AsmResolver.DotNet.Signatures.Types.Parsing;
-using EazyDevirt.Architecture;
-using EazyDevirt.Architecture.InlineOperands;
+using EazyDevirt.Core.Architecture;
+using EazyDevirt.Core.Architecture.InlineOperands;
 using EazyDevirt.Devirtualization;
 
 namespace EazyDevirt.Core.IO;

@@ -1,6 +1,6 @@
 ﻿using AsmResolver.DotNet.Code.Cil;
 
-namespace EazyDevirt.Architecture;
+namespace EazyDevirt.Core.Architecture;
 
 internal record VMExceptionHandler
 {

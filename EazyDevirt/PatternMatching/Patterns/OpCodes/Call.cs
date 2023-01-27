@@ -1,9 +1,8 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
-using EazyDevirt.Abstractions;
-using EazyDevirt.Architecture;
-using EazyDevirt.Core.IO;
+using EazyDevirt.Core.Abstractions;
+using EazyDevirt.Core.Architecture;
 
 namespace EazyDevirt.PatternMatching.Patterns.OpCodes;
 

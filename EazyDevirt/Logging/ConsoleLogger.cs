@@ -1,4 +1,4 @@
-﻿using EazyDevirt.Abstractions;
+﻿using EazyDevirt.Core.Abstractions;
 
 namespace EazyDevirt.Logging;
 

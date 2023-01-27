@@ -1,4 +1,4 @@
-﻿namespace EazyDevirt.Architecture;
+﻿namespace EazyDevirt.Core.Architecture;
 
 /// <summary>
 /// These opcodes typically pertain to actions within the vm itself.

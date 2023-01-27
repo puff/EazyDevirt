@@ -2,8 +2,8 @@
 using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
 using AsmResolver.PE.DotNet.Metadata.Tables.Rows;
-using EazyDevirt.Abstractions;
-using EazyDevirt.Core.IO;
+using EazyDevirt.Core.Abstractions;
+using EazyDevirt.Core.Architecture;
 using EazyDevirt.Devirtualization;
 
 namespace EazyDevirt.PatternMatching.Patterns.OpCodes;

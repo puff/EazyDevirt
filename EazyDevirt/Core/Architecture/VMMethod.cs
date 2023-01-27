@@ -3,7 +3,7 @@ using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.DotNet.Signatures.Types;
 using AsmResolver.PE.DotNet.Cil;
 
-namespace EazyDevirt.Architecture;
+namespace EazyDevirt.Core.Architecture;
 
 internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
 {

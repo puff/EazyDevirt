@@ -1,6 +1,6 @@
 ﻿using EazyDevirt.Devirtualization;
 
-namespace EazyDevirt.Abstractions;
+namespace EazyDevirt.Core.Abstractions;
 
 internal abstract class Stage
 {

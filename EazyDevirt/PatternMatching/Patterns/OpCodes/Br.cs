@@ -1,7 +1,7 @@
 ﻿using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
-using EazyDevirt.Abstractions;
-using EazyDevirt.Core.IO;
+using EazyDevirt.Core.Abstractions;
+using EazyDevirt.Core.Architecture;
 
 namespace EazyDevirt.PatternMatching.Patterns.OpCodes;
 
@@ -33,7 +33,7 @@ internal record Br : IOpCodePattern
 
     public CilOpCode CilOpCode => CilOpCodes.Br;
 
-    bool IOpCodePattern.Verify(VMOpCode vmOpCode, int index) =>
+    bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new SetBranchIndexPattern(),
             (vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[6].Operand as SerializedMethodDefinition)!);
 }

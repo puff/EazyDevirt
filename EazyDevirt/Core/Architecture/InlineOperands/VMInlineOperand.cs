@@ -1,4 +1,4 @@
-﻿namespace EazyDevirt.Architecture.InlineOperands;
+﻿namespace EazyDevirt.Core.Architecture.InlineOperands;
 
 // thank you to saneki
 

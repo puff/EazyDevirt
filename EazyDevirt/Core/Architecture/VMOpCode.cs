@@ -1,8 +1,7 @@
 ﻿using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
-using EazyDevirt.Architecture;
 
-namespace EazyDevirt.Core.IO;
+namespace EazyDevirt.Core.Architecture;
 
 internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField = null!, SerializedMethodDefinition SerializedDelegateMethod = null!)
 {
