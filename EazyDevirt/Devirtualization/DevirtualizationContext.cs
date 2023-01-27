@@ -1,7 +1,6 @@
 ﻿using AsmResolver.DotNet;
-using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Metadata.Tables;
-using EazyDevirt.Architecture;
+using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.IO;
 using EazyDevirt.Devirtualization.Options;
 using EazyDevirt.Logging;

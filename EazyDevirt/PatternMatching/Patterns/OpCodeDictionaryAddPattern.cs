@@ -1,5 +1,5 @@
 ﻿using AsmResolver.PE.DotNet.Cil;
-using EazyDevirt.Abstractions;
+using EazyDevirt.Core.Abstractions;
 
 namespace EazyDevirt.PatternMatching.Patterns;
 

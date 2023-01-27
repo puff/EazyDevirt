@@ -1,8 +1,8 @@
 ﻿using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.DotNet.Collections;
 using AsmResolver.PE.DotNet.Cil;
-using EazyDevirt.Abstractions;
-using EazyDevirt.Architecture;
+using EazyDevirt.Core.Abstractions;
+using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.IO;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
