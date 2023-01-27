@@ -63,15 +63,15 @@ internal class MethodDevirtualizer : Stage
         // vmMethod.Parent.CilMethodBody!.ExceptionHandlers.Clear();
         // vmMethod.ExceptionHandlers.ForEach(x => vmMethod.Parent.CilMethodBody.ExceptionHandlers.Add(x));
 
-
         // TODO: Remove this when all opcodes are properly handled
         vmMethod.Parent.CilMethodBody!.VerifyLabelsOnBuild = false;
         vmMethod.Parent.CilMethodBody!.ComputeMaxStackOnBuild = false;
 
         vmMethod.Parent.CilMethodBody.Instructions.Clear();
         vmMethod.Instructions.ForEach(x => vmMethod.Parent.CilMethodBody.Instructions.Add(x));
+        // vmMethod.Parent.CilMethodBody.Instructions.CalculateOffsets();
         
-        if (Ctx.Options.VeryVeryVerbose)
+        if (Ctx.Options.VeryVerbose)
             Ctx.Console.Info(vmMethod);
     }
     
@@ -101,7 +101,7 @@ internal class MethodDevirtualizer : Stage
         
         // the parameters should already be the correct types and in the correct order so we don't need to resolve those
     }
-    
+
     private void ReadInstructions(VMMethod vmMethod)
     {
         vmMethod.Instructions = new List<CilInstruction>();
@@ -138,9 +138,45 @@ internal class MethodDevirtualizer : Stage
 
     private void ResolveBranchTargets(VMMethod vmMethod)
     {
-        // TODO: resolve branch targets
+        var virtualOffsets = new Dictionary<int, int>(vmMethod.Instructions.Count);
+        var lastCilOffset = 0;
+        var lastOffset = 0;
+        foreach (var ins in vmMethod.Instructions)
+        {
+            if (ins.OpCode == CilOpCodes.Switch)
+            {
+                var offsetsLength = (ins.Operand as uint[])!.Length;
+                lastOffset += 4 * offsetsLength + 8;
+                lastCilOffset += ins.OpCode.Size + 4 + 4 * offsetsLength;
+            }
+            else
+            {
+                lastOffset += ins.OpCode.OperandType == CilOperandType.ShortInlineBrTarget
+                    ? 8
+                    : ins.Size - ins.OpCode.Size + 4;
+                lastCilOffset += ins.Size;
+            }
+
+            virtualOffsets.Add(lastOffset, lastCilOffset);
+        }
+
+        foreach (var ins in vmMethod.Instructions)
+            switch (ins.OpCode.OperandType)
+            {
+                case CilOperandType.InlineBrTarget:
+                case CilOperandType.ShortInlineBrTarget:
+                    ins.Operand = new CilOffsetLabel(virtualOffsets[(int)(uint)ins.Operand!]);
+                    break;
+                case CilOperandType.InlineSwitch:
+                    var offsets = ins.Operand as uint[];
+                    var labels = new ICilLabel[offsets!.Length];
+                    for (var i = 0; i < offsets.Length; i++)
+                        labels[i] = new CilOffsetLabel(virtualOffsets[(int)offsets[i]]);
+                    ins.Operand = labels;
+                    break;
+            }
     }
-    
+
     private void ResolveExceptionHandlers(VMMethod vmMethod)
     {
         vmMethod.ExceptionHandlers = new List<CilExceptionHandler>();
