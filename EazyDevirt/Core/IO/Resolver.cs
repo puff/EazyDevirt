@@ -100,7 +100,10 @@ internal class Resolver
             throw new Exception("Unable to resolve vm method declaring type!");
 
         var typeDef = declaringType.Resolve();
-        var method = typeDef?.Methods.FirstOrDefault(m => m.Name == data.Name);
+        var method = typeDef?.Methods.FirstOrDefault(m => m.Name == data.Name 
+                                                          && m.Parameters.Count == data.Parameters.Length
+                                                          && m.Parameters.Where((p, i) => 
+                                                              p.ParameterType.FullName == ResolveType(data.Parameters[i].Position)?.FullName).Count() == data.Parameters.Length);
         if (method == null)
         {
             Ctx.Console.Error($"Failed to resolve vm method {data.Name}");
