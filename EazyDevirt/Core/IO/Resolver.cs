@@ -84,6 +84,18 @@ internal class Resolver
         return declaringType.Fields.FirstOrDefault(f => f.Name == data.Name);
     }
 
+    private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodData data) =>
+        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name 
+                                                   && m.Parameters.Count == data.Parameters.Length 
+                                                   && m.Parameters.Where((p, i) => 
+                                                       p.ParameterType.FullName == ResolveType(data.Parameters[i].Position)?.FullName).Count() == data.Parameters.Length);
+
+    private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodInfo data) =>
+        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name 
+                                                   && m.Parameters.Count == data.VMParameters.Count 
+                                                   && m.Parameters.Where((p, i) => 
+                                                       p.ParameterType.FullName == ResolveType(data.VMParameters[i].VMType)?.FullName).Count() == data.VMParameters.Count);
+
     public IMethodDescriptor? ResolveMethod(int position)
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
@@ -100,19 +112,14 @@ internal class Resolver
             throw new Exception("Unable to resolve vm method declaring type!");
 
         var typeDef = declaringType.Resolve();
-        var method = typeDef?.Methods.FirstOrDefault(m => m.Name == data.Name 
-                                                          && m.Parameters.Count == data.Parameters.Length
-                                                          && m.Parameters.Where((p, i) => 
-                                                              p.ParameterType.FullName == ResolveType(data.Parameters[i].Position)?.FullName).Count() == data.Parameters.Length);
+        var method = ResolveMethod(typeDef, data);
         if (method == null)
         {
             Ctx.Console.Error($"Failed to resolve vm method {data.Name}");
             return null;
         }
        
-        // TODO: verify declaringType's generic types are working with the resolved method
         var methodDefOrRef = method.ImportWith(Ctx.Importer);
-
         if (!data.HasGenericArguments)
             return methodDefOrRef;
 
@@ -149,7 +156,7 @@ internal class Resolver
         };
     }
     
-    public MethodDefinition? ResolveEazCall(int value)
+    public IMethodDescriptor? ResolveEazCall(int value)
     {
         var noGenericVars = (value & 0x80000000) != 0; 
         // var forceResolveGenericVars = (value & 0x40000000) != 0;
@@ -163,13 +170,21 @@ internal class Resolver
         if (declaringType == null)
             throw new Exception("Unable to resolve vm eaz call declaring type");
 
-        // TODO: generic types support
-        return declaringType.Methods.FirstOrDefault(m => m.Name == methodInfo.Name);
-        // if (!data.HasGenericArguments)
-        //     return GetMethodSignatureFromDeclaringType(declaringType, methodInfo.Name, null);
-        //
+        var method = ResolveMethod(declaringType, methodInfo);
+        if (method == null)
+        {
+            Ctx.Console.Error($"Failed to resolve vm eaz call {methodInfo.Name}");
+            return null;
+        }
+       
+        var methodDefOrRef = method.ImportWith(Ctx.Importer);
+        if (noGenericVars)
+            return methodDefOrRef;
+        
+        return methodDefOrRef;
+        // TODO: verify / add generics support
         // var generics = data.GenericArguments.Select(g => ResolveType(g.Position)!).ToArray();
-        // return GetMethodSignatureFromDeclaringType(declaringType, methodInfo.Name, generics);
+        // return methodDefOrRef.MakeGenericInstanceMethod(generics);
     }
 
     public string ResolveString(int position)
