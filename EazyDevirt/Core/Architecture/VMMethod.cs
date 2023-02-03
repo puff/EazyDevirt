@@ -48,7 +48,7 @@ internal record VMMethodInfo
         BindingFlags = reader.ReadByte();
         VMReturnType = reader.ReadInt32();
 
-        VMLocals = new List<VMLocal>((int)reader.ReadInt16());
+        VMLocals = new List<VMLocal>(reader.ReadInt16());
         for (var i = 0; i < VMLocals.Capacity; i++)
             VMLocals.Add(new VMLocal(reader.ReadInt32()));
         

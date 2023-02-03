@@ -92,6 +92,10 @@ internal sealed class MethodDiscovery : Stage
             if (index == -1)
                 continue;
 
+            // hack fix for virtualized methods using out parameters
+            if (instructions[index + 1].IsStloc())
+                index += 3;
+            
             if (instructions[index + 1].OpCode != CilOpCodes.Ldstr)
             {
                 if (Ctx.Options.Verbose)
