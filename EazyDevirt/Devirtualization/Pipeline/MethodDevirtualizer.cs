@@ -24,9 +24,8 @@ internal class MethodDevirtualizer : Stage
         Resolver = new Resolver(Ctx);
         foreach (var vmMethod in Ctx.VMMethods)
         { 
-            // if (vmMethod.EncodedMethodKey != @"5<]fEBf\76") continue;
-            // if (vmMethod.EncodedMethodKey != @"5<_4mf/boO") continue;
-            
+            if (vmMethod.EncodedMethodKey != @"+m@MBmHj<0") continue;
+
             vmMethod.MethodKey = VMCipherStream.DecodeMethodKey(vmMethod.EncodedMethodKey, Ctx.PositionCryptoKey);
             
             VMStream.Seek(vmMethod.MethodKey, SeekOrigin.Begin);
@@ -156,6 +155,9 @@ internal class MethodDevirtualizer : Stage
                     : ins.Size - ins.OpCode.Size + 4;
                 lastCilOffset += ins.Size;
             }
+            
+            if (ins.OpCode.OperandType != CilOperandType.InlineNone && ins.Operand == null)
+                ins.ReplaceWithNop();
 
             virtualOffsets.Add(lastOffset, lastCilOffset);
         }

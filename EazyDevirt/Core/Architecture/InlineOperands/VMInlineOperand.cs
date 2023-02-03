@@ -10,12 +10,12 @@ internal enum ValueType
     /// <summary>
     /// The Value field holds a raw MetadataToken value.
     /// </summary>
-    Token = 0,
+    Token = 1,
 
     /// <summary>
     /// The Value field holds a position.
     /// </summary>
-    Position = 1
+    Position = 0
 }
 
 /// <summary>
@@ -28,9 +28,9 @@ internal enum ValueType
 internal enum VMInlineOperandType
 {
     Type = 0,
-    Field = 1,
-    Method = 2,
-    EazCall = 3,
+    Field = 2,
+    Method = 3,
+    EazCall = 1,
     UserString = 4
 }
 
