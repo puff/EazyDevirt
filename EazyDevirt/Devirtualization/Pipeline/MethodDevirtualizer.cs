@@ -24,7 +24,7 @@ internal class MethodDevirtualizer : Stage
         Resolver = new Resolver(Ctx);
         foreach (var vmMethod in Ctx.VMMethods)
         { 
-            if (vmMethod.EncodedMethodKey != @"+m@MBmHj<0") continue;
+            // if (vmMethod.EncodedMethodKey != @"+m@MBmHj<0") continue;
 
             vmMethod.MethodKey = VMCipherStream.DecodeMethodKey(vmMethod.EncodedMethodKey, Ctx.PositionCryptoKey);
             
@@ -52,7 +52,12 @@ internal class MethodDevirtualizer : Stage
         
         ReadInstructions(vmMethod);
 
-        ResolveBranchTargets(vmMethod);
+        // just for testing. resolving branch targets won't work if all opcodes aren't resolved.
+        try
+        {
+            ResolveBranchTargets(vmMethod);
+        }
+        catch {}
 
         ResolveExceptionHandlers(vmMethod);
 
