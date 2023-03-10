@@ -46,15 +46,14 @@ internal record VMTypeData : VMInlineOperandData
     public int DeclaringTypeGenericArgumentIndex { get; }
     public VMInlineOperand[] GenericTypes { get; }
     
-    // public string TypeNameWithoutNamespace => TypeName.Contains('.') ? TypeName.Split('.').Last() : string.Empty;
-    //
-    // public string Namespace => TypeName.Contains('.') ? string.Join(".", TypeName.Split('.').Reverse().Skip(1).Reverse().ToArray()) : TypeName;
 
     public string TypeName => Name.Contains(", ") ? Name.Split(',')[0] : Name;
-
-    // public string AssemblyFullName => Name.Substring(TypeName.Length + 2, Name.Length - (TypeName.Length + 2));
-    //
-    // public string AssemblyName => AssemblyFullName.Split(',')[0];
+    public string TypeNameWithoutNamespace => TypeName.Contains('.') ? TypeName.Split('.').Last() : TypeName;
+    
+    public string Namespace => TypeName.Contains('.') ? string.Join(".", TypeName.Split('.').Reverse().Skip(1).Reverse().ToArray()) : string.Empty;
+    
+    public string AssemblyFullName => Name.Substring(TypeName.Length + 2, Name.Length - (TypeName.Length + 2));
+    public string AssemblyName => AssemblyFullName.Split(',')[0];
 
     public VMTypeData(BinaryReader reader) : base(VMInlineOperandType.Type)
     {
@@ -72,7 +71,7 @@ internal record VMTypeData : VMInlineOperandData
 /// </summary>
 internal record VMFieldData : VMInlineOperandData
 {
-    public VMInlineOperand FieldType { get; }
+    public VMInlineOperand DeclaringType { get; }
     public string Name { get; }
     public bool Flags { get; }
     
@@ -88,7 +87,7 @@ internal record VMFieldData : VMInlineOperandData
     
     public VMFieldData(BinaryReader reader) : base(VMInlineOperandType.Field)
     {
-        FieldType = VMInlineOperand.ReadInternal(reader);
+        DeclaringType = VMInlineOperand.ReadInternal(reader);
         Name = reader.ReadString();
         Flags = reader.ReadBoolean();
     }
