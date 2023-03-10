@@ -134,3 +134,34 @@ internal record Pop : IOpCodePattern
     }
 }
 #endregion Pop
+
+internal record Ldtoken : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 33	0064	ldarg.0
+        CilOpCodes.Ldloc_0,     // 34	0065	ldloc.0
+        CilOpCodes.Callvirt,    // 35	0066	callvirt	instance class [mscorlib]System.Reflection.FieldInfo VM::ResolveFieldCache(int32)
+        CilOpCodes.Callvirt,    // 36	006B	callvirt	instance valuetype [mscorlib]System.RuntimeFieldHandle [mscorlib]System.Reflection.FieldInfo::get_FieldHandle()
+        CilOpCodes.Box,         // 37	0070	box	[mscorlib]System.RuntimeFieldHandle
+        CilOpCodes.Stloc_2,     // 38	0075	stloc.2
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Ldtoken;
+
+    public bool MatchEntireBody => false;
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0)
+    {
+        var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions!;
+        var resolveFieldCall = instructions[index + 2].Operand as SerializedMethodDefinition;
+        if (!resolveFieldCall!.Signature!.ReturnsValue ||
+            resolveFieldCall.Signature.ReturnType.FullName != "System.Reflection.FieldInfo")
+            return false;
+        
+        var getFieldHandleCall = instructions[index + 3].Operand as SerializedMemberReference;
+        return getFieldHandleCall!.FullName == "System.RuntimeFieldHandle System.Reflection.FieldInfo::get_FieldHandle()";
+    }
+}
