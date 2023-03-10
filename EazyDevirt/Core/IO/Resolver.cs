@@ -4,6 +4,7 @@ using AsmResolver.DotNet.Signatures.Types;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.Architecture.InlineOperands;
 using EazyDevirt.Devirtualization;
+using Org.BouncyCastle.Asn1.Cmp;
 
 namespace EazyDevirt.Core.IO;
 
@@ -76,11 +77,11 @@ internal class Resolver
         return null;
     }
 
-    // private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodData data) =>
-    //     declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name 
-    //                                                && m.Parameters.Count == data.Parameters.Length 
-    //                                                && m.Parameters.Where((p, i) => 
-    //                                                    p.ParameterType.FullName == ResolveType(data.Parameters[i].Position)?.FullName).Count() == data.Parameters.Length);
+    private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodData data) =>
+        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name 
+                                                   && m.Parameters.Count == data.Parameters.Length 
+                                                   && m.Parameters.Where((p, i) => 
+                                                       p.ParameterType.FullName == ResolveType(data.Parameters[i].Position)?.FullName).Count() == data.Parameters.Length);
 
     private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodInfo data) =>
         declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name 
@@ -106,8 +107,8 @@ internal class Resolver
             return methodSpec?.ImportWith(Ctx.Importer);
         }
         
-        var declaringType = ResolveType(data.DeclaringType.Position);
-        if (declaringType == null)
+        var declaringTypeSig = ResolveType(data.DeclaringType.Position);
+        if (declaringTypeSig == null)
         {
             Ctx.Console.Error($"Unable to resolve declaring type on vm method {data.Name}");
             return null;
@@ -119,8 +120,19 @@ internal class Resolver
             Ctx.Console.Error($"Failed to resolve vm method {data.Name} return type!");
             return null;
         }
+        
+        var declaringType = declaringTypeSig.Resolve();
+        if (declaringType != null)
+        {
+            var methodDef = ResolveMethod(declaringType, data);
+            if (data.HasGenericArguments)
+                return methodDef?
+                    .MakeGenericInstanceMethod(data.GenericArguments.Select(g => ResolveType(g.Position)!).ToArray())
+                    .ImportWith(Ctx.Importer);
+            return methodDef?.ImportWith(Ctx.Importer);
+        }
 
-        var memberRef = declaringType
+        var memberRef = declaringTypeSig
             .ToTypeDefOrRef()
             .CreateMemberReference(data.Name, data.IsStatic
                 ? MethodSignature.CreateStatic(
