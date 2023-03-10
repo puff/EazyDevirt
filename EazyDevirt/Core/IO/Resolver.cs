@@ -4,7 +4,6 @@ using AsmResolver.DotNet.Signatures.Types;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.Architecture.InlineOperands;
 using EazyDevirt.Devirtualization;
-using Org.BouncyCastle.Asn1.Cmp;
 
 namespace EazyDevirt.Core.IO;
 
@@ -41,7 +40,7 @@ internal class Resolver
                                 .FirstOrDefault(x => x.FullName == data.TypeName && x.Scope?.Name == data.AssemblyName))?.ToTypeSignature();
         if (typeDefOrRef != null)
             return typeDefOrRef.ImportWith(Ctx.Importer);
-        
+
         var assemblyRef = Ctx.Module.AssemblyReferences.FirstOrDefault(x => x.Name == data.AssemblyName);
         if (assemblyRef == null)
         {
@@ -113,12 +112,20 @@ internal class Resolver
             Ctx.Console.Error($"Unable to resolve declaring type on vm method {data.Name}");
             return null;
         }
-        
-        var returnType = ResolveType(data.ReturnType.Position);
-        if (returnType == null)
+
+        // there's probably a better way to check if a type is outside the assembly / module
+        if (declaringTypeSig.Scope?.GetAssembly()?.Name != Ctx.Module.Assembly?.Name)
         {
-            Ctx.Console.Error($"Failed to resolve vm method {data.Name} return type!");
-            return null;
+            var importedMemberRef = Ctx.Module.GetImportedMemberReferences().FirstOrDefault(x => x.Name == data.Name);
+            if (importedMemberRef != null)
+            {
+                if (data.HasGenericArguments)
+                    return importedMemberRef
+                        .MakeGenericInstanceMethod(
+                            data.GenericArguments.Select(g => ResolveType(g.Position)!).ToArray())
+                        .ImportWith(Ctx.Importer);
+                return importedMemberRef.ImportWith(Ctx.Importer);
+            }
         }
         
         var declaringType = declaringTypeSig.Resolve();
@@ -130,6 +137,15 @@ internal class Resolver
                     .MakeGenericInstanceMethod(data.GenericArguments.Select(g => ResolveType(g.Position)!).ToArray())
                     .ImportWith(Ctx.Importer);
             return methodDef?.ImportWith(Ctx.Importer);
+        }
+        
+        // stuff below should never execute
+        
+        var returnType = ResolveType(data.ReturnType.Position);
+        if (returnType == null)
+        {
+            Ctx.Console.Error($"Failed to resolve vm method {data.Name} return type!");
+            return null;
         }
 
         var memberRef = declaringTypeSig
