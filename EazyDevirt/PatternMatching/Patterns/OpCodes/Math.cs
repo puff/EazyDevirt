@@ -421,3 +421,118 @@ internal record Div_Un : IOpCodePattern
     }
 }
 #endregion Div
+
+#region Mul
+
+internal record MulOperandsPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloc_0,     // 20	0035	ldloc.0
+        CilOpCodes.Ldloc_1,     // 21	0036	ldloc.1
+        CilOpCodes.Mul_Ovf,     // 22	0037	mul.ovf
+        CilOpCodes.Stloc_2,     // 23	0038	stloc.2
+    };
+
+    public bool MatchEntireBody => false;
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+}
+
+internal record MulOperandsHelperPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Call,        // 1	0001	call	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Call,        // 4	0008	call	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_1,     // 5	000D	stloc.1
+        CilOpCodes.Ldarg_0,     // 6	000E	ldarg.0
+        CilOpCodes.Ldloc_1,     // 7	000F	ldloc.1
+        CilOpCodes.Ldloc_0,     // 8	0010	ldloc.0
+        CilOpCodes.Ldarg_1,     // 9	0011	ldarg.1
+        CilOpCodes.Ldarg_2,     // 10	0012	ldarg.2
+        CilOpCodes.Call,        // 11	0013	call	class VMOperandType VM::MulOperands(class VMOperandType, class VMOperandType, bool, bool)
+        CilOpCodes.Call,        // 12	0018	call	instance void VM::PushStack(class VMOperandType)
+        CilOpCodes.Ret          // 13	001D	ret
+    };
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0)
+    {
+        var mulOperandsMethod = instructions[11].Operand as SerializedMethodDefinition;
+        
+        return PatternMatcher.MatchesPattern(new MulOperandsPattern(), mulOperandsMethod!);
+    }
+}
+
+internal record Mul : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Ldc_I4_0,    // 1	0001	ldc.i4.0
+        CilOpCodes.Ldc_I4_0,    // 2	0002	ldc.i4.0
+        CilOpCodes.Callvirt,    // 3	0003	callvirt	instance void VM::MulOperandsHelper(bool, bool)
+        CilOpCodes.Ret          // 4	0008	ret
+    };
+    
+    public CilOpCode CilOpCode => CilOpCodes.Mul;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0)
+    {
+        var mulOperandsHelperMethod =
+            vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[3].Operand as SerializedMethodDefinition;
+
+        return PatternMatcher.MatchesPattern(new MulOperandsHelperPattern(), mulOperandsHelperMethod!);
+    }
+}
+
+internal record Mul_Ovf : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Ldc_I4_1,    // 1	0001	ldc.i4.1
+        CilOpCodes.Ldc_I4_0,    // 2	0002	ldc.i4.0
+        CilOpCodes.Callvirt,    // 3	0003	callvirt	instance void VM::MulOperandsHelper(bool, bool)
+        CilOpCodes.Ret          // 4	0008	ret
+    };
+    
+    public CilOpCode CilOpCode => CilOpCodes.Mul_Ovf;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0)
+    {
+        var mulOperandsHelperMethod =
+            vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[3].Operand as SerializedMethodDefinition;
+
+        return PatternMatcher.MatchesPattern(new MulOperandsHelperPattern(), mulOperandsHelperMethod!);
+    }
+}
+
+internal record Mul_Ovf_Un : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Ldc_I4_1,    // 1	0001	ldc.i4.1
+        CilOpCodes.Ldc_I4_1,    // 2	0002	ldc.i4.1
+        CilOpCodes.Callvirt,    // 3	0003	callvirt	instance void VM::MulOperandsHelper(bool, bool)
+        CilOpCodes.Ret          // 4	0008	ret
+    };
+    
+    public CilOpCode CilOpCode => CilOpCodes.Mul_Ovf_Un;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0)
+    {
+        var mulOperandsHelperMethod =
+            vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[3].Operand as SerializedMethodDefinition;
+
+        return PatternMatcher.MatchesPattern(new MulOperandsHelperPattern(), mulOperandsHelperMethod!);
+    }
+}
+#endregion Mul
