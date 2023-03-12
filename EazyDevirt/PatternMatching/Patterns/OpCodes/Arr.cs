@@ -64,3 +64,123 @@ internal record Ldlen : IOpCodePattern
         };
 }
 
+#region Ldelem
+
+
+#endregion Ldelem
+
+#region Stelem
+
+internal record Stelem_I1 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 80	00E2	ldarg.0
+        CilOpCodes.Ldtoken,     // 81	00E3	ldtoken	[mscorlib]System.SByte
+        CilOpCodes.Call,        // 82	00E8	call	class [mscorlib]System.Type [mscorlib]System.Type::GetTypeFromHandle(valuetype [mscorlib]System.RuntimeTypeHandle)
+        CilOpCodes.Ldloc_0,     // 83	00ED	ldloc.0
+        CilOpCodes.Ldloc_1,     // 84	00EE	ldloc.1
+        CilOpCodes.Ldloc_2,     // 85	00EF	ldloc.2
+        CilOpCodes.Callvirt,    // 86	00F0	callvirt	instance void VM::StelemInner(class [mscorlib]System.Type, object, int64, class [mscorlib]System.Array)
+        CilOpCodes.Ret          // 87	00F5	ret
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Stelem_I1;
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index) =>
+        vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[index + 1].Operand is SerializedTypeReference
+        {
+            FullName: "System.SByte"
+        };
+}
+
+internal record Stelem_I2 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 80	00E2	ldarg.0
+        CilOpCodes.Ldtoken,     // 81	00E3	ldtoken	[mscorlib]System.Int16
+        CilOpCodes.Call,        // 82	00E8	call	class [mscorlib]System.Type [mscorlib]System.Type::GetTypeFromHandle(valuetype [mscorlib]System.RuntimeTypeHandle)
+        CilOpCodes.Ldloc_0,     // 83	00ED	ldloc.0
+        CilOpCodes.Ldloc_1,     // 84	00EE	ldloc.1
+        CilOpCodes.Ldloc_2,     // 85	00EF	ldloc.2
+        CilOpCodes.Callvirt,    // 86	00F0	callvirt	instance void VM::StelemInner(class [mscorlib]System.Type, object, int64, class [mscorlib]System.Array)
+        CilOpCodes.Ret          // 87	00F5	ret
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Stelem_I2;
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index) =>
+        vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[index + 1].Operand is SerializedTypeReference
+        {
+            FullName: "System.Int16"
+        };
+}
+
+internal record Stelem_I4 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 80	00E2	ldarg.0
+        CilOpCodes.Ldtoken,     // 81	00E3	ldtoken	[mscorlib]System.Int32
+        CilOpCodes.Call,        // 82	00E8	call	class [mscorlib]System.Type [mscorlib]System.Type::GetTypeFromHandle(valuetype [mscorlib]System.RuntimeTypeHandle)
+        CilOpCodes.Ldloc_0,     // 83	00ED	ldloc.0
+        CilOpCodes.Ldloc_1,     // 84	00EE	ldloc.1
+        CilOpCodes.Ldloc_2,     // 85	00EF	ldloc.2
+        CilOpCodes.Callvirt,    // 86	00F0	callvirt	instance void VM::StelemInner(class [mscorlib]System.Type, object, int64, class [mscorlib]System.Array)
+        CilOpCodes.Ret          // 87	00F5	ret
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Stelem_I4;
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index) =>
+        vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[index + 1].Operand is SerializedTypeReference
+        {
+            FullName: "System.Int32"
+        };
+}
+
+internal record Stelem_I8 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 80	00E2	ldarg.0
+        CilOpCodes.Ldtoken,     // 81	00E3	ldtoken	[mscorlib]System.Int64
+        CilOpCodes.Call,        // 82	00E8	call	class [mscorlib]System.Type [mscorlib]System.Type::GetTypeFromHandle(valuetype [mscorlib]System.RuntimeTypeHandle)
+        CilOpCodes.Ldloc_0,     // 83	00ED	ldloc.0
+        CilOpCodes.Ldloc_1,     // 84	00EE	ldloc.1
+        CilOpCodes.Ldloc_2,     // 85	00EF	ldloc.2
+        CilOpCodes.Callvirt,    // 86	00F0	callvirt	instance void VM::StelemInner(class [mscorlib]System.Type, object, int64, class [mscorlib]System.Array)
+        CilOpCodes.Ret          // 87	00F5	ret
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Stelem_I8;
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index) =>
+        vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[index + 1].Operand is SerializedTypeReference
+        {
+            FullName: "System.Int64"
+        };
+}
+
+#endregion Stelem
