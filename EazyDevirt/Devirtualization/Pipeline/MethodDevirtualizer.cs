@@ -131,6 +131,11 @@ internal class MethodDevirtualizer : Stage
             if (!vmOpCode.IsIdentified && Ctx.Options.VeryVerbose)
                 Ctx.Console.Warning($"Instruction {vmMethod.Instructions.Count} vm opcode not identified [{vmOpCode}]");
             
+            // TODO: Remember to remove the log for stinds
+            // Log these for now since they're special cases. 
+            if (vmOpCode.CilOpCode.Mnemonic.Contains("stind"))
+                Ctx.Console.Warning($"Placing stind instruction at #{vmMethod.Instructions.Count}");
+            
             var instruction = new CilInstruction(vmOpCode.CilOpCode, vmOpCode.IsIdentified ? operand : operand); // TODO: remember to switch the alternate to null
             vmMethod.Instructions.Add(instruction);
         }

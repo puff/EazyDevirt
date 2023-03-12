@@ -36,8 +36,8 @@ internal class PatternMatcher
                     : GetAllMatchingInstructions(pat, vmOpCode, index).Count <= 0)
                 continue;
             
-            // if (!pattern.ExpectsMultiple)
-            OpCodePatterns.Remove(pat);
+            if (!pat.AllowMultiple)
+                OpCodePatterns.Remove(pat);
             return pat;
         }
 

@@ -14,6 +14,11 @@ internal interface IOpCodePattern : IPattern
     bool IsSpecial => false;
 
     /// <summary>
+    /// Whether the pattern can be matched more than once.
+    /// </summary>
+    bool AllowMultiple => false;
+    
+    /// <summary>
     /// Additional verification to ensure the match is valid.
     /// </summary>
     /// <param name="vmOpCode">VMOpCode the pattern is for</param>
