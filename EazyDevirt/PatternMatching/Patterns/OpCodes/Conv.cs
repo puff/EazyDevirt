@@ -129,7 +129,7 @@ internal record Conv_Ovf_I8 : IOpCodePattern
 
 #region Conv_U
 
-#region Conv_I8
+#region Conv_U8
 
 internal record Conv_U8InnerPattern : IPattern
 {
@@ -180,5 +180,5 @@ internal record Conv_Ovf_U8 : IOpCodePattern
     public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_U8InnerPattern(),
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
 }
-#endregion Conv_I8
+#endregion Conv_U8
 #endregion Conv_U
