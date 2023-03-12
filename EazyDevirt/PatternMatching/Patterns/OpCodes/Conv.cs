@@ -129,6 +129,59 @@ internal record Conv_Ovf_I8 : IOpCodePattern
 
 #region Conv_U
 
+#region Conv_U1
+
+internal record Conv_U1InnerPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloc_0,     // 94	0106	ldloc.0
+        CilOpCodes.Castclass,   // 95	0107	castclass	VMLongOperand
+        CilOpCodes.Callvirt,    // 96	010C	callvirt	instance int64 VMLongOperand::method_3()
+        CilOpCodes.Conv_U1,     // 97	0111	conv.u1
+        CilOpCodes.Stloc_2,     // 98	0112	stloc.2
+    };
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+}
+
+
+internal record Conv_U1 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0 0000 ldarg.0
+        CilOpCodes.Ldc_I4_0,    // 1 0001 ldc.i4.0
+        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_U1Inner(bool)
+        CilOpCodes.Ret          // 3 0007 ret
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Conv_U1;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_U1InnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
+}
+
+internal record Conv_Ovf_U1 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0 0000 ldarg.0
+        CilOpCodes.Ldc_I4_1,    // 1 0001 ldc.i4.1
+        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_U1Inner(bool)
+        CilOpCodes.Ret          // 3 0007 ret
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Conv_Ovf_U1;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_U1InnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
+}
+#endregion Conv_U1
+
 #region Conv_U8
 
 internal record Conv_U8InnerPattern : IPattern
@@ -171,7 +224,7 @@ internal record Conv_Ovf_U8 : IOpCodePattern
     {
         CilOpCodes.Ldarg_0,     // 0 0000 ldarg.0
         CilOpCodes.Ldc_I4_1,    // 1 0001 ldc.i4.1
-        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_I8Inner(bool)
+        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_U8Inner(bool)
         CilOpCodes.Ret          // 3 0007 ret
     };
 
