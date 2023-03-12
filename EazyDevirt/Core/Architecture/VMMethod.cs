@@ -38,8 +38,8 @@ internal record VMMethodInfo
     public List<VMLocal> VMLocals { get; }
     public List<VMParameter> VMParameters { get; }
 
-    public TypeSignature DeclaringType { get; set; }
-    public TypeSignature ReturnType { get; set; }
+    public ITypeDefOrRef DeclaringType { get; set; }
+    public ITypeDefOrRef ReturnType { get; set; }
     
     public VMMethodInfo(BinaryReader reader)
     {

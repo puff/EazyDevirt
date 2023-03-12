@@ -93,7 +93,7 @@ internal class MethodDevirtualizer : Stage
         foreach (var local in vmMethod.MethodInfo.VMLocals)
         {
             var type = Resolver.ResolveType(local.VMType)!;
-            vmMethod.Locals.Add(new CilLocalVariable(type));
+            vmMethod.Locals.Add(new CilLocalVariable(type.ToTypeSignature()));
 
             // if (Ctx.Options.VeryVeryVerbose)
             //     Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {local.Type.Name}");
