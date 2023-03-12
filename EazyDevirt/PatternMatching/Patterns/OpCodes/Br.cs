@@ -33,12 +33,53 @@ internal record Br : IOpCodePattern
 
     public CilOpCode CilOpCode => CilOpCodes.Br;
 
-    bool Verify(VMOpCode vmOpCode, int index) =>
+    public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new SetBranchIndexPattern(),
             (vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[6].Operand as SerializedMethodDefinition)!);
 }
 
-// No br.s opcode
+#region Bgt
+
+internal record BgtInnerPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 97	0102	ldarg.0
+        CilOpCodes.Castclass,   // 98	0103	castclass	VMIntOperand
+        CilOpCodes.Callvirt,    // 99	0108	callvirt	instance int32 VMIntOperand::method_3()
+        CilOpCodes.Ldarg_1,     // 100	010D	ldarg.1
+        CilOpCodes.Castclass,   // 101	010E	castclass	VMIntOperand
+        CilOpCodes.Callvirt,    // 102	0113	callvirt	instance int32 VMIntOperand::method_3()
+        CilOpCodes.Cgt,         // 103	0118	cgt
+        CilOpCodes.Stloc_0,     // 104	011A	stloc.0
+    };
+
+    public bool MatchEntireBody => false;
+}
+
+internal record Bgt : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Callvirt,    // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
+        CilOpCodes.Call,        // 6	000E	call	bool VM::BgtInner(class VMOperandType, class VMOperandType)
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Bgt;
+
+    public bool MatchEntireBody => false;
+    
+    public bool InterchangeLdlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index) => PatternMatcher.MatchesPattern(new BgtInnerPattern(),
+            (vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[6].Operand as SerializedMethodDefinition)!);
+}
+#endregion Bgt
 
 internal record Brtrue : IOpCodePattern
 {
