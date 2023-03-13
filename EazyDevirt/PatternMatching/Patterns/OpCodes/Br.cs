@@ -55,6 +55,8 @@ internal record BgtInnerPattern : IPattern
     };
 
     public bool MatchEntireBody => false;
+    
+    public bool InterchangeStlocOpCodes => true;
 }
 
 internal record Bgt : IOpCodePattern
@@ -99,6 +101,8 @@ internal record BltInnerPattern : IPattern
     };
 
     public bool MatchEntireBody => false;
+    
+    public bool InterchangeStlocOpCodes => true;
 }
 
 internal record Blt : IOpCodePattern
@@ -125,6 +129,50 @@ internal record Blt : IOpCodePattern
         (vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[6].Operand as SerializedMethodDefinition)!);
 }
 #endregion Blt
+
+#region Beq
+
+internal record BeqInnerPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 283	03CC	ldarg.0
+        CilOpCodes.Callvirt,    // 284	03CD	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Ldarg_1,     // 285	03D2	ldarg.1
+        CilOpCodes.Callvirt,    // 286	03D3	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Ceq,         // 287	03D8	ceq
+        CilOpCodes.Stloc_0,     // 288	03DA	stloc.0
+    };
+
+    public bool MatchEntireBody => false;
+    
+    public bool InterchangeStlocOpCodes => true;
+}
+
+internal record Beq : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Callvirt,    // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
+        CilOpCodes.Call,        // 6	000E	call	bool VM::BeqInner(class VMOperandType, class VMOperandType)
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Beq;
+
+    public bool MatchEntireBody => false;
+    
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index) => PatternMatcher.MatchesPattern(new BeqInnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[6].Operand as SerializedMethodDefinition)!);
+}
+#endregion Beq
 
 internal record Brtrue : IOpCodePattern
 {
