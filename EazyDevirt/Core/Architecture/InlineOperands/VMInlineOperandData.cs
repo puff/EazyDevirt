@@ -45,16 +45,9 @@ internal record VMTypeData : VMInlineOperandData
     public int GenericArgumentIndex { get; } 
     public int DeclaringTypeGenericArgumentIndex { get; }
     public VMInlineOperand[] GenericTypes { get; }
-    
 
-    public string TypeName => Name.Contains(", ") ? Name.Split(',')[0] : Name;
-    public string TypeNameWithoutNamespace => TypeName.Contains('.') ? TypeName.Split('.').Last() : TypeName;
+    public TypeName TypeName { get; }
     
-    public string Namespace => TypeName.Contains('.') ? string.Join(".", TypeName.Split('.').Reverse().Skip(1).Reverse().ToArray()) : string.Empty;
-    
-    public string AssemblyFullName => Name.Substring(TypeName.Length + 2, Name.Length - (TypeName.Length + 2));
-    public string AssemblyName => AssemblyFullName.Split(',')[0];
-
     public VMTypeData(BinaryReader reader) : base(VMInlineOperandType.Type)
     {
         Name = reader.ReadString();
@@ -63,6 +56,8 @@ internal record VMTypeData : VMInlineOperandData
         GenericArgumentIndex = reader.ReadInt32();
         DeclaringTypeGenericArgumentIndex = reader.ReadInt32();
         GenericTypes = VMInlineOperand.ReadArrayInternal(reader);
+
+        TypeName = new TypeName(Name);
     }
 }
 
