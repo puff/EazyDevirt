@@ -11,9 +11,11 @@ internal class DevirtualizationOptionsBinder : BinderBase<DevirtualizationOption
     private readonly Option<bool> _preserveAllOption;
     private readonly Option<bool> _keepTypesOption;
     private readonly Option<bool> _saveAnywayOption;
+    private readonly Option<bool> _onlySaveDevirtedOption;
 
     public DevirtualizationOptionsBinder(Argument<FileInfo> assemblyArgument, Argument<DirectoryInfo> outputPathArgument, 
-        Option<int> verbosityOption, Option<bool> preserveAllOption, Option<bool> keepTypesOption, Option<bool> saveAnywayOption)
+        Option<int> verbosityOption, Option<bool> preserveAllOption, Option<bool> keepTypesOption, Option<bool> saveAnywayOption,
+        Option<bool> onlySaveDevirtedOption)
     {
         _assemblyArgument = assemblyArgument;
         _outputPathArgument = outputPathArgument;
@@ -21,6 +23,7 @@ internal class DevirtualizationOptionsBinder : BinderBase<DevirtualizationOption
         _preserveAllOption = preserveAllOption;
         _keepTypesOption = keepTypesOption;
         _saveAnywayOption = saveAnywayOption;
+        _onlySaveDevirtedOption = onlySaveDevirtedOption;
     }
 
     protected override DevirtualizationOptions GetBoundValue(BindingContext bindingContext) =>
@@ -32,5 +35,6 @@ internal class DevirtualizationOptionsBinder : BinderBase<DevirtualizationOption
             PreserveAll = bindingContext.ParseResult.GetValueForOption(_preserveAllOption),
             KeepTypes = bindingContext.ParseResult.GetValueForOption(_keepTypesOption),
             SaveAnyway = bindingContext.ParseResult.GetValueForOption(_saveAnywayOption),
+            OnlySaveDevirted = bindingContext.ParseResult.GetValueForOption(_onlySaveDevirtedOption)
         };
 }

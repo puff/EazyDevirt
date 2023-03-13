@@ -48,4 +48,12 @@ internal record DevirtualizationOptions
  /// Save output even if devirtualization fails
  /// </summary>
  public bool SaveAnyway { get; init; }
+ 
+ /// <summary>
+ /// Only save successfully devirtualized methods
+ /// </summary>
+ /// <remarks>
+ /// This only matters if you're using the Save Anyway option
+ /// </remarks>
+ public bool OnlySaveDevirted { get; init; }
 }
