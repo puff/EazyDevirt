@@ -76,16 +76,26 @@ internal class Resolver
     }
 
     private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodData data) =>
-        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name 
-                                                   && m.Parameters.Count == data.Parameters.Length 
-                                                   && m.Parameters.Where((p, i) => 
-                                                       p.ParameterType.FullName == ResolveType(data.Parameters[i].Position)?.FullName).Count() == data.Parameters.Length);
+        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
+                                                   && (!(m.Signature?.ReturnsValue).GetValueOrDefault() ||
+                                                       m.Signature?.ReturnType.FullName ==
+                                                       ResolveType(data.ReturnType.Position)?.FullName)
+                                                   && m.Signature?.GenericParameterCount == data.GenericArguments.Length
+                                                   && m.Parameters.Count == data.Parameters.Length
+                                                   && m.Parameters.Zip(data.Parameters).All(x =>
+                                                       x.First.ParameterType.FullName ==
+                                                       ResolveType(x.Second.Position)?.FullName));
+
 
     private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodInfo data) =>
-        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name 
-                                                   && m.Parameters.Count == data.VMParameters.Count 
-                                                   && m.Parameters.Where((p, i) => 
-                                                       p.ParameterType.FullName == ResolveType(data.VMParameters[i].VMType)?.FullName).Count() == data.VMParameters.Count);
+        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
+                                                   && (!(m.Signature?.ReturnsValue).GetValueOrDefault() ||
+                                                       m.Signature?.ReturnType.FullName ==
+                                                       ResolveType(data.VMReturnType)?.FullName)
+                                                   && m.Parameters.Count == data.VMParameters.Count
+                                                   && m.Parameters.Zip(data.VMParameters).All(x =>
+                                                       x.First.ParameterType.FullName ==
+                                                       ResolveType(x.Second.VMType)?.FullName));
 
     public IMethodDescriptor? ResolveMethod(int position)
     {
@@ -111,11 +121,29 @@ internal class Resolver
             Ctx.Console.Error($"Unable to resolve declaring type on vm method {data.Name}");
             return null;
         }
+        
+        var returnType = ResolveType(data.ReturnType.Position);
+        if (returnType == null)
+        {
+            Ctx.Console.Error($"Failed to resolve vm method {data.Name} return type!");
+            return null;
+        }
 
         // there's probably a better way to check if a type is outside the assembly / module
         if (declaringTypeSig.Scope?.GetAssembly()?.Name != Ctx.Module.Assembly?.Name)
         {
-            var importedMemberRef = Ctx.Module.GetImportedMemberReferences().FirstOrDefault(x => x.Name == data.Name);
+            var importedMemberRef = Ctx.Module.GetImportedMemberReferences().FirstOrDefault(x =>
+                x.IsMethod
+                && x.DeclaringType?.FullName == declaringTypeSig.FullName
+                && x.Name == data.Name
+                && x.Signature is MethodSignature ms
+                && (!ms.ReturnsValue || ms.ReturnType.FullName == ResolveType(data.ReturnType.Position)?.FullName)
+                && ms.GenericParameterCount == data.GenericArguments.Length
+                && ms.ParameterTypes.Count == data.Parameters.Length
+                && ms.ParameterTypes.Zip(data.Parameters).All(z =>
+                    z.First.FullName ==
+                    ResolveType(z.Second.Position)?.FullName));
+            
             if (importedMemberRef != null)
             {
                 if (data.HasGenericArguments)
@@ -139,21 +167,16 @@ internal class Resolver
         }
         
         // stuff below should never execute
-        
-        var returnType = ResolveType(data.ReturnType.Position);
-        if (returnType == null)
-        {
-            Ctx.Console.Error($"Failed to resolve vm method {data.Name} return type!");
-            return null;
-        }
 
         var memberRef = declaringTypeSig
             .ToTypeDefOrRef()
             .CreateMemberReference(data.Name, data.IsStatic
                 ? MethodSignature.CreateStatic(
-                    returnType.ToTypeSignature(), data.GenericArguments.Length, data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature()))
+                    returnType.ToTypeSignature(), data.GenericArguments.Length,
+                    data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature()))
                 : MethodSignature.CreateInstance(
-                    returnType.ToTypeSignature(), data.GenericArguments.Length, data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature())));
+                    returnType.ToTypeSignature(), data.GenericArguments.Length,
+                    data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature())));
 
         if (data.HasGenericArguments)
             return memberRef
