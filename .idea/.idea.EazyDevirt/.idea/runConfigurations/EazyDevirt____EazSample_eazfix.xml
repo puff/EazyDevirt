@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="EazyDevirt -&gt; EazSample-eazfix" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/EazyDevirt/bin/Debug/net6.0/EazyDevirt.exe" />
-    <option name="PROGRAM_PARAMETERS" value="$PROJECT_DIR$/samples/EazSample/analysis/EazSample-eazfix.dll -v 3 -kt --preserve-all --save-anyway true --only-save-devirted true" />
+    <option name="PROGRAM_PARAMETERS" value="$PROJECT_DIR$/samples/EazSample/analysis/EazSample-eazfix.dll -v 3 -kt --preserve-all --save-anyway true --only-save-devirted false" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/EazyDevirt/bin/Debug/net6.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <option name="USE_EXTERNAL_CONSOLE" value="0" />

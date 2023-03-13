@@ -32,6 +32,9 @@ internal class MethodDevirtualizer : Stage
             VMStream.Seek(vmMethod.MethodKey, SeekOrigin.Begin);
 
             ReadVMMethod(vmMethod);
+            
+            if (Ctx.Options.VeryVerbose)
+                Ctx.Console.Info(vmMethod);
         }
         
         VMStreamReader.Dispose();
@@ -71,9 +74,6 @@ internal class MethodDevirtualizer : Stage
         vmMethod.Parent.CilMethodBody.Instructions.Clear();
         vmMethod.Instructions.ForEach(x => vmMethod.Parent.CilMethodBody.Instructions.Add(x));
         // vmMethod.Parent.CilMethodBody.Instructions.CalculateOffsets();
-        
-        if (Ctx.Options.VeryVerbose)
-            Ctx.Console.Info(vmMethod);
     }
     
     private void ReadExceptionHandlers(VMMethod vmMethod)
@@ -94,7 +94,8 @@ internal class MethodDevirtualizer : Stage
         foreach (var local in vmMethod.MethodInfo.VMLocals)
         {
             var type = Resolver.ResolveType(local.VMType)!;
-            vmMethod.Locals.Add(new CilLocalVariable(type.ToTypeSignature()));
+            var res = type.Resolve();
+            vmMethod.Locals.Add(new CilLocalVariable(type.ToTypeSignature((res?.IsValueType).GetValueOrDefault())));
 
             // if (Ctx.Options.VeryVeryVerbose)
             //     Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {local.Type.Name}");
