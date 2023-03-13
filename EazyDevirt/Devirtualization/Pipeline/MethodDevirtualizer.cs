@@ -30,12 +30,12 @@ internal class MethodDevirtualizer : Stage
             vmMethod.MethodKey = VMCipherStream.DecodeMethodKey(vmMethod.EncodedMethodKey, Ctx.PositionCryptoKey);
             
             VMStream.Seek(vmMethod.MethodKey, SeekOrigin.Begin);
-            
+
             ReadVMMethod(vmMethod);
         }
         
         VMStreamReader.Dispose();
-        return false;
+        return true;
     }
     
     private void ReadVMMethod(VMMethod vmMethod)
@@ -50,8 +50,9 @@ internal class MethodDevirtualizer : Stage
         // may need to add SortVMExceptionHandlers
         
         ResolveLocalsAndParameters(vmMethod);
-        
-        ReadInstructions(vmMethod);
+
+        if (!ReadInstructions(vmMethod) && (!Ctx.Options.SaveAnyway || Ctx.Options.OnlySaveDevirted))
+            return;
 
         ResolveBranchTargets(vmMethod);
 
@@ -102,11 +103,12 @@ internal class MethodDevirtualizer : Stage
         // the parameters should already be the correct types and in the correct order so we don't need to resolve those
     }
 
-    private void ReadInstructions(VMMethod vmMethod)
+    private bool ReadInstructions(VMMethod vmMethod)
     {
         vmMethod.Instructions = new List<CilInstruction>();
         var codeSize = VMStreamReader.ReadInt32();
         var finalPosition = VMStream.Position + codeSize;
+        var success = true;
         
         while (VMStream.Position < finalPosition)
         {
@@ -128,17 +130,24 @@ internal class MethodDevirtualizer : Stage
             else
                 operand = ReadOperand(vmOpCode, vmMethod);
 
-            if (!vmOpCode.IsIdentified && Ctx.Options.VeryVerbose)
-                Ctx.Console.Warning($"Instruction {vmMethod.Instructions.Count} vm opcode not identified [{vmOpCode}]");
-            
+            if (!vmOpCode.IsIdentified)
+            {
+                if (Ctx.Options.VeryVerbose)
+                    Ctx.Console.Warning($"[{vmMethod.Parent.MetadataToken}] Instruction {vmMethod.Instructions.Count} vm opcode not identified [{vmOpCode}]");
+
+                success = false;
+            }
+
             // TODO: Remember to remove the log for stinds
             // Log these for now since they're special cases. 
-            if (vmOpCode.CilOpCode.Mnemonic.Contains("stind"))
+            if (vmOpCode.CilOpCode.Mnemonic.StartsWith("stind"))
                 Ctx.Console.Warning($"Placing stind instruction at #{vmMethod.Instructions.Count}");
             
             var instruction = new CilInstruction(vmOpCode.CilOpCode, vmOpCode.IsIdentified ? operand : operand); // TODO: remember to switch the alternate to null
             vmMethod.Instructions.Add(instruction);
         }
+
+        return success;
     }
 
     private void ResolveBranchTargets(VMMethod vmMethod)
