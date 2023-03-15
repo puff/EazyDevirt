@@ -21,7 +21,12 @@ internal record DevirtualizationContext
     
     public MetadataToken VMResourceGetterMdToken { get; set; }
     
-    
+    /// <summary>
+    /// VM Type fields set in the vm type's constructor.
+    /// Used in pattern matching opcodes.
+    /// </summary>
+    public Dictionary<FieldDefinition, ITypeDefOrRef> VMTypeFields { get; set; }
+
     /// <summary>
     /// VM method locals field.
     /// Used in pattern matching ldloc and stloc opcodes.

@@ -1,6 +1,7 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Signatures;
 using AsmResolver.DotNet.Signatures.Types;
+using AsmResolver.PE.DotNet.Metadata.Tables.Rows;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.Architecture.InlineOperands;
 using EazyDevirt.Devirtualization;
@@ -19,7 +20,24 @@ internal class Resolver
     
     private VMBinaryReader VMStreamReader { get; }
 
-    public TypeSignature? ResolveType(int position)
+    private TypeSignature ApplySigModifiers(TypeSignature baseTypeSig, Stack<string> mods)
+    {
+        while (mods.Count > 0)
+        {
+            var mod = mods.Pop();
+            baseTypeSig = mod switch
+            {
+                "[]" => baseTypeSig.MakeSzArrayType(),
+                "*" => baseTypeSig.MakePointerType(),
+                "&" => baseTypeSig.MakeByReferenceType(),
+                _ => throw new Exception($"Unknown modifier: {mod}")
+            };
+        }
+
+        return baseTypeSig;
+    }
+    
+    public ITypeDefOrRef? ResolveType(int position)
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
 
@@ -28,32 +46,34 @@ internal class Resolver
             throw new Exception("VM inline operand expected to have type data!");
 
         if (inlineOperand.IsToken)
-            return ((ITypeDefOrRef)Ctx.Module.LookupMember(inlineOperand.Token))
-                .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!).ToArray())
-                .ImportWith(Ctx.Importer);
+            return ApplySigModifiers(((ITypeDefOrRef)Ctx.Module.LookupMember(inlineOperand.Token))
+                .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray()),
+                data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
 
                 
         // Try to find type definition or reference
         var typeDefOrRef = ((ITypeDefOrRef?)Ctx.Module.GetAllTypes()
-                                .FirstOrDefault(x => x.FullName == data.TypeName) ??
+                                .FirstOrDefault(x => x.FullName == data.TypeName.Name) ??
                             (ITypeDefOrRef?)Ctx.Module.GetImportedTypeReferences()
-                                .FirstOrDefault(x => x.FullName == data.TypeName && x.Scope?.Name == data.AssemblyName))?.ToTypeSignature();
+                                .FirstOrDefault(x => x.FullName == data.TypeName.Name && x.Scope?.Name == data.TypeName.AssemblyName));
         if (typeDefOrRef != null)
-            return typeDefOrRef.ImportWith(Ctx.Importer);
+            return ApplySigModifiers(typeDefOrRef.ToTypeSignature(), data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
 
-        var assemblyRef = Ctx.Module.AssemblyReferences.FirstOrDefault(x => x.Name == data.AssemblyName);
+        var assemblyRef = Ctx.Module.AssemblyReferences.FirstOrDefault(x => x.Name == data.TypeName.AssemblyName);
         if (assemblyRef == null)
         {
             Ctx.Console.Error($"Failed to find vm type {data.Name} assembly reference!");
             return null!;
         }
 
-        var typeRef = assemblyRef.CreateTypeReference(data.Namespace, data.TypeNameWithoutNamespace);
+        var typeRef = assemblyRef.CreateTypeReference(data.TypeName.Namespace, data.TypeName.NameWithoutNamespace);
+        var typeBaseSig = typeRef.ToTypeSignature();
         if (data.HasGenericTypes)
-            return typeRef
-                .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!).ToArray())
-                .ImportWith(Ctx.Importer);
-        return typeRef.ToTypeSignature().ImportWith(Ctx.Importer);
+            typeBaseSig = typeRef
+                .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature())
+                    .ToArray());
+
+        return ApplySigModifiers(typeBaseSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
     }
     
     public IFieldDescriptor? ResolveField(int position)
@@ -77,16 +97,26 @@ internal class Resolver
     }
 
     private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodData data) =>
-        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name 
-                                                   && m.Parameters.Count == data.Parameters.Length 
-                                                   && m.Parameters.Where((p, i) => 
-                                                       p.ParameterType.FullName == ResolveType(data.Parameters[i].Position)?.FullName).Count() == data.Parameters.Length);
+        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
+                                                   && (!(m.Signature?.ReturnsValue).GetValueOrDefault() ||
+                                                       m.Signature?.ReturnType.FullName ==
+                                                       ResolveType(data.ReturnType.Position)?.FullName)
+                                                   && m.Signature?.GenericParameterCount == data.GenericArguments.Length
+                                                   && m.Parameters.Count == data.Parameters.Length
+                                                   && m.Parameters.Zip(data.Parameters).All(x =>
+                                                       x.First.ParameterType.FullName ==
+                                                       ResolveType(x.Second.Position)?.FullName));
+
 
     private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodInfo data) =>
-        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name 
-                                                   && m.Parameters.Count == data.VMParameters.Count 
-                                                   && m.Parameters.Where((p, i) => 
-                                                       p.ParameterType.FullName == ResolveType(data.VMParameters[i].VMType)?.FullName).Count() == data.VMParameters.Count);
+        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
+                                                   && (!(m.Signature?.ReturnsValue).GetValueOrDefault() ||
+                                                       m.Signature?.ReturnType.FullName ==
+                                                       ResolveType(data.VMReturnType)?.FullName)
+                                                   && m.Parameters.Count == data.VMParameters.Count
+                                                   && m.Parameters.Zip(data.VMParameters).All(x =>
+                                                       x.First.ParameterType.FullName ==
+                                                       ResolveType(x.Second.VMType)?.FullName));
 
     public IMethodDescriptor? ResolveMethod(int position)
     {
@@ -101,45 +131,17 @@ internal class Resolver
             var methodSpec = ((IMethodDescriptor)Ctx.Module.LookupMember(inlineOperand.Token)).Resolve();
             if (data.HasGenericArguments)
                 return methodSpec?
-                    .MakeGenericInstanceMethod(data.GenericArguments.Select(g => ResolveType(g.Position)!).ToArray())
+                    .MakeGenericInstanceMethod(data.GenericArguments.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
                     .ImportWith(Ctx.Importer);
             return methodSpec?.ImportWith(Ctx.Importer);
         }
         
-        var declaringTypeSig = ResolveType(data.DeclaringType.Position);
-        if (declaringTypeSig == null)
+        var declaringTypeDefOrRef = ResolveType(data.DeclaringType.Position);
+        if (declaringTypeDefOrRef == null)
         {
             Ctx.Console.Error($"Unable to resolve declaring type on vm method {data.Name}");
             return null;
         }
-
-        // there's probably a better way to check if a type is outside the assembly / module
-        if (declaringTypeSig.Scope?.GetAssembly()?.Name != Ctx.Module.Assembly?.Name)
-        {
-            var importedMemberRef = Ctx.Module.GetImportedMemberReferences().FirstOrDefault(x => x.Name == data.Name);
-            if (importedMemberRef != null)
-            {
-                if (data.HasGenericArguments)
-                    return importedMemberRef
-                        .MakeGenericInstanceMethod(
-                            data.GenericArguments.Select(g => ResolveType(g.Position)!).ToArray())
-                        .ImportWith(Ctx.Importer);
-                return importedMemberRef.ImportWith(Ctx.Importer);
-            }
-        }
-        
-        var declaringType = declaringTypeSig.Resolve();
-        if (declaringType != null)
-        {
-            var methodDef = ResolveMethod(declaringType, data);
-            if (data.HasGenericArguments)
-                return methodDef?
-                    .MakeGenericInstanceMethod(data.GenericArguments.Select(g => ResolveType(g.Position)!).ToArray())
-                    .ImportWith(Ctx.Importer);
-            return methodDef?.ImportWith(Ctx.Importer);
-        }
-        
-        // stuff below should never execute
         
         var returnType = ResolveType(data.ReturnType.Position);
         if (returnType == null)
@@ -148,17 +150,58 @@ internal class Resolver
             return null;
         }
 
-        var memberRef = declaringTypeSig
-            .ToTypeDefOrRef()
+        // there's probably a better way to check if a type is outside the assembly / module
+        if (declaringTypeDefOrRef.Scope?.GetAssembly()?.Name != Ctx.Module.Assembly?.Name)
+        {
+            var importedMemberRef = Ctx.Module.GetImportedMemberReferences().FirstOrDefault(x =>
+                x.IsMethod
+                && x.DeclaringType?.FullName == declaringTypeDefOrRef.FullName
+                && x.Name == data.Name
+                && x.Signature is MethodSignature ms
+                // TODO: Fix resolving imported member references of methods returning a generic parameter
+                && (!ms.ReturnsValue || ms.ReturnType is GenericParameterSignature || ms.ReturnType.FullName == returnType.FullName)
+                && ms.GenericParameterCount == data.GenericArguments.Length
+                && ms.ParameterTypes.Count == data.Parameters.Length
+                && ms.ParameterTypes.Zip(data.Parameters).All(z =>
+                    z.First.FullName ==
+                    ResolveType(z.Second.Position)?.FullName));
+            
+            if (importedMemberRef != null)
+            {
+                if (data.HasGenericArguments)
+                    return importedMemberRef
+                        .MakeGenericInstanceMethod(
+                            data.GenericArguments.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
+                        .ImportWith(Ctx.Importer);
+                return importedMemberRef.ImportWith(Ctx.Importer);
+            }
+        }
+        
+        var declaringType = declaringTypeDefOrRef.Resolve();
+        if (declaringType != null)
+        {
+            var methodDef = ResolveMethod(declaringType, data);
+            if (data.HasGenericArguments)
+                return methodDef?
+                    .MakeGenericInstanceMethod(data.GenericArguments.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
+                    .ImportWith(Ctx.Importer);
+            return methodDef?.ImportWith(Ctx.Importer);
+        }
+        
+        // stuff below should never execute
+
+        var memberRef = declaringTypeDefOrRef
             .CreateMemberReference(data.Name, data.IsStatic
                 ? MethodSignature.CreateStatic(
-                    returnType, data.GenericArguments.Length, data.Parameters.Select(g => ResolveType(g.Position)!))
+                    returnType.ToTypeSignature(), data.GenericArguments.Length,
+                    data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature()))
                 : MethodSignature.CreateInstance(
-                    returnType, data.GenericArguments.Length, data.Parameters.Select(g => ResolveType(g.Position)!)));
+                    returnType.ToTypeSignature(), data.GenericArguments.Length,
+                    data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature())));
 
         if (data.HasGenericArguments)
             return memberRef
-                .MakeGenericInstanceMethod(data.GenericArguments.Select(g => ResolveType(g.Position)!).ToArray())
+                .MakeGenericInstanceMethod(data.GenericArguments.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
                 .ImportWith(Ctx.Importer);
         return memberRef.ImportWith(Ctx.Importer);
     }

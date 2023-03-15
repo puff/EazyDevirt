@@ -70,6 +70,9 @@ internal static class Program
         var saveAnywayOption = new Option<bool>(new[] { "--save-anyway"}, "Saves output of devirtualizer even if it fails");
         saveAnywayOption.SetDefaultValue(false);
         
+        var onlySaveDevirtedOption = new Option<bool>(new[] { "--only-save-devirted"}, "Only saves successfully devirtualized methods (This option only matters if you use the save anyway option)");
+        onlySaveDevirtedOption.SetDefaultValue(false);
+
         var rootCommand = new RootCommand("EazyDevirt is a tool to automatically restore the original IL code " +
                                           "from an assembly virtualized with Eazfuscator.NET")
         {
@@ -78,12 +81,13 @@ internal static class Program
             verbosityOption,
             preserveAllOption,
             keepTypesOption,
-            saveAnywayOption
+            saveAnywayOption,
+            onlySaveDevirtedOption
         };
         
         rootCommand.SetHandler(Run, 
             new DevirtualizationOptionsBinder(inputArgument, outputArgument, verbosityOption,
-                preserveAllOption, keepTypesOption, saveAnywayOption));
+                preserveAllOption, keepTypesOption, saveAnywayOption, onlySaveDevirtedOption));
         
         return new CommandLineBuilder(rootCommand)
             .UseDefaults()

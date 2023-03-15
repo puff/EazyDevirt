@@ -27,6 +27,35 @@ internal class OpCodeMapping : Stage
 
         Ctx.VMExecuteVMMethod = executeVMMethod;
 
+        Ctx.VMTypeFields = new Dictionary<FieldDefinition, ITypeDefOrRef>();
+        var cctor = Ctx.VMDeclaringType.Methods.FirstOrDefault(x => x.Name == ".cctor");
+        if (cctor == null || cctor.CilMethodBody?.Instructions.Count <= 0)
+        {
+            Ctx.Console.Error("Failed to find VM declaring type cctor method!");
+            return false;
+        }
+
+        var subs = PatternMatcher.GetAllMatchingInstructions(new TypeFieldPattern(), cctor);
+        foreach (var sub in subs)
+        {
+            if (sub[0].Operand is not ITypeDefOrRef typeDefOrRef)
+                continue;
+            
+            if (sub[2].Operand is not FieldDefinition fieldDef)
+                continue;
+
+            if (Ctx.VMTypeFields.ContainsKey(fieldDef))
+            {
+                if (Ctx.Options.VeryVeryVerbose)
+                    Ctx.Console.Warning($"Overwriting {fieldDef.Name} type {Ctx.VMTypeFields[fieldDef].Name} with new type {typeDefOrRef.Name}");
+                Ctx.VMTypeFields[fieldDef] = typeDefOrRef;
+            }
+            else
+                Ctx.VMTypeFields.Add(fieldDef, typeDefOrRef);
+        }
+        if (Ctx.Options.VeryVerbose)
+            Ctx.Console.InfoStr("Type fields found in VM declaring type", Ctx.VMTypeFields.Count);
+
         var argumentFieldMatches =
             PatternMatcher.GetAllMatchingInstructions(new ArgumentFieldPattern(), executeVMMethod);
         if (argumentFieldMatches.Count <= 0)

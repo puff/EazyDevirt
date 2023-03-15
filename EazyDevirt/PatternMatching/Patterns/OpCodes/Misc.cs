@@ -1,5 +1,4 @@
-﻿using AsmResolver.DotNet.Code.Cil;
-using AsmResolver.DotNet.Serialized;
+﻿using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
@@ -112,57 +111,6 @@ internal record Dup : IOpCodePattern
             (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[1].Operand as SerializedMethodDefinition)!);
 }
 
-#region Newobj
-
-internal record RunNewObjectPattern : IPattern
-{
-    public IList<CilOpCode> Pattern => new List<CilOpCode>
-    {
-        CilOpCodes.Ldarg_1,     // 0	0000	ldarg.1
-        CilOpCodes.Castclass,   // 1	0001	castclass	VMIntOperand
-        CilOpCodes.Callvirt,    // 2	0006	callvirt	instance int32 VMIntOperand::method_3()
-        CilOpCodes.Stloc_S,     // 3	000B	stloc.s	V_8 (8)
-        CilOpCodes.Ldarg_0,     // 4	000D	ldarg.0
-        CilOpCodes.Ldloc_S,     // 5	000E	ldloc.s	V_8 (8)
-        CilOpCodes.Call,        // 6	0010	call	instance class [mscorlib]System.Reflection.MethodBase VM::ResolveMethod(int32)
-        CilOpCodes.Stloc_2,     // 7	0015	stloc.2
-        CilOpCodes.Ldloc_2,     // 8	0016	ldloc.2
-        CilOpCodes.Callvirt,    // 9	0017	callvirt	instance class [mscorlib]System.Type [mscorlib]System.Reflection.MemberInfo::get_DeclaringType()
-        CilOpCodes.Stloc_S,     // 10	001C	stloc.s	V_9 (9)
-        CilOpCodes.Ldloc_2,     // 11	001E	ldloc.2
-        CilOpCodes.Callvirt,    // 12	001F	callvirt	instance class [mscorlib]System.Reflection.ParameterInfo[] [mscorlib]System.Reflection.MethodBase::GetParameters()
-                                // ...
-    };
-    
-    public bool MatchEntireBody => false;
-
-    public bool Verify(CilInstructionCollection instructions, int index)
-    {
-        if ((instructions[index + 6].Operand as SerializedMethodDefinition)!.Signature!.ReturnType.FullName != "System.Reflection.MethodBase")
-            return false;
-
-        return PatternMatcher.MatchesPattern(new PushStackPattern(), 
-            (instructions[^2].Operand as SerializedMethodDefinition)!);
-    }
-}
-
-internal record Newobj : IOpCodePattern
-{
-    public IList<CilOpCode> Pattern => new List<CilOpCode>
-    {
-        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
-        CilOpCodes.Ldarg_1,     // 1	0001	ldarg.1
-        CilOpCodes.Callvirt,    // 2	0002	callvirt	instance void VM::RunNewObject(class VMOperandType)
-        CilOpCodes.Ret          // 3	0007	ret
-    };
-
-    public CilOpCode CilOpCode => CilOpCodes.Newobj;
-
-    public bool Verify(VMOpCode vmOpCode, int index) => PatternMatcher.MatchesPattern(new RunNewObjectPattern(),
-        (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
-}
-#endregion Newobj
-
 #region Pop
 
 internal record Pop : IOpCodePattern
@@ -186,3 +134,34 @@ internal record Pop : IOpCodePattern
     }
 }
 #endregion Pop
+
+internal record Ldtoken : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 33	0064	ldarg.0
+        CilOpCodes.Ldloc_0,     // 34	0065	ldloc.0
+        CilOpCodes.Callvirt,    // 35	0066	callvirt	instance class [mscorlib]System.Reflection.FieldInfo VM::ResolveFieldCache(int32)
+        CilOpCodes.Callvirt,    // 36	006B	callvirt	instance valuetype [mscorlib]System.RuntimeFieldHandle [mscorlib]System.Reflection.FieldInfo::get_FieldHandle()
+        CilOpCodes.Box,         // 37	0070	box	[mscorlib]System.RuntimeFieldHandle
+        CilOpCodes.Stloc_2,     // 38	0075	stloc.2
+    };
+
+    public CilOpCode CilOpCode => CilOpCodes.Ldtoken;
+
+    public bool MatchEntireBody => false;
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0)
+    {
+        var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions!;
+        var resolveFieldCall = instructions[index + 2].Operand as SerializedMethodDefinition;
+        if (!resolveFieldCall!.Signature!.ReturnsValue ||
+            resolveFieldCall.Signature.ReturnType.FullName != "System.Reflection.FieldInfo")
+            return false;
+        
+        var getFieldHandleCall = instructions[index + 3].Operand as SerializedMemberReference;
+        return getFieldHandleCall!.FullName == "System.RuntimeFieldHandle System.Reflection.FieldInfo::get_FieldHandle()";
+    }
+}
