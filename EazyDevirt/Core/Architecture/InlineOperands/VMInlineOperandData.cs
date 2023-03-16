@@ -95,6 +95,8 @@ internal record VMMethodData : VMInlineOperandData
 {
     public VMInlineOperand DeclaringType { get; }
     public byte Flags { get; } 
+    
+    // this is also different across samples, see issue #3
     public bool IsStatic { get; } 
     public bool IsInstance => !IsStatic;
     public string Name { get; } 
@@ -118,7 +120,7 @@ internal record VMMethodData : VMInlineOperandData
     {
         DeclaringType = VMInlineOperand.ReadInternal(reader);
         Flags = reader.ReadByte();
-        IsStatic = (Flags & 1) != 0;
+        IsStatic = (Flags & 1) > 0;
         Name = reader.ReadString();
         ReturnType = VMInlineOperand.ReadInternal(reader);
         Parameters = VMInlineOperand.ReadArrayInternal(reader);

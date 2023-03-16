@@ -1,7 +1,6 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Signatures;
 using AsmResolver.DotNet.Signatures.Types;
-using AsmResolver.PE.DotNet.Metadata.Tables.Rows;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.Architecture.InlineOperands;
 using EazyDevirt.Devirtualization;
@@ -55,14 +54,26 @@ internal class Resolver
         var typeDefOrRef = ((ITypeDefOrRef?)Ctx.Module.GetAllTypes()
                                 .FirstOrDefault(x => x.FullName == data.TypeName.Name) ??
                             (ITypeDefOrRef?)Ctx.Module.GetImportedTypeReferences()
-                                .FirstOrDefault(x => x.FullName == data.TypeName.Name && x.Scope?.Name == data.TypeName.AssemblyName));
+                                .FirstOrDefault(x => x.FullName == data.TypeName.Name && x.Scope?.Name == data.TypeName.AssemblyName.Name));
         if (typeDefOrRef != null)
-            return ApplySigModifiers(typeDefOrRef.ToTypeSignature(), data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
-
-        var assemblyRef = Ctx.Module.AssemblyReferences.FirstOrDefault(x => x.Name == data.TypeName.AssemblyName);
-        if (assemblyRef == null)
         {
-            Ctx.Console.Error($"Failed to find vm type {data.Name} assembly reference!");
+            var typeSig = typeDefOrRef.ToTypeSignature();
+            if (data.HasGenericTypes)
+                typeSig = typeDefOrRef
+                    .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature())
+                        .ToArray());
+            
+            return ApplySigModifiers(typeSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
+        }
+
+        var assemblyRef =
+            Ctx.Module.AssemblyReferences.FirstOrDefault(x => x.Name == data.TypeName.AssemblyName.Name) ??
+            new AssemblyReference(data.TypeName.AssemblyName.Name, data.TypeName.AssemblyName.Version!,
+                data.TypeName.AssemblyName.GetPublicKey() != null,
+                data.TypeName.AssemblyName.GetPublicKey() ?? data.TypeName.AssemblyName.GetPublicKeyToken());
+        if (assemblyRef == null!)
+        {
+            Ctx.Console.Warning($"Failed to find vm type {data.Name} assembly reference!");
             return null!;
         }
 
@@ -95,29 +106,71 @@ internal class Resolver
         Ctx.Console.Error($"Unable to resolve vm field {data.Name} declaring type {declaringTypeSig?.Name} to a TypeDef!");
         return null;
     }
+    
+    private bool VerifyMethodParameters(MethodSignatureBase method, VMMethodData data) =>
+        method.ParameterTypes.Count == data.Parameters.Length && method.ParameterTypes
+            .Zip(data.Parameters).All(x =>
+                x.First is GenericParameterSignature or GenericInstanceTypeSignature || x.First.FullName ==
+                ResolveType(x.Second.Position)?.FullName);
+    
+    
+    private bool VerifyMethodParameters(MethodDefinition method, VMMethodInfo data)
+    {
+        var skip = 0;
+        if (method.Parameters.ThisParameter != null && data.VMParameters.Count > 0 &&
+            method.Parameters.ThisParameter.ParameterType.FullName ==
+            ResolveType(data.VMParameters[0].VMType)?.FullName)
+            skip++;
+
+        return method.Parameters.Count == data.VMParameters.Count - skip && method.Parameters
+            .Zip(data.VMParameters.Skip(skip)).All(x =>
+                x.First.ParameterType is GenericParameterSignature or GenericInstanceTypeSignature ||
+                (x.First.ParameterType is TypeSpecificationSignature tss &&
+                 (tss.BaseType is GenericParameterSignature or GenericInstanceTypeSignature ||
+                  tss.BaseType.FullName == ResolveType(x.Second.VMType)?.FullName)) ||
+                x.First.ParameterType?.FullName == ResolveType(x.Second.VMType)?.FullName);
+    }
+    
+    private bool VerifyMethodParameters(MethodDefinition method, VMMethodData data)
+    {
+        var skip = 0;
+        if (method.Parameters.ThisParameter != null && data.Parameters.Length > 0 &&
+            method.Parameters.ThisParameter.ParameterType.FullName ==
+            ResolveType(data.Parameters[0].Position)?.FullName)
+            skip++;
+
+
+        return method.Parameters.Count == data.Parameters.Length - skip && method.Parameters
+            .Zip(data.Parameters.Skip(skip)).All(x =>
+                // TODO: Should probably resolve these generic parameter signatures and verify them too
+                x.First.ParameterType is GenericParameterSignature or GenericInstanceTypeSignature ||
+                (x.First.ParameterType is TypeSpecificationSignature tss &&
+                 (tss.BaseType is GenericParameterSignature or GenericInstanceTypeSignature ||
+                  tss.BaseType.FullName == ResolveType(x.Second.Position)?.FullName)) ||
+                x.First.ParameterType?.FullName == ResolveType(x.Second.Position)?.FullName);
+        ;
+    }
+    
+    private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodInfo data) =>
+        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
+                                                   && (m.Signature?.ReturnType is GenericParameterSignature or GenericInstanceTypeSignature ||
+                                                       (m.Signature?.ReturnType is TypeSpecificationSignature tss &&
+                                                        (tss.BaseType is GenericParameterSignature or GenericInstanceTypeSignature ||
+                                                         tss.BaseType.FullName == ResolveType(data.VMReturnType)?.FullName)) ||
+                                                       m.Signature?.ReturnType?.FullName ==
+                                                       ResolveType(data.VMReturnType)?.FullName)
+                                                   && VerifyMethodParameters(m, data));
 
     private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodData data) =>
         declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
-                                                   && (!(m.Signature?.ReturnsValue).GetValueOrDefault() ||
-                                                       m.Signature?.ReturnType.FullName ==
+                                                   // TODO: Should probably resolve these generic parameter signatures and verify them too
+                                                   && (m.Signature?.ReturnType is GenericParameterSignature or GenericInstanceTypeSignature ||
+                                                       (m.Signature?.ReturnType is TypeSpecificationSignature tss &&
+                                                        (tss.BaseType is GenericParameterSignature or GenericInstanceTypeSignature ||
+                                                         tss.BaseType.FullName == ResolveType(data.ReturnType.Position)?.FullName)) ||
+                                                       m.Signature?.ReturnType?.FullName ==
                                                        ResolveType(data.ReturnType.Position)?.FullName)
-                                                   && m.Signature?.GenericParameterCount == data.GenericArguments.Length
-                                                   && m.Parameters.Count == data.Parameters.Length
-                                                   && m.Parameters.Zip(data.Parameters).All(x =>
-                                                       x.First.ParameterType.FullName ==
-                                                       ResolveType(x.Second.Position)?.FullName));
-
-
-    private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodInfo data) =>
-        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
-                                                   && (!(m.Signature?.ReturnsValue).GetValueOrDefault() ||
-                                                       m.Signature?.ReturnType.FullName ==
-                                                       ResolveType(data.VMReturnType)?.FullName)
-                                                   && m.Parameters.Count == data.VMParameters.Count
-                                                   && m.Parameters.Zip(data.VMParameters).All(x =>
-                                                       x.First.ParameterType.FullName ==
-                                                       ResolveType(x.Second.VMType)?.FullName));
-
+                                                   && VerifyMethodParameters(m, data));
     public IMethodDescriptor? ResolveMethod(int position)
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
@@ -149,7 +202,7 @@ internal class Resolver
             Ctx.Console.Error($"Failed to resolve vm method {data.Name} return type!");
             return null;
         }
-
+        
         // there's probably a better way to check if a type is outside the assembly / module
         if (declaringTypeDefOrRef.Scope?.GetAssembly()?.Name != Ctx.Module.Assembly?.Name)
         {
@@ -159,13 +212,10 @@ internal class Resolver
                 && x.Name == data.Name
                 && x.Signature is MethodSignature ms
                 // TODO: Fix resolving imported member references of methods returning a generic parameter
-                && (!ms.ReturnsValue || ms.ReturnType is GenericParameterSignature || ms.ReturnType.FullName == returnType.FullName)
+                && (ms.ReturnType is GenericParameterSignature or GenericInstanceTypeSignature || ms.ReturnType.FullName == returnType.FullName)
                 && ms.GenericParameterCount == data.GenericArguments.Length
-                && ms.ParameterTypes.Count == data.Parameters.Length
-                && ms.ParameterTypes.Zip(data.Parameters).All(z =>
-                    z.First.FullName ==
-                    ResolveType(z.Second.Position)?.FullName));
-            
+                && VerifyMethodParameters(ms, data));
+        
             if (importedMemberRef != null)
             {
                 if (data.HasGenericArguments)
@@ -189,15 +239,31 @@ internal class Resolver
         }
         
         // stuff below should never execute
+        // this doesn't support generics in return types
 
+        var declaringTypeSig = declaringTypeDefOrRef.ToTypeSignature();
+        var parameters = data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray();
+        var newParams = new List<TypeSignature>();
+        foreach (var parameter in parameters)
+        {
+            if (declaringTypeSig is GenericInstanceTypeSignature declaringTypeGenericSig)
+            {
+                var f = declaringTypeGenericSig.TypeArguments.FirstOrDefault(x => x.FullName == parameter.FullName);
+                if (f != null)
+                    newParams.Add(new GenericParameterSignature(GenericParameterType.Type, declaringTypeGenericSig.TypeArguments.IndexOf(f)));
+            }
+            else
+                newParams.Add(parameter);
+        }
+        
         var memberRef = declaringTypeDefOrRef
             .CreateMemberReference(data.Name, data.IsStatic
                 ? MethodSignature.CreateStatic(
                     returnType.ToTypeSignature(), data.GenericArguments.Length,
-                    data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature()))
+                    newParams)
                 : MethodSignature.CreateInstance(
                     returnType.ToTypeSignature(), data.GenericArguments.Length,
-                    data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature())));
+                    newParams));
 
         if (data.HasGenericArguments)
             return memberRef
