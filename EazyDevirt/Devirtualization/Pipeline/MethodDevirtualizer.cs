@@ -4,7 +4,6 @@ using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.IO;
-using EazyDevirt.PatternMatching.Patterns.OpCodes;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
@@ -26,7 +25,8 @@ internal class MethodDevirtualizer : Stage
         foreach (var vmMethod in Ctx.VMMethods)
         { 
             // if (vmMethod.EncodedMethodKey != @"+m@MBmHj<0") continue;
-
+            // if (vmMethod.Parent.MetadataToken != 0x06002729) continue;
+                
             vmMethod.MethodKey = VMCipherStream.DecodeMethodKey(vmMethod.EncodedMethodKey, Ctx.PositionCryptoKey);
             
             VMStream.Seek(vmMethod.MethodKey, SeekOrigin.Begin);
@@ -59,11 +59,10 @@ internal class MethodDevirtualizer : Stage
         try
         {
             ResolveBranchTargets(vmMethod);
+            ResolveExceptionHandlers(vmMethod);
         }
         catch {}
-
-        ResolveExceptionHandlers(vmMethod);
-
+        
         vmMethod.Parent.CilMethodBody!.LocalVariables.Clear();
         vmMethod.Locals.ForEach(x => vmMethod.Parent.CilMethodBody.LocalVariables.Add(x));
 
@@ -219,12 +218,15 @@ internal class MethodDevirtualizer : Stage
         vmMethod.ExceptionHandlers = new List<CilExceptionHandler>();
         
         var virtualOffsets = GetVirtualOffsets(vmMethod);
+        var virtualOffsetsValues = virtualOffsets.Values.ToList();
         foreach (var vmExceptionHandler in vmMethod.VMExceptionHandlers)
         {
-            var tryStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.TryStart]);
+            var tryStart = vmMethod.Instructions[virtualOffsetsValues.IndexOf((int)vmExceptionHandler.TryStart)];
+            // var tryStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.TryStart]);
             var tryStartLabel = vmMethod.Instructions.SkipWhile(x => x.Offset <= tryStart?.Offset).First().CreateLabel();
 
-            var handlerStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.HandlerStart]);
+            var handlerStart = vmMethod.Instructions[virtualOffsetsValues.IndexOf((int)vmExceptionHandler.HandlerStart)];
+            // var handlerStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.HandlerStart]);
             var handlerStartLabel = vmMethod.Instructions.SkipWhile(x => x.Offset <= handlerStart?.Offset).First().CreateLabel();
             var exceptionHandler = new CilExceptionHandler
             {
