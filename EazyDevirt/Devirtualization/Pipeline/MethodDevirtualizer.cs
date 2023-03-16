@@ -50,8 +50,6 @@ internal class MethodDevirtualizer : Stage
         
         vmMethod.MethodInfo.DeclaringType = Resolver.ResolveType(vmMethod.MethodInfo.VMDeclaringType)!;
         vmMethod.MethodInfo.ReturnType = Resolver.ResolveType(vmMethod.MethodInfo.VMReturnType)!;
-
-        // may need to add SortVMExceptionHandlers
         
         ResolveLocalsAndParameters(vmMethod);
 
@@ -84,9 +82,9 @@ internal class MethodDevirtualizer : Stage
             vmMethod.VMExceptionHandlers.Add(new VMExceptionHandler(VMStreamReader));
 
         vmMethod.VMExceptionHandlers.Sort((first, second) =>
-            first.HandlerStart == second.HandlerStart
-                ? second.HandlerStart.CompareTo(first.FilterStart)
-                : first.HandlerStart.CompareTo(second.HandlerStart));
+            first.TryStart == second.TryStart
+                ? second.TryLength.CompareTo(first.TryLength)
+                : first.TryStart.CompareTo(second.TryStart));
     }
     
     private void ResolveLocalsAndParameters(VMMethod vmMethod)
