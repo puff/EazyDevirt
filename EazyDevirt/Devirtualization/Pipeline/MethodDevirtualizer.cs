@@ -4,6 +4,7 @@ using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.IO;
+using EazyDevirt.PatternMatching.Patterns.OpCodes;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
@@ -48,8 +49,6 @@ internal class MethodDevirtualizer : Stage
         
         vmMethod.MethodInfo.DeclaringType = Resolver.ResolveType(vmMethod.MethodInfo.VMDeclaringType)!;
         vmMethod.MethodInfo.ReturnType = Resolver.ResolveType(vmMethod.MethodInfo.VMReturnType)!;
-
-        // may need to add SortVMExceptionHandlers
         
         ResolveLocalsAndParameters(vmMethod);
 
@@ -87,9 +86,9 @@ internal class MethodDevirtualizer : Stage
             vmMethod.VMExceptionHandlers.Add(new VMExceptionHandler(VMStreamReader));
 
         vmMethod.VMExceptionHandlers.Sort((first, second) =>
-            first.HandlerStart == second.HandlerStart
-                ? second.HandlerStart.CompareTo(first.FilterStart)
-                : first.HandlerStart.CompareTo(second.HandlerStart));
+            first.TryStart == second.TryStart
+                ? second.TryLength.CompareTo(first.TryLength)
+                : first.TryStart.CompareTo(second.TryStart));
     }
     
     private void ResolveLocalsAndParameters(VMMethod vmMethod)
@@ -111,29 +110,24 @@ internal class MethodDevirtualizer : Stage
     private bool ReadInstructions(VMMethod vmMethod)
     {
         vmMethod.Instructions = new List<CilInstruction>();
-        var codeSize = VMStreamReader.ReadInt32();
-        var finalPosition = VMStream.Position + codeSize;
+        vmMethod.CodeSize = VMStreamReader.ReadInt32();
+        vmMethod.InitialCodeStreamPosition = VMStream.Position;
+        var finalPosition = VMStream.Position + vmMethod.CodeSize;
         var success = true;
         
         while (VMStream.Position < finalPosition)
         {
+            vmMethod.CodePosition = vmMethod.CodeSize - (finalPosition - VMStream.Position);
             var virtualOpCode = VMStreamReader.ReadInt32Special();
             var vmOpCode = Ctx.PatternMatcher.GetOpCodeValue(virtualOpCode);
             if (!vmOpCode.HasVirtualCode)
             {
                 if (Ctx.Options.VeryVerbose)
-                    Ctx.Console.Error($"Method {vmMethod.Parent} {vmMethod.EncodedMethodKey}, VM opcode [{vmOpCode}] not found!");
-                break;
+                    Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Instruction {vmMethod.Instructions.Count}, VM opcode [{virtualOpCode}] not found!");
+                
+                vmMethod.Instructions.Add(new CilInstruction(CilOpCodes.Nop));
+                continue;
             }
-
-            object? operand;
-            if (vmOpCode.IsSpecial)
-            {
-                // ResolveSpecialCilOpCode(vmOpCode);
-                operand = ReadSpecialOperand(vmOpCode, vmMethod);
-            }
-            else
-                operand = ReadOperand(vmOpCode, vmMethod);
 
             if (!vmOpCode.IsIdentified)
             {
@@ -143,19 +137,29 @@ internal class MethodDevirtualizer : Stage
                 success = false;
             }
 
-            // TODO: Remember to remove the log for stinds
-            // Log these for now since they're special cases. 
-            if (vmOpCode.CilOpCode.Mnemonic.StartsWith("stind"))
-                Ctx.Console.Warning($"Placing stind instruction at #{vmMethod.Instructions.Count}");
-            
-            var instruction = new CilInstruction(vmOpCode.CilOpCode, vmOpCode.IsIdentified ? operand : operand); // TODO: remember to switch the alternate to null
-            vmMethod.Instructions.Add(instruction);
+            var operand = vmOpCode.IsSpecial ? ReadSpecialOperand(vmOpCode, vmMethod) : ReadOperand(vmOpCode, vmMethod);
+            if (vmOpCode.CilOpCode != null)
+            {
+                // TODO: Remember to remove the log for stinds
+                // Log these for now since they're special cases. 
+                if (vmOpCode.CilOpCode.Value.Mnemonic.StartsWith("stind"))
+                    Ctx.Console.Warning($"Placing stind instruction at #{vmMethod.Instructions.Count}");
+
+
+                var instruction =
+                    new CilInstruction(vmOpCode.CilOpCode.Value,
+                        vmOpCode.IsIdentified ? operand : operand); // TODO: remember to switch the alternate to null
+                vmMethod.Instructions.Add(instruction);
+            }
         }
 
+        if (vmMethod.HasHomomorphicEncryption)
+            success = false;
+        
         return success;
     }
 
-    private void ResolveBranchTargets(VMMethod vmMethod)
+    private Dictionary<int, int> GetVirtualOffsets(VMMethod vmMethod)
     {
         var virtualOffsets = new Dictionary<int, int>(vmMethod.Instructions.Count);
         var lastCilOffset = 0;
@@ -182,7 +186,17 @@ internal class MethodDevirtualizer : Stage
             virtualOffsets.Add(lastOffset, lastCilOffset);
         }
 
-        foreach (var ins in vmMethod.Instructions)
+        return virtualOffsets;
+    }
+    
+    private void ResolveBranchTargets(VMMethod vmMethod)
+    {
+        var virtualOffsets = GetVirtualOffsets(vmMethod);
+
+        for (var i = 0; i < vmMethod.Instructions.Count; i++)
+        {
+            var ins = vmMethod.Instructions[i];
+            ins.Offset = virtualOffsets[virtualOffsets.Keys.ToArray()[i]];
             switch (ins.OpCode.OperandType)
             {
                 case CilOperandType.InlineBrTarget:
@@ -192,17 +206,40 @@ internal class MethodDevirtualizer : Stage
                 case CilOperandType.InlineSwitch:
                     var offsets = ins.Operand as uint[];
                     var labels = new ICilLabel[offsets!.Length];
-                    for (var i = 0; i < offsets.Length; i++)
-                        labels[i] = new CilOffsetLabel(virtualOffsets[(int)offsets[i]]);
+                    for (var x = 0; x < offsets.Length; x++)
+                        labels[x] = new CilOffsetLabel(virtualOffsets[(int)offsets[x]]);
                     ins.Operand = labels;
                     break;
             }
+        }
     }
 
     private void ResolveExceptionHandlers(VMMethod vmMethod)
     {
         vmMethod.ExceptionHandlers = new List<CilExceptionHandler>();
-        // TODO: resolve cil exception handlers from vm exception handlers
+        
+        var virtualOffsets = GetVirtualOffsets(vmMethod);
+        foreach (var vmExceptionHandler in vmMethod.VMExceptionHandlers)
+        {
+            var tryStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.TryStart]);
+            var tryStartLabel = vmMethod.Instructions.SkipWhile(x => x.Offset <= tryStart?.Offset).First().CreateLabel();
+
+            var handlerStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.HandlerStart]);
+            var handlerStartLabel = vmMethod.Instructions.SkipWhile(x => x.Offset <= handlerStart?.Offset).First().CreateLabel();
+            var exceptionHandler = new CilExceptionHandler
+            {
+                ExceptionType = vmExceptionHandler.HandlerType == CilExceptionHandlerType.Exception ? Resolver.ResolveType(vmExceptionHandler.CatchType) : null,
+                HandlerType = vmExceptionHandler.HandlerType,
+                TryStart = tryStartLabel,
+                TryEnd = handlerStartLabel,
+                HandlerStart = handlerStartLabel,
+                HandlerEnd = handlerStart?.Operand as ICilLabel,
+                FilterStart = vmExceptionHandler.HandlerType == CilExceptionHandlerType.Filter ? vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.FilterStart])?.CreateLabel() : new CilOffsetLabel(0),
+            };
+            
+            vmMethod.Parent.CilMethodBody?.ExceptionHandlers.Add(exceptionHandler);
+        }
+        
     }
 
     private object? ReadOperand(VMOpCode vmOpCode, VMMethod vmMethod) =>
@@ -224,15 +261,31 @@ internal class MethodDevirtualizer : Stage
             _ => null
         };
 
-    private object? ReadSpecialOperand(VMOpCode vmOpCode, VMMethod method) =>
+    private object? ReadSpecialOperand(VMOpCode vmOpCode, VMMethod vmMethod) =>
         vmOpCode.SpecialOpCode switch
         {
             SpecialOpCodes.EazCall => Resolver.ResolveEazCall(VMStreamReader.ReadInt32Special()),
+            SpecialOpCodes.StartHomomorphic => ReadHomomorphicEncryption(vmMethod),
             _ => null
         };
 
+    /// <summary>
+    /// Processes homomorphic encryption data into CIL instructions 
+    /// </summary>
+    /// <param name="method"></param>
+    /// <returns>
+    /// branch offset
+    /// </returns>
+    private int? ReadHomomorphicEncryption(VMMethod vmMethod)
+    {
+        Ctx.Console.Info($"[{vmMethod.Parent.MetadataToken}] Detected homomorphic encryption.");
+
+        vmMethod.HasHomomorphicEncryption = true;
+        return null;
+    }
+
     private object? ReadInlineTok(VMOpCode vmOpCode) =>
-        vmOpCode.CilOpCode.OperandType switch
+        vmOpCode.CilOpCode?.OperandType switch
         {
             CilOperandType.InlineString => Resolver.ResolveString(VMStreamReader.ReadInt32Special()),
             _ => Resolver.ResolveToken(VMStreamReader.ReadInt32Special())
@@ -259,7 +312,7 @@ internal class MethodDevirtualizer : Stage
 
     private static CilLocalVariable GetLocal(VMMethod vmMethod, int index) => (index < vmMethod.Locals.Count ? vmMethod.Locals[index] : null)!;
 
-    private static bool IsInlineArgument(CilOpCode opCode) => opCode.OperandType is CilOperandType.InlineArgument or CilOperandType.ShortInlineArgument;
+    private static bool IsInlineArgument(CilOpCode? opCode) => opCode?.OperandType is CilOperandType.InlineArgument or CilOperandType.ShortInlineArgument;
 
 #pragma warning disable CS8618
     public MethodDevirtualizer(DevirtualizationContext ctx) : base(ctx)

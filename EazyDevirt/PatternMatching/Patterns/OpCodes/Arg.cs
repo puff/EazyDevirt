@@ -62,7 +62,7 @@ internal record Ldarg : IOpCodePattern
         CilOpCodes.Ret          // 5	0011	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldarg;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldarg;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -87,7 +87,7 @@ internal record Ldarg_S : IOpCodePattern
         CilOpCodes.Ret          // 5	0011	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldarg_S;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldarg_S;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -122,7 +122,7 @@ internal record Ldarga : IOpCodePattern
         CilOpCodes.Ret          // 13	0029	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldarga;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldarga;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -156,7 +156,7 @@ internal record Ldarga_S : IOpCodePattern
         CilOpCodes.Ret          // 13	0029	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldarga_S;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldarga_S;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -181,7 +181,7 @@ internal record Ldarg_0 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldarg_0;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldarg_0;
 
     public bool Verify(MethodDefinition method, int index) => 
         PatternMatcher.MatchesPattern(new PushArgumentToStackPattern(), 
@@ -198,7 +198,7 @@ internal record Ldarg_1 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldarg_1;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldarg_1;
 
     public bool Verify(MethodDefinition method, int index) => 
         PatternMatcher.MatchesPattern(new PushArgumentToStackPattern(), 
@@ -215,7 +215,7 @@ internal record Ldarg_2 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldarg_2;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldarg_2;
 
     public bool Verify(MethodDefinition method, int index) => 
         PatternMatcher.MatchesPattern(new PushArgumentToStackPattern(), 
@@ -232,7 +232,7 @@ internal record Ldarg_3 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldarg_3;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldarg_3;
 
     public bool Verify(MethodDefinition method, int index) => 
         PatternMatcher.MatchesPattern(new PushArgumentToStackPattern(), 
@@ -275,7 +275,7 @@ internal record Starg : IOpCodePattern
         CilOpCodes.Ret          // 5	0011	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Starg;
+    public CilOpCode? CilOpCode => CilOpCodes.Starg;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -300,7 +300,7 @@ internal record Starg_S : IOpCodePattern
         CilOpCodes.Ret          // 5	0011	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Starg_S;
+    public CilOpCode? CilOpCode => CilOpCodes.Starg_S;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {

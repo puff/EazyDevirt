@@ -66,7 +66,7 @@ internal record Add : IOpCodePattern
         CilOpCodes.Ret              // 4	0008	ret
     };
     
-    public CilOpCode CilOpCode => CilOpCodes.Add;
+    public CilOpCode? CilOpCode => CilOpCodes.Add;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -88,7 +88,7 @@ internal record Add_Ovf : IOpCodePattern
         CilOpCodes.Ret              // 4	0008	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Add_Ovf;
+    public CilOpCode? CilOpCode => CilOpCodes.Add_Ovf;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -110,7 +110,7 @@ internal record Add_Ovf_Un : IOpCodePattern
         CilOpCodes.Ret              // 4	0008	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Add_Ovf_Un;
+    public CilOpCode? CilOpCode => CilOpCodes.Add_Ovf_Un;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -185,7 +185,7 @@ internal record Sub : IOpCodePattern
         CilOpCodes.Ret              // 4	0008	ret
     };
     
-    public CilOpCode CilOpCode => CilOpCodes.Sub;
+    public CilOpCode? CilOpCode => CilOpCodes.Sub;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -207,7 +207,7 @@ internal record Sub_Ovf : IOpCodePattern
         CilOpCodes.Ret              // 4	0008	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Sub_Ovf;
+    public CilOpCode? CilOpCode => CilOpCodes.Sub_Ovf;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -229,7 +229,7 @@ internal record Sub_Ovf_Un : IOpCodePattern
         CilOpCodes.Ret              // 4	0008	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Sub_Ovf_Un;
+    public CilOpCode? CilOpCode => CilOpCodes.Sub_Ovf_Un;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -298,7 +298,7 @@ internal record Rem : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
     
-    public CilOpCode CilOpCode => CilOpCodes.Rem;
+    public CilOpCode? CilOpCode => CilOpCodes.Rem;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -319,7 +319,7 @@ internal record Rem_Un : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Rem_Un;
+    public CilOpCode? CilOpCode => CilOpCodes.Rem_Un;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -389,7 +389,7 @@ internal record Div : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
     
-    public CilOpCode CilOpCode => CilOpCodes.Div;
+    public CilOpCode? CilOpCode => CilOpCodes.Div;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -410,7 +410,7 @@ internal record Div_Un : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Div_Un;
+    public CilOpCode? CilOpCode => CilOpCodes.Div_Un;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -481,7 +481,7 @@ internal record Mul : IOpCodePattern
         CilOpCodes.Ret          // 4	0008	ret
     };
     
-    public CilOpCode CilOpCode => CilOpCodes.Mul;
+    public CilOpCode? CilOpCode => CilOpCodes.Mul;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -503,7 +503,7 @@ internal record Mul_Ovf : IOpCodePattern
         CilOpCodes.Ret          // 4	0008	ret
     };
     
-    public CilOpCode CilOpCode => CilOpCodes.Mul_Ovf;
+    public CilOpCode? CilOpCode => CilOpCodes.Mul_Ovf;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
@@ -525,7 +525,7 @@ internal record Mul_Ovf_Un : IOpCodePattern
         CilOpCodes.Ret          // 4	0008	ret
     };
     
-    public CilOpCode CilOpCode => CilOpCodes.Mul_Ovf_Un;
+    public CilOpCode? CilOpCode => CilOpCodes.Mul_Ovf_Un;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0)
     {
