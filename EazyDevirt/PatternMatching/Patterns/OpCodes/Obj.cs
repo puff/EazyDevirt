@@ -51,7 +51,7 @@ internal record Newobj : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Newobj;
+    public CilOpCode? CilOpCode => CilOpCodes.Newobj;
 
     public bool Verify(VMOpCode vmOpCode, int index) => PatternMatcher.MatchesPattern(new RunNewObjectPattern(),
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
@@ -109,7 +109,7 @@ internal record Initobj : IOpCodePattern
         CilOpCodes.Ret          // 63	0097	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Initobj;
+    public CilOpCode? CilOpCode => CilOpCodes.Initobj;
 
     public bool MatchEntireBody => false;
 

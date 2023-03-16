@@ -5,7 +5,7 @@ namespace EazyDevirt.Core.Abstractions;
 
 internal interface IOpCodePattern : IPattern
 {
-    CilOpCode CilOpCode => CilOpCodes.Nop;
+    CilOpCode? CilOpCode => null;
     SpecialOpCodes? SpecialOpCode => null;
 
     /// <summary>

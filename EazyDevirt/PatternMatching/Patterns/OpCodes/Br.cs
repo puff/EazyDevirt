@@ -31,7 +31,7 @@ internal record Br : IOpCodePattern
         CilOpCodes.Ret          // 7	0013	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Br;
+    public CilOpCode? CilOpCode => CilOpCodes.Br;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new SetBranchIndexPattern(),
@@ -70,9 +70,10 @@ internal record Bgt : IOpCodePattern
         CilOpCodes.Callvirt,    // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
         CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
         CilOpCodes.Call,        // 6	000E	call	bool VM::BgtInner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Brfalse_S,   // 7	0013	brfalse.s	15 (0028) ret 
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Bgt;
+    public CilOpCode? CilOpCode => CilOpCodes.Bgt;
 
     public bool MatchEntireBody => false;
     
@@ -116,9 +117,10 @@ internal record Blt : IOpCodePattern
         CilOpCodes.Callvirt,    // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
         CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
         CilOpCodes.Call,        // 6	000E	call	bool VM::BltInner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Brfalse_S,   // 7	0013	brfalse.s	15 (0028) ret 
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Blt;
+    public CilOpCode? CilOpCode => CilOpCodes.Blt;
 
     public bool MatchEntireBody => false;
     
@@ -160,9 +162,10 @@ internal record Beq : IOpCodePattern
         CilOpCodes.Callvirt,    // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
         CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
         CilOpCodes.Call,        // 6	000E	call	bool VM::BeqInner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Brfalse_S,   // 7	0013	brfalse.s	15 (0028) ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Beq;
+    public CilOpCode? CilOpCode => CilOpCodes.Beq;
 
     public bool MatchEntireBody => false;
     
@@ -183,10 +186,9 @@ internal record Brtrue : IOpCodePattern
         CilOpCodes.Ldnull,      // 54	009D	ldnull
         CilOpCodes.Cgt_Un,      // 55	009E	cgt.un
         CilOpCodes.Stloc_1,     // 56	00A0	stloc.1
-                                // ...
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Brtrue;
+    public CilOpCode? CilOpCode => CilOpCodes.Brtrue;
 
     public bool MatchEntireBody => false;
 }
@@ -200,50 +202,9 @@ internal record Brfalse : IOpCodePattern
         CilOpCodes.Ldnull,      // 56	00A0	ldnull
         CilOpCodes.Ceq,         // 57	00A1	ceq
         CilOpCodes.Stloc_1,     // 58	00A3	stloc.1
-                                // ...
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Brfalse;
-
-    public bool MatchEntireBody => false;
-}
-
-/// <summary>
-/// Used by various branch opcodes
-/// </summary>
-internal record BrtruePattern : IPattern
-{
-    public IList<CilOpCode> Pattern => new List<CilOpCode>
-    {
-        // 0	0000	ldarg.0
-        // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
-        // 2	0006	stloc.0
-        // 3	0007	ldarg.0
-        // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
-        // 5	000D	ldloc.0
-        // 6	000E	call	bool VM::smethod_15(class VMOperandType, class VMOperandType)
-        // 7	0013	brfalse.s	15 (0028) ret
-    };
-    
-    public bool MatchEntireBody => false;
-}
-
-/// <summary>
-/// Used by various branch opcodes
-/// </summary>
-internal record BrfalsePattern : IPattern
-{
-    public IList<CilOpCode> Pattern => new List<CilOpCode>
-    {
-        // 0	0000	ldarg.0
-        // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
-        // 2	0006	stloc.0
-        // 3	0007	ldarg.0
-        // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
-        // 5	000D	ldloc.0
-        // 6	000E	call	bool VM::smethod_215(class VMOperandType, class VMOperandType)
-        // 7	0013	brtrue.s	15 (0028) ret 
-    };
+    public CilOpCode? CilOpCode => CilOpCodes.Brfalse;
 
     public bool MatchEntireBody => false;
 }

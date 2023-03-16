@@ -44,7 +44,7 @@ internal record Conv_I4 : IOpCodePattern
         CilOpCodes.Ret          // 3 0007 ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Conv_I4;
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_I4;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_I4InnerPattern(),
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
@@ -60,7 +60,7 @@ internal record Conv_Ovf_I4 : IOpCodePattern
         CilOpCodes.Ret          // 3 0007 ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Conv_Ovf_I4;
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_Ovf_I4;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_I4InnerPattern(),
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
@@ -102,7 +102,7 @@ internal record Conv_I8 : IOpCodePattern
         CilOpCodes.Ret          // 3 0007 ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Conv_I8;
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_I8;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_I8InnerPattern(),
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
@@ -118,7 +118,7 @@ internal record Conv_Ovf_I8 : IOpCodePattern
         CilOpCodes.Ret          // 3 0007 ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Conv_Ovf_I8;
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_Ovf_I8;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_I8InnerPattern(),
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
@@ -159,7 +159,7 @@ internal record Conv_U1 : IOpCodePattern
         CilOpCodes.Ret          // 3 0007 ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Conv_U1;
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_U1;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_U1InnerPattern(),
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
@@ -175,7 +175,7 @@ internal record Conv_Ovf_U1 : IOpCodePattern
         CilOpCodes.Ret          // 3 0007 ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Conv_Ovf_U1;
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_Ovf_U1;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_U1InnerPattern(),
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
@@ -212,7 +212,7 @@ internal record Conv_U8 : IOpCodePattern
         CilOpCodes.Ret          // 3 0007 ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Conv_U8;
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_U8;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_U8InnerPattern(),
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
@@ -228,7 +228,7 @@ internal record Conv_Ovf_U8 : IOpCodePattern
         CilOpCodes.Ret          // 3 0007 ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Conv_Ovf_U8;
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_Ovf_U8;
 
     public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_U8InnerPattern(),
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);

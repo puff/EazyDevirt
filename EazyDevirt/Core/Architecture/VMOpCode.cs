@@ -64,7 +64,7 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField = 
     /// <summary>
     /// Associated CIL opcode.
     /// </summary>
-    public CilOpCode CilOpCode { get; set; } = CilOpCodes.Nop;
+    public CilOpCode? CilOpCode { get; set; } = CilOpCodes.Nop;
     
     /// <summary>
     /// Associated special opcode.
