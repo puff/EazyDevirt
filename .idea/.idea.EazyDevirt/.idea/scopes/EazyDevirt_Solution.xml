@@ -1,3 +1,0 @@
-﻿<component name="DependencyValidationManager">
-  <scope name="EazyDevirt Solution" pattern="file[rider.module]:*/&amp;&amp;!file[rider.module]:libs//*" />
-</component>
