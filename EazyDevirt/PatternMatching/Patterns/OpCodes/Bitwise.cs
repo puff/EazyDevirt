@@ -38,7 +38,7 @@ internal record Xor : IOpCodePattern
         CilOpCodes.Ret          // 12	001C	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Xor;
+    public CilOpCode? CilOpCode => CilOpCodes.Xor;
 
     public bool Verify(VMOpCode vmOpCode, int index)
     {

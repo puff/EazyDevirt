@@ -30,10 +30,10 @@ internal record VMExceptionHandler
     {
         VMHandlerType = reader.ReadByte();
         CatchType = reader.ReadInt32();
-        TryStart = reader.ReadUInt32();
         HandlerStart = reader.ReadUInt32();
-        TryLength = reader.ReadUInt32();
+        TryStart = reader.ReadUInt32();
         FilterStart = reader.ReadUInt32();
+        TryLength = reader.ReadUInt32();
     }
 
     public override string ToString() =>

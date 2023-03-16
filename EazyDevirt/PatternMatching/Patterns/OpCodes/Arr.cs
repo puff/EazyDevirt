@@ -25,7 +25,7 @@ internal record Newarr : IOpCodePattern
         CilOpCodes.Ret          // 55	008C	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Newarr;
+    public CilOpCode? CilOpCode => CilOpCodes.Newarr;
 
     public bool MatchEntireBody => false;
 
@@ -56,7 +56,7 @@ internal record Ldlen : IOpCodePattern
         CilOpCodes.Ret          // 10	0022	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldlen;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldlen;
 
     public bool InterchangeLdlocOpCodes => true;
     public bool InterchangeStlocOpCodes => true;
@@ -101,7 +101,7 @@ internal record Ldelem : IOpCodePattern
         CilOpCodes.Ret          // 12	001C	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem;
 
     public bool MatchEntireBody => false;
 
@@ -122,7 +122,7 @@ internal record Ldelem_Ref : IOpCodePattern
         CilOpCodes.Ret          // 3	000B	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem_Ref;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem_Ref;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
@@ -144,7 +144,7 @@ internal record Ldelem_I : IOpCodePattern
         CilOpCodes.Ret          // 3	000B	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem_I;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem_I;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
@@ -165,7 +165,7 @@ internal record Ldelem_I1 : IOpCodePattern
         CilOpCodes.Ret          // 4	0010	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem_I1;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem_I1;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
@@ -187,7 +187,7 @@ internal record Ldelem_I2 : IOpCodePattern
         CilOpCodes.Ret          // 4	0010	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem_I2;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem_I2;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
@@ -209,7 +209,7 @@ internal record Ldelem_I4 : IOpCodePattern
         CilOpCodes.Ret          // 4	0010	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem_I4;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem_I4;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
@@ -231,7 +231,7 @@ internal record Ldelem_I8 : IOpCodePattern
         CilOpCodes.Ret          // 4	0010	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem_I8;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem_I8;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
@@ -256,7 +256,7 @@ internal record Ldelem_R4 : IOpCodePattern
         CilOpCodes.Ret          // 4	0010	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem_R4;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem_R4;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
@@ -278,7 +278,7 @@ internal record Ldelem_R8 : IOpCodePattern
         CilOpCodes.Ret          // 4	0010	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem_R8;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem_R8;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
@@ -303,7 +303,7 @@ internal record Ldelem_U1 : IOpCodePattern
         CilOpCodes.Ret          // 4	0010	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem_U1;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem_U1;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
@@ -325,7 +325,7 @@ internal record Ldelem_U2 : IOpCodePattern
         CilOpCodes.Ret          // 4	0010	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem_U2;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem_U2;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
@@ -347,7 +347,7 @@ internal record Ldelem_U4 : IOpCodePattern
         CilOpCodes.Ret          // 4	0010	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelem_U4;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelem_U4;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
@@ -372,7 +372,7 @@ internal record Ldelema : IOpCodePattern
         CilOpCodes.Newobj,      // 18	002E	newobj	instance void Class41::.ctor()
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldelema;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldelema;
 
     public bool MatchEntireBody => false;
 
@@ -446,7 +446,7 @@ internal record Stelem : IOpCodePattern
         CilOpCodes.Ret          // 12	001C	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stelem;
+    public CilOpCode? CilOpCode => CilOpCodes.Stelem;
 
     public bool MatchEntireBody => false;
 
@@ -467,7 +467,7 @@ internal record Stelem_Ref : IOpCodePattern
         CilOpCodes.Ret          // 3	000B	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stelem_Ref;
+    public CilOpCode? CilOpCode => CilOpCodes.Stelem_Ref;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new StelemInnerHelperPattern(),
@@ -488,7 +488,7 @@ internal record Stelem_I : IOpCodePattern
         CilOpCodes.Ret          // 3	000B	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stelem_I;
+    public CilOpCode? CilOpCode => CilOpCodes.Stelem_I;
 
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new StelemInnerHelperPattern(),
@@ -512,7 +512,7 @@ internal record Stelem_I1 : IOpCodePattern
         CilOpCodes.Ret          // 87	00F5	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stelem_I1;
+    public CilOpCode? CilOpCode => CilOpCodes.Stelem_I1;
 
     public bool MatchEntireBody => false;
 
@@ -542,7 +542,7 @@ internal record Stelem_I2 : IOpCodePattern
         CilOpCodes.Ret          // 87	00F5	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stelem_I2;
+    public CilOpCode? CilOpCode => CilOpCodes.Stelem_I2;
 
     public bool MatchEntireBody => false;
 
@@ -572,7 +572,7 @@ internal record Stelem_I4 : IOpCodePattern
         CilOpCodes.Ret          // 87	00F5	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stelem_I4;
+    public CilOpCode? CilOpCode => CilOpCodes.Stelem_I4;
 
     public bool MatchEntireBody => false;
 
@@ -602,7 +602,7 @@ internal record Stelem_I8 : IOpCodePattern
         CilOpCodes.Ret          // 87	00F5	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stelem_I8;
+    public CilOpCode? CilOpCode => CilOpCodes.Stelem_I8;
 
     public bool MatchEntireBody => false;
 
@@ -631,7 +631,7 @@ internal record Stelem_R4 : IOpCodePattern
          CilOpCodes.Ret          // 4	0010	ret
      };
  
-     public CilOpCode CilOpCode => CilOpCodes.Stelem_R4;
+     public CilOpCode? CilOpCode => CilOpCodes.Stelem_R4;
      
      public bool Verify(VMOpCode vmOpCode, int index) =>
          PatternMatcher.MatchesPattern(new StelemInnerHelperPattern(),
@@ -653,7 +653,7 @@ internal record Stelem_R8 : IOpCodePattern
         CilOpCodes.Ret          // 4	0010	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stelem_R8;
+    public CilOpCode? CilOpCode => CilOpCodes.Stelem_R8;
     
     public bool Verify(VMOpCode vmOpCode, int index) =>
         PatternMatcher.MatchesPattern(new StelemInnerHelperPattern(),
