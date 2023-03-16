@@ -18,10 +18,16 @@ internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
     public List<CilLocalVariable> Locals { get; set; }
     public List<CilInstruction> Instructions { get; set; }
     
+    // temporary while testing
+    public bool HasHomomorphicEncryption { get; set; }
+    public int CodeSize { get; set; }
+    public long CodePosition { get; set; }
+    public long InitialCodeStreamPosition { get; set; }
+    
     public override string ToString() =>
         $"Parent: {Parent.MetadataToken} | EncodedMethodKey: {EncodedMethodKey} | MethodKey: 0x{MethodKey:X} | " +
         $"MethodInfo: [{MethodInfo}] | VMExceptionHandlers: [{string.Join(", ", VMExceptionHandlers)}] | " +
-        $"ExceptionHandlers: [{string.Join(", ", ExceptionHandlers)}] | Locals: [{string.Join(", ", Locals)}] | " +
+        $"ExceptionHandlers: [{ExceptionHandlers?.Count}] | Locals: {Locals?.Count} | " +
         $"Instructions: {Instructions?.Count}";
 }
 

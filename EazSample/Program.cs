@@ -43,7 +43,8 @@ namespace EazSample
         [Obfuscation(Feature = "virtualization", Exclude = false)]
         private static void HomomorphicEncryption()
         {
-            if (Console.ReadLine() == "constant")
+            var a = int.Parse("420");
+            if (a == 1337)
             {
                 Console.Write("constant");
                 Console.WriteLine("This should invoke homomorphic encryption");

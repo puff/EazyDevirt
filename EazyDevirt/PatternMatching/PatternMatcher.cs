@@ -87,14 +87,14 @@ internal class PatternMatcher
     /// <param name="method">Method to match body against</param>
     /// <param name="index">Index of method's instruction body to start matching at</param>
     /// <returns>Whether the pattern matches method's instruction body</returns>
-    public static bool MatchesPattern(IPattern pattern, MethodDefinition method, int index = 0)
+    public static bool MatchesPattern(IPattern pattern, MethodDefinition? method, int index = 0)
     {
-        if (!method.HasMethodBody) return false;
+        if (!(method?.HasMethodBody).GetValueOrDefault()) return false;
         
         return pattern.MatchEntireBody 
-            ? MatchesEntire(pattern, method.CilMethodBody!.Instructions, index) &&
+            ? MatchesEntire(pattern, method!.CilMethodBody!.Instructions, index) &&
               pattern.Verify(method, index) 
-            : GetAllMatchingInstructions(pattern, method, index).Count > 0;
+            : GetAllMatchingInstructions(pattern, method!, index).Count > 0;
     }
 
 

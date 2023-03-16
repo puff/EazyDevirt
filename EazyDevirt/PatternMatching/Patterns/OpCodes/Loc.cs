@@ -40,7 +40,7 @@ internal record Ldloc : IOpCodePattern
         CilOpCodes.Ret          // 5	0011	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldloc;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldloc;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -65,7 +65,7 @@ internal record Ldloc_S : IOpCodePattern
         CilOpCodes.Ret          // 5	0011	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldloc_S;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldloc_S;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -124,7 +124,7 @@ internal record Ldloca : IOpCodePattern
         CilOpCodes.Ret          // 5	0011	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldloca;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldloca;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -150,7 +150,7 @@ internal record Ldloca_S : IOpCodePattern
         CilOpCodes.Ret          // 5	0011	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldloca_S;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldloca_S;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -175,7 +175,7 @@ internal record Ldloc_0 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldloc_0;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldloc_0;
 
     public bool Verify(MethodDefinition method, int index) => 
         PatternMatcher.MatchesPattern(new PushLocalToStackPattern(), 
@@ -192,7 +192,7 @@ internal record Ldloc_1 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldloc_1;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldloc_1;
 
     public bool Verify(MethodDefinition method, int index) => 
         PatternMatcher.MatchesPattern(new PushLocalToStackPattern(), 
@@ -209,7 +209,7 @@ internal record Ldloc_2 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldloc_2;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldloc_2;
 
     public bool Verify(MethodDefinition method, int index) => 
         PatternMatcher.MatchesPattern(new PushLocalToStackPattern(), 
@@ -226,7 +226,7 @@ internal record Ldloc_3 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldloc_3;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldloc_3;
 
     public bool Verify(MethodDefinition method, int index) => 
         PatternMatcher.MatchesPattern(new PushLocalToStackPattern(), 
@@ -270,7 +270,7 @@ internal record Stloc : IOpCodePattern
         CilOpCodes.Ret          // 7	0013	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stloc;
+    public CilOpCode? CilOpCode => CilOpCodes.Stloc;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -297,7 +297,7 @@ internal record Stloc_S : IOpCodePattern
         CilOpCodes.Ret          // 7	0013	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stloc_S;
+    public CilOpCode? CilOpCode => CilOpCodes.Stloc_S;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -322,7 +322,7 @@ internal record Stloc_0 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stloc_0;
+    public CilOpCode? CilOpCode => CilOpCodes.Stloc_0;
 
     public bool Verify(MethodDefinition method, int index) => PatternMatcher
         .GetAllMatchingInstructions(new StoreLocalPattern(),
@@ -339,7 +339,7 @@ internal record Stloc_1 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stloc_1;
+    public CilOpCode? CilOpCode => CilOpCodes.Stloc_1;
 
     public bool Verify(MethodDefinition method, int index) => PatternMatcher
         .GetAllMatchingInstructions(new StoreLocalPattern(),
@@ -356,7 +356,7 @@ internal record Stloc_2 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stloc_2;
+    public CilOpCode? CilOpCode => CilOpCodes.Stloc_2;
 
     public bool Verify(MethodDefinition method, int index) => PatternMatcher
         .GetAllMatchingInstructions(new StoreLocalPattern(),
@@ -373,7 +373,7 @@ internal record Stloc_3 : IOpCodePattern
         CilOpCodes.Ret          // 3	0007	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stloc_3;
+    public CilOpCode? CilOpCode => CilOpCodes.Stloc_3;
 
     public bool Verify(MethodDefinition method, int index) => PatternMatcher
         .GetAllMatchingInstructions(new StoreLocalPattern(),

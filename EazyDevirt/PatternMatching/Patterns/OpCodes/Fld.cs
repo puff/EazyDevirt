@@ -21,7 +21,7 @@ internal record Ldfld : IOpCodePattern
         CilOpCodes.Ret          // 35	0057	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldfld;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldfld;
 
     public bool MatchEntireBody => false;
 
@@ -46,7 +46,7 @@ internal record Ldflda : IOpCodePattern
         CilOpCodes.Ret          // 31	004B	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldflda;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldflda;
 
     public bool MatchEntireBody => false;
 
@@ -84,7 +84,7 @@ internal record Ldsfld : IOpCodePattern
         CilOpCodes.Ret          // 16	002C	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldsfld;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldsfld;
     
     public bool Verify(VMOpCode vmOpCode, int index) => (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[11].Operand as SerializedMemberReference)?
         .FullName == "System.Object System.Reflection.FieldInfo::GetValue(System.Object)";
@@ -110,7 +110,7 @@ internal record Ldsflda : IOpCodePattern
         CilOpCodes.Ret          // 13	0021	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Ldsflda;
+    public CilOpCode? CilOpCode => CilOpCodes.Ldsflda;
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
@@ -133,7 +133,7 @@ internal record Stfld : IOpCodePattern
         CilOpCodes.Ldloc_1,     // 41	006C	ldloc.1
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stfld;
+    public CilOpCode? CilOpCode => CilOpCodes.Stfld;
 
     public bool MatchEntireBody => false;
 
@@ -157,7 +157,7 @@ internal record Stsfld : IOpCodePattern
         CilOpCodes.Ret          // 20	0038	ret
     };
 
-    public CilOpCode CilOpCode => CilOpCodes.Stsfld;
+    public CilOpCode? CilOpCode => CilOpCodes.Stsfld;
 
     public bool MatchEntireBody => false;
 
