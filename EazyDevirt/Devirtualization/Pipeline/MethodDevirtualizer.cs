@@ -4,7 +4,6 @@ using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.IO;
-using EazyDevirt.PatternMatching.Patterns.OpCodes;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
@@ -212,12 +211,15 @@ internal class MethodDevirtualizer : Stage
         vmMethod.ExceptionHandlers = new List<CilExceptionHandler>();
         
         var virtualOffsets = GetVirtualOffsets(vmMethod);
+        var virtualOffsetsValues = virtualOffsets.Values.ToList();
         foreach (var vmExceptionHandler in vmMethod.VMExceptionHandlers)
         {
-            var tryStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.TryStart]);
+            var tryStart = vmMethod.Instructions[virtualOffsetsValues.IndexOf((int)vmExceptionHandler.TryStart)];
+            // var tryStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.TryStart]);
             var tryStartLabel = vmMethod.Instructions.SkipWhile(x => x.Offset <= tryStart?.Offset).First().CreateLabel();
 
-            var handlerStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.HandlerStart]);
+            var handlerStart = vmMethod.Instructions[virtualOffsetsValues.IndexOf((int)vmExceptionHandler.HandlerStart)];
+            // var handlerStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.HandlerStart]);
             var handlerStartLabel = vmMethod.Instructions.SkipWhile(x => x.Offset <= handlerStart?.Offset).First().CreateLabel();
             var exceptionHandler = new CilExceptionHandler
             {

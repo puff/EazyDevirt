@@ -1,6 +1,5 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Code.Cil;
-using AsmResolver.DotNet.Signatures.Types;
 using AsmResolver.PE.DotNet.Cil;
 
 namespace EazyDevirt.Core.Architecture;
@@ -27,7 +26,7 @@ internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
     public override string ToString() =>
         $"Parent: {Parent.MetadataToken} | EncodedMethodKey: {EncodedMethodKey} | MethodKey: 0x{MethodKey:X} | " +
         $"MethodInfo: [{MethodInfo}] | VMExceptionHandlers: [{string.Join(", ", VMExceptionHandlers)}] | " +
-        $"ExceptionHandlers: [{ExceptionHandlers?.Count}] | Locals: {Locals?.Count} | " +
+        $"ExceptionHandlers: {ExceptionHandlers?.Count} | Locals: {Locals?.Count} | " +
         $"Instructions: {Instructions?.Count}";
 }
 
