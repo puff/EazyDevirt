@@ -1,4 +1,6 @@
 ﻿
+using System.Reflection;
+
 namespace EazyDevirt.Core.Architecture;
 
 
@@ -18,8 +20,9 @@ public class TypeName
 	public TypeName(string fullName)
 	{
 		// Eazfuscator.NET uses '+' to indicate a nested type name follows, while
-		// dnlib uses '/'
-		FullName = fullName.Replace('+', '/');
+		// dnlib uses '+'
+		// FullName = fullName.Replace('+', '+');
+		FullName = fullName;
 	}
 
     /// <summary>
@@ -27,11 +30,11 @@ public class TypeName
     /// </summary>
     public string AssemblyFullName =>
         FullName[(FullName.IndexOf(", ", StringComparison.Ordinal) + 2)..];
-
+    
     /// <summary>
     /// Assembly name.
     /// </summary>
-    public string AssemblyName => AssemblyFullName.Split(',')[0];
+    public AssemblyName AssemblyName => new(AssemblyFullName);
 
     /// <summary>
     /// Type name without namespace.
@@ -66,20 +69,20 @@ public class TypeName
 	/// <summary>
 	/// Whether or not this name indicates the type is nested.
 	/// </summary>
-	public bool IsNested => Name.Contains('/');
+	public bool IsNested => Name.Contains('+');
 
 	/// <summary>
 	/// The parent type name if nested. If not nested, an empty string.
 	/// </summary>
 	public string ParentName => IsNested
-		? string.Join("/",
-			Name.Split('/').Reverse().Skip(1).Reverse().ToArray())
+		? string.Join("+",
+			Name.Split('+').Reverse().Skip(1).Reverse().ToArray())
 		: string.Empty;
 
 	/// <summary>
 	/// The nested child type name if nested. If not nested, null.
 	/// </summary>
-	public string NestedName => IsNested ? Name.Split('/').Last() : string.Empty;
+	public string NestedName => IsNested ? Name.Split('+').Last() : string.Empty;
 
 	/// <summary>
 	/// Get a modifiers stack from a deserialized type name, and also
