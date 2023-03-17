@@ -149,9 +149,8 @@ internal class MethodDevirtualizer : Stage
                 vmMethod.Instructions.Add(instruction);
             }
         }
-
-        if (vmMethod.HasHomomorphicEncryption)
-            vmMethod.SuccessfullyDevirtualized = false;
+        
+        vmMethod.SuccessfullyDevirtualized = !vmMethod.HasHomomorphicEncryption;
     }
 
     private Dictionary<int, int> GetVirtualOffsets(VMMethod vmMethod)

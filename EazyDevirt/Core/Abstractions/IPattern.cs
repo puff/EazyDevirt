@@ -14,7 +14,7 @@ internal interface IPattern
     /// <summary>
     /// Whether this pattern allows to interchange Ldc OpCodes like Ldc_I4 and Ldc_I4_8
     /// </summary>
-    bool InterchangeLdcOpCodes => false;
+    bool InterchangeLdcI4OpCodes => false;
     
     /// <summary>
     /// Whether this pattern allows to interchange Ldloc OpCodes like Ldloc and Ldloc.s

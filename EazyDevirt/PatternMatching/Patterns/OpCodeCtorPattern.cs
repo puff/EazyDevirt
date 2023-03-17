@@ -17,7 +17,7 @@ internal record OpCodeCtorPattern : IPattern
         CilOpCodes.Stfld        // 739	0A41	stfld	valuetype VMOpCode VMOpCodeStructs::struct4_185
     };
 
-    public bool InterchangeLdcOpCodes => true;
+    public bool InterchangeLdcI4OpCodes => true;
     
     public bool MatchEntireBody => false;
 }

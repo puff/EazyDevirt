@@ -44,25 +44,6 @@ internal class PatternMatcher
         return null!;
     }
 
-    private static bool MatchesEntire(IPattern pattern, CilInstructionCollection instructions, int index)
-    {
-        var pat = pattern.Pattern;
-        if (index + pat.Count > instructions.Count || (pattern.MatchEntireBody && pat.Count != instructions.Count)) return false;
-        
-        for (var i = 0; i < pat.Count; i++)
-        {
-            if (pat[i] == CilOpCodes.Nop)
-                continue;
-            if (instructions[i + index].OpCode != pat[i] 
-                && (!pattern.InterchangeLdcOpCodes || !instructions[i + index].IsLdcI4())
-                && (!pattern.InterchangeLdlocOpCodes || !instructions[i + index].IsLdloc())
-                && (!pattern.InterchangeStlocOpCodes || !instructions[i + index].IsStloc()))
-                return false;
-        }
-
-        return true;
-    }
-    
     /// <summary>
     /// Checks if pattern matches a method's instructions body
     /// </summary>
@@ -111,6 +92,39 @@ internal class PatternMatcher
               pattern.Verify(instructions, index)
             : GetAllMatchingInstructions(pattern, instructions, index).Count > 0;
 
+    private static bool CanInterchange(IPattern pat, CilInstruction ins, CilOpCode patOpCode)
+    {
+        var patIns = new CilInstruction(patOpCode);
+        if (ins.IsLdcI4())
+            return pat.InterchangeLdcI4OpCodes && patIns.IsLdcI4();
+
+        if (ins.IsLdloc())
+            return pat.InterchangeLdlocOpCodes && patIns.IsLdloc();
+
+        if (ins.IsStloc())
+            return pat.InterchangeStlocOpCodes && patIns.IsStloc();
+
+        return false;
+    }
+    
+    private static bool MatchesEntire(IPattern pattern, CilInstructionCollection instructions, int index)
+    {
+        var pat = pattern.Pattern;
+        if (index + pat.Count > instructions.Count || (pattern.MatchEntireBody && pat.Count != instructions.Count)) return false;
+        
+        for (var i = 0; i < pat.Count; i++)
+        {
+            if (pat[i] == CilOpCodes.Nop)
+                continue;
+
+            var instruction = instructions[i + index];
+            if (instructions[i + index].OpCode != pat[i] && !CanInterchange(pattern, instruction, pat[i]))
+                return false;
+        }
+
+        return true;
+    }
+    
     /// <summary>
     /// Gets all matching instruction sets in a method's instructions body.
     /// </summary>
@@ -131,7 +145,7 @@ internal class PatternMatcher
             for(int j = i, k = 0; j < instructions.Count && k < pat.Count; j++, k++)
             {
                 var instruction = instructions[j];
-                if (instruction.OpCode != pat[k] && (!instruction.IsLdcI4() || !pattern.InterchangeLdcOpCodes))
+                if (instruction.OpCode != pat[k] && !CanInterchange(pattern, instruction, pat[k]))
                     break;
                 current.Add(instructions[j]);
             }
@@ -142,7 +156,7 @@ internal class PatternMatcher
 
         return matchingInstructions;
     }
-    
+
     /// <summary>
     /// Gets all matching instruction sets in a method's instructions body.
     /// </summary>
@@ -166,7 +180,7 @@ internal class PatternMatcher
             for(int j = i, k = 0; j < instructions.Count && k < pat.Count; j++, k++)
             {
                 var instruction = instructions[j];
-                if (instruction.OpCode != pat[k] && (!instruction.IsLdcI4() || !pattern.InterchangeLdcOpCodes))
+                if (instruction.OpCode != pat[k] && !CanInterchange(pattern, instruction, pat[k]))
                     break;
                 current.Add(instructions[j]);
             }
@@ -201,7 +215,7 @@ internal class PatternMatcher
             for(int j = i, k = 0; j < instructions.Count && k < pat.Count; j++, k++)
             {
                 var instruction = instructions[j];
-                if (instruction.OpCode != pat[k] && (!instruction.IsLdcI4() || !pattern.InterchangeLdcOpCodes))
+                if (instruction.OpCode != pat[k] && !CanInterchange(pattern, instruction, pat[k]))
                     break;
                 current.Add(instructions[j]);
             }
