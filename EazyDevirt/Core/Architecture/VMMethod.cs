@@ -17,7 +17,8 @@ internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
     public List<CilLocalVariable> Locals { get; set; }
     public List<CilInstruction> Instructions { get; set; }
     
-    // temporary while testing
+    
+    public bool SuccessfullyDevirtualized { get; set; }
     public bool HasHomomorphicEncryption { get; set; }
     public int CodeSize { get; set; }
     public long CodePosition { get; set; }
