@@ -54,7 +54,7 @@ internal class MethodDevirtualizer : Stage
 
         ReadInstructions(vmMethod);
         // homomorphic encryption is not supported currently
-        if (vmMethod.HasHomomorphicEncryption || !vmMethod.SuccessfullyDevirtualized && (!Ctx.Options.SaveAnyway || Ctx.Options.OnlySaveDevirted))
+        if (!vmMethod.SuccessfullyDevirtualized && (!Ctx.Options.SaveAnyway || Ctx.Options.OnlySaveDevirted))
             return;
 
         ResolveBranchTargets(vmMethod);
