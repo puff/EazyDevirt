@@ -213,3 +213,40 @@ internal record Box : IOpCodePattern
                boxOperandCall.Parameters[1].ParameterType.FullName == "System.Type";
     }
 }
+
+internal record Ckfinite : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Castclass,   // 2	0006	castclass	VMDoubleOperand
+        CilOpCodes.Stloc_0,     // 3	000B	stloc.0
+        CilOpCodes.Ldloc_0,     // 4	000C	ldloc.0
+        CilOpCodes.Callvirt,    // 5	000D	callvirt	instance float64 VMDoubleOperand::method_3()
+        CilOpCodes.Call,        // 6	0012	call	bool [mscorlib]System.Double::IsNaN(float64)
+        CilOpCodes.Brtrue_S,    // 7	0017	brtrue.s	12 (0026) nop 
+        CilOpCodes.Ldloc_0,     // 8	0019	ldloc.0
+        CilOpCodes.Callvirt,    // 9	001A	callvirt	instance float64 VMDoubleOperand::method_3()
+        CilOpCodes.Call,        // 10	001F	call	bool [mscorlib]System.Double::IsInfinity(float64)
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Ckfinite;
+
+    public bool MatchEntireBody => false;
+
+    public bool Verify(VMOpCode vmOpCode, int index)
+    {
+        var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions!;
+        if (instructions[index + 6].Operand is not SerializedMemberReference
+            {
+                FullName: "System.Boolean System.Double::IsNaN(System.Double)"
+            })
+            return false;
+
+        return instructions[index + 10].Operand is SerializedMemberReference
+        {
+            FullName: "System.Boolean System.Double::IsInfinity(System.Double)"
+        };
+    }
+}
