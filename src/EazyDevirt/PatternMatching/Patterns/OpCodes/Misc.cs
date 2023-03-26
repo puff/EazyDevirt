@@ -1,4 +1,5 @@
-﻿using AsmResolver.DotNet.Serialized;
+﻿using AsmResolver.DotNet.Code.Cil;
+using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
@@ -226,6 +227,37 @@ internal record Box : IOpCodePattern
     }
 }
 #endregion Box
+
+#region Unbox_Any
+
+internal record Unbox_Any : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 9	0015	ldarg.0
+        CilOpCodes.Callvirt,    // 10	0016	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Callvirt,    // 11	001B	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Ldloc_1,     // 12	0020	ldloc.1
+        CilOpCodes.Call,        // 13	0021	call	class VMOperandType VMOperandType::smethod_0(object, class [mscorlib]System.Type)
+        CilOpCodes.Stloc_2,     // 14	0026	stloc.2
+        CilOpCodes.Ldarg_0,     // 15	0027	ldarg.0
+        CilOpCodes.Ldloc_2,     // 16	0028	ldloc.2
+        CilOpCodes.Callvirt,    // 17	0029	callvirt	instance void VM::PushStack(class VMOperandType)
+        CilOpCodes.Ret          // 18	002E	ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Unbox_Any;
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        instructions[index + 4].Operand is SerializedMethodDefinition { Parameters.Count: 2 } unboxCall &&
+        unboxCall.Parameters.All(x => x.ParameterType.FullName is "System.Object" or "System.Type");
+}
+#endregion Unbox_Any
 
 #region Ckfinite
 
