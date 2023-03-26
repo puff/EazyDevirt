@@ -2,6 +2,7 @@
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using AsmResolver.DotNet.Builder;
+using AsmResolver.DotNet.Code.Cil;
 using EazyDevirt.Devirtualization;
 using EazyDevirt.Devirtualization.Options;
 
@@ -36,10 +37,21 @@ internal static class Program
         ctx.Options.OutputPath.Create();
         var outputFilePath = ctx.Options.OutputPath.FullName + '\\' + Path.GetFileNameWithoutExtension(ctx.Options.Assembly.Name) +
                              "-devirt" + ctx.Options.Assembly.Extension;
+
+        var dnFactory =
+            new DotNetDirectoryFactory(ctx.Options.PreserveAll
+                ? MetadataBuilderFlags.PreserveAll
+                : MetadataBuilderFlags.None)
+            {
+                MethodBodySerializer = new CilMethodBodySerializer
+                {
+                    ComputeMaxStackOnBuildOverride = false
+                }
+            };
+
         ctx.Module.Write(outputFilePath,
             new ManagedPEImageBuilder(
-                new DotNetDirectoryFactory(
-                    ctx.Options.PreserveAll ? MetadataBuilderFlags.PreserveAll : MetadataBuilderFlags.None)));
+                dnFactory));
         ctx.Console.Success($"Saved file to {outputFilePath}");
     }
     
