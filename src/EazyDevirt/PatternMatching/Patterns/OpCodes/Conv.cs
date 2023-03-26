@@ -37,7 +37,7 @@ internal record Conv_I : IOpCodePattern
     {
         CilOpCodes.Ldarg_0,     // 0 0000 ldarg.0
         CilOpCodes.Ldc_I4_0,    // 1 0001 ldc.i4.0
-        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_IOperand(bool)
+        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_IInner(bool)
         CilOpCodes.Ret          // 3 0007 ret
     };
 
@@ -53,7 +53,7 @@ internal record Conv_Ovf_I : IOpCodePattern
     {
         CilOpCodes.Ldarg_0,     // 0 0000 ldarg.0
         CilOpCodes.Ldc_I4_1,    // 1 0001 ldc.i4.1
-        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_IOperand(bool)
+        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_IInner(bool)
         CilOpCodes.Ret          // 3 0007 ret
     };
 
