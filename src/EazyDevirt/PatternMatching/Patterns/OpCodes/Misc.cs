@@ -2,8 +2,11 @@
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
+A// ReSharper disable InconsistentNaming
 
 namespace EazyDevirt.PatternMatching.Patterns.OpCodes;
+
+#region Ldstr
 
 internal record Ldstr : IOpCodePattern
 {
@@ -31,6 +34,7 @@ internal record Ldstr : IOpCodePattern
     public bool Verify(VMOpCode vmOpCode, int index) => (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[6].Operand as SerializedMethodDefinition)!.Signature!.ReturnType.FullName 
                                                         == "System.String";
 }
+#endregion Ldstr
 
 #region Return
 internal record EnableReturnFromVMMethodPattern : IPattern
@@ -90,6 +94,8 @@ internal record Ldnull : IOpCodePattern
 }
 #endregion Ldnull
 
+#region Dup
+
 internal record Dup : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -110,6 +116,7 @@ internal record Dup : IOpCodePattern
         PatternMatcher.MatchesPattern(new PeekStackPattern(),
             (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[1].Operand as SerializedMethodDefinition)!);
 }
+#endregion Dup
 
 #region Pop
 
@@ -134,6 +141,8 @@ internal record Pop : IOpCodePattern
     }
 }
 #endregion Pop
+
+#region Ldtoken
 
 internal record Ldtoken : IOpCodePattern
 {
@@ -165,6 +174,9 @@ internal record Ldtoken : IOpCodePattern
         return getFieldHandleCall!.FullName == "System.RuntimeFieldHandle System.Reflection.FieldInfo::get_FieldHandle()";
     }
 }
+#endregion Ldtoken
+
+#region Box
 
 internal record Box : IOpCodePattern
 {
@@ -213,6 +225,9 @@ internal record Box : IOpCodePattern
                boxOperandCall.Parameters[1].ParameterType.FullName == "System.Type";
     }
 }
+#endregion Box
+
+#region Ckfinite
 
 internal record Ckfinite : IOpCodePattern
 {
@@ -250,3 +265,29 @@ internal record Ckfinite : IOpCodePattern
         };
     }
 }
+#endregion Ckfinite
+
+#region Castclass
+
+internal record Castclass : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    { 
+        CilOpCodes.Newobj,      // 17	0026	newobj	instance void [mscorlib]System.InvalidCastException::.ctor()
+        CilOpCodes.Throw,       // 18	002B	throw
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Castclass;
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) =>
+        vmOpCode.CilOperandType == CilOperandType.InlineTok &&
+        vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[index].Operand is SerializedMemberReference
+        {
+            FullName: "System.Void System.InvalidCastException::.ctor()"
+        };
+}
+#endregion Castclass
