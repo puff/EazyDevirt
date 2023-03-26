@@ -182,6 +182,76 @@ internal record Conv_Ovf_I8 : IOpCodePattern
 
 #endregion Conv_IC
 
+#region Conv_RC
+
+#region Conv_R_Un
+
+internal record Conv_R_Un : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloc_0,     // 31	0041	ldloc.0
+        CilOpCodes.Castclass,   // 32	0042	castclass	VMEnumOperand
+        CilOpCodes.Callvirt,    // 33	0047	callvirt	instance class [System.Runtime]System.Enum VMEnumOperand::method_3()
+        CilOpCodes.Call,        // 34	004C	call	uint64 [mscorlib]System.Convert::ToUInt64(object)
+        CilOpCodes.Conv_R_Un,   // 35	0051	conv.r.un
+        CilOpCodes.Conv_R8,     // 36	0052	conv.r8
+        CilOpCodes.Stloc_2,     // 37	0053	stloc.2
+        // this is from the original executable because de4dot optimizes this
+        CilOpCodes.Br_S,        // 36	004E	br.s	39 (0056) ldarg.0 
+        CilOpCodes.Newobj,      // 37	0050	newobj	instance void [mscorlib]System.InvalidOperationException::.ctor()
+        CilOpCodes.Throw,       // 38	0055	throw
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_R_Un;
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+ 
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        instructions[3 + index].Operand is SerializedMemberReference
+        {
+            FullName: "System.UInt64 System.Convert::ToUInt64(System.Object)"
+        };
+}
+#endregion Conv_R_Un
+
+#region Conv_R8
+
+internal record Conv_R8 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloc_0,     // 22	002B	ldloc.0
+        CilOpCodes.Castclass,   // 23	002C	castclass	VMEnumOperand
+        CilOpCodes.Callvirt,    // 24	0031	callvirt	instance class [System.Runtime]System.Enum VMEnumOperand::method_3()
+        CilOpCodes.Call,        // 25	0036	call	uint64 [mscorlib]System.Convert::ToUInt64(object)
+        CilOpCodes.Conv_R_Un,   // 26	003B	conv.r.un
+        CilOpCodes.Conv_R8,     // 27	003C	conv.r8
+        CilOpCodes.Stloc_2,     // 28	003D	stloc.2
+        CilOpCodes.Br_S,        // 29	003E	br.s	48 (006B) ldarg.0
+        CilOpCodes.Ldloc_1,     // 30	0040	ldloc.1
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_R8;
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        instructions[3 + index].Operand is SerializedMemberReference
+        {
+            FullName: "System.UInt64 System.Convert::ToUInt64(System.Object)"
+        };
+}
+#endregion Conv_R8
+
+#endregion Conv_RC
+
 #region Conv_U
 
 #region Conv_U1
