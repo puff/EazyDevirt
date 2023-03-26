@@ -142,6 +142,60 @@ internal record Blt_Un : IOpCodePattern
 }
 #endregion Blt_Un
 
+#region Bge
+internal record Bge : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Callvirt,    // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
+        CilOpCodes.Call,        // 6	000E	call	bool VM::CltInner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Brtrue_S,    // 7	0013	brtrue.s	15 (0028) ret 
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Bge;
+
+    public bool MatchEntireBody => false;
+    
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index) => PatternMatcher.MatchesPattern(new CltInnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[6].Operand as SerializedMethodDefinition)!);
+}
+#endregion Bge
+
+#region Bge_Un
+internal record Bge_Un : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Callvirt,    // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
+        CilOpCodes.Call,        // 6	000E	call	bool VM::Clt_UnInner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Brtrue_S,    // 7	0013	brtrue.s	15 (0028) ret 
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Bge_Un;
+
+    public bool MatchEntireBody => false;
+    
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index) => PatternMatcher.MatchesPattern(new Clt_UnInnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[6].Operand as SerializedMethodDefinition)!);
+}
+#endregion Bge_Un
+
 #region Beq
 
 internal record BeqInnerPattern : IPattern
