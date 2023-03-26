@@ -17,6 +17,8 @@ internal record SetBranchIndexPattern : IPattern
     };
 }
 
+#region Br
+
 internal record Br : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -37,6 +39,7 @@ internal record Br : IOpCodePattern
         PatternMatcher.MatchesPattern(new SetBranchIndexPattern(),
             (vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[6].Operand as SerializedMethodDefinition)!);
 }
+#endregion Br
 
 #region Bgt
 
@@ -177,6 +180,8 @@ internal record Beq : IOpCodePattern
 }
 #endregion Beq
 
+#region Brtrue
+
 internal record Brtrue : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -192,6 +197,9 @@ internal record Brtrue : IOpCodePattern
 
     public bool MatchEntireBody => false;
 }
+#endregion Brtrue
+
+#region Brfalse
 
 internal record Brfalse : IOpCodePattern
 {
@@ -208,3 +216,39 @@ internal record Brfalse : IOpCodePattern
 
     public bool MatchEntireBody => false;
 }
+#endregion Brfalse
+
+#region Switch
+
+internal record Switch : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldlen,       // 41	005F	ldlen
+        CilOpCodes.Conv_I4,     // 42	0060	conv.i4
+        CilOpCodes.Conv_I8,     // 43	0061	conv.i8
+        CilOpCodes.Blt_S,       // 44	0062	blt.s	46 (0065) ldloc.3 
+        CilOpCodes.Ret,         // 45	0064	ret
+        CilOpCodes.Ldloc_3,     // 46	0065	ldloc.3
+        CilOpCodes.Ldloc_2,     // 47	0066	ldloc.2
+        CilOpCodes.Ldelem,      // 48	0067	ldelem	VMIntOperand
+        CilOpCodes.Callvirt,    // 49	006C	callvirt	instance int32 VMIntOperand::method_3()
+        CilOpCodes.Stloc_S,     // 50	0071	stloc.s	V_4 (4)
+        CilOpCodes.Ldarg_0,     // 51	0073	ldarg.0
+        CilOpCodes.Ldloc_S,     // 52	0074	ldloc.s	V_4 (4)
+        CilOpCodes.Callvirt,    // 53	0076	callvirt	instance void VM::SetBranchIndex(uint32)
+        CilOpCodes.Ret,         // 54	007B	ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Switch;
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) =>
+        vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions![index + 12].Operand is SerializedMethodDefinition
+            setBranchIndexCall &&
+        PatternMatcher.MatchesPattern(new SetBranchIndexPattern(), setBranchIndexCall);
+}
+#endregion Switch

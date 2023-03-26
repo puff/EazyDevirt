@@ -75,7 +75,6 @@ internal class MethodDevirtualizer : Stage
 
         vmMethod.Parent.CilMethodBody.Instructions.Clear();
         vmMethod.Instructions.ForEach(x => vmMethod.Parent.CilMethodBody.Instructions.Add(x));
-        // vmMethod.Parent.CilMethodBody.Instructions.CalculateOffsets();
     }
     
     private void ReadExceptionHandlers(VMMethod vmMethod)
@@ -162,7 +161,7 @@ internal class MethodDevirtualizer : Stage
         {
             if (ins.OpCode == CilOpCodes.Switch)
             {
-                var offsetsLength = (ins.Operand as uint[])!.Length;
+                var offsetsLength = (ins.Operand as Array)!.Length;
                 lastOffset += 4 * offsetsLength + 8;
                 lastCilOffset += ins.OpCode.Size + 4 + 4 * offsetsLength;
             }
