@@ -110,6 +110,7 @@ internal class MethodDevirtualizer : Stage
         vmMethod.Instructions = new List<CilInstruction>();
         vmMethod.CodeSize = VMStreamReader.ReadInt32();
         vmMethod.InitialCodeStreamPosition = VMStream.Position;
+        vmMethod.SuccessfullyDevirtualized = true;
         var finalPosition = VMStream.Position + vmMethod.CodeSize;
         while (VMStream.Position < finalPosition)
         {
@@ -148,8 +149,9 @@ internal class MethodDevirtualizer : Stage
                 vmMethod.Instructions.Add(instruction);
             }
         }
-        
-        vmMethod.SuccessfullyDevirtualized = vmMethod is { SuccessfullyDevirtualized: true, HasHomomorphicEncryption: false };
+
+        if (vmMethod.HasHomomorphicEncryption)
+            vmMethod.SuccessfullyDevirtualized = false;
     }
 
     private Dictionary<int, int> GetVirtualOffsets(VMMethod vmMethod)
