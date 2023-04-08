@@ -155,13 +155,13 @@ internal record VMEazCallData : VMInlineOperandData
     public int EazCallValue { get; }
     
     /// <summary>
-    /// The dictionary key for the method resolver cache.
+    /// The method's operand data vm stream position.
     /// </summary>
-    public int CacheKey { get; }
+    public int VMMethodPosition { get; }
 
     public VMEazCallData(BinaryReader reader) : base(VMInlineOperandType.EazCall)
     {
         EazCallValue = reader.ReadInt32();
-        CacheKey = reader.ReadInt32();
+        VMMethodPosition = reader.ReadInt32();
     }
 }
