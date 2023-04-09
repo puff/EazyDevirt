@@ -142,7 +142,6 @@ internal class MethodDevirtualizer : Stage
                 if (vmOpCode.CilOpCode.Value.Mnemonic.StartsWith("stind"))
                     Ctx.Console.Warning($"Placing stind instruction at #{vmMethod.Instructions.Count}");
 
-
                 var instruction =
                     new CilInstruction(vmOpCode.CilOpCode.Value,
                         vmOpCode.IsIdentified ? operand : operand); // TODO: remember to switch the alternate to null
@@ -218,11 +217,11 @@ internal class MethodDevirtualizer : Stage
         var virtualOffsetsValues = virtualOffsets.Values.ToList();
         foreach (var vmExceptionHandler in vmMethod.VMExceptionHandlers)
         {
-            var tryStart = vmMethod.Instructions[virtualOffsetsValues.IndexOf(virtualOffsets[(int)vmExceptionHandler.TryStart])];
+            var tryStart = vmExceptionHandler.TryStart == 0 ? vmMethod.Instructions[0] : vmMethod.Instructions[virtualOffsetsValues.IndexOf(virtualOffsets[(int)vmExceptionHandler.TryStart])];
             // var tryStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.TryStart]);
             var tryStartLabel = vmMethod.Instructions.SkipWhile(x => x.Offset <= tryStart?.Offset).First().CreateLabel();
 
-            var handlerStart = vmMethod.Instructions[virtualOffsetsValues.IndexOf(virtualOffsets[(int)vmExceptionHandler.HandlerStart])];
+            var handlerStart = vmExceptionHandler.HandlerStart == 0 ? vmMethod.Instructions[0] : vmMethod.Instructions[virtualOffsetsValues.IndexOf(virtualOffsets[(int)vmExceptionHandler.HandlerStart])];
             // var handlerStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.HandlerStart]);
             var handlerStartLabel = vmMethod.Instructions.SkipWhile(x => x.Offset <= handlerStart?.Offset).First().CreateLabel();
             var exceptionHandler = new CilExceptionHandler
