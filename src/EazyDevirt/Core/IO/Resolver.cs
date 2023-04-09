@@ -124,8 +124,7 @@ internal class Resolver
             .Zip(data.Parameters).All(x =>
                 x.First is GenericParameterSignature or GenericInstanceTypeSignature || x.First.FullName ==
                 ResolveType(x.Second.Position)?.FullName);
-    
-    
+
     private bool VerifyMethodParameters(MethodDefinition method, VMMethodInfo data)
     {
         var skip = 0;
@@ -134,7 +133,7 @@ internal class Resolver
             ResolveType(data.VMParameters[0].VMType)?.FullName)
             skip++;
 
-        return method.Parameters.Count == data.VMParameters.Count - skip && method.Parameters
+        return (method.Parameters.Count == data.VMParameters.Count || method.Parameters.Count == data.VMParameters.Count - skip) && method.Parameters
             .Zip(data.VMParameters.Skip(skip)).All(x =>
                 x.First.ParameterType is GenericParameterSignature or GenericInstanceTypeSignature ||
                 (x.First.ParameterType is TypeSpecificationSignature tss &&
@@ -152,7 +151,7 @@ internal class Resolver
             skip++;
 
 
-        return method.Parameters.Count == data.Parameters.Length - skip && method.Parameters
+        return (method.Parameters.Count == data.Parameters.Length || method.Parameters.Count == data.Parameters.Length - skip) && method.Parameters
             .Zip(data.Parameters.Skip(skip)).All(x =>
                 // TODO: Should probably resolve these generic parameter signatures and verify them too
                 x.First.ParameterType is GenericParameterSignature or GenericInstanceTypeSignature ||
@@ -174,7 +173,7 @@ internal class Resolver
                                                    && VerifyMethodParameters(m, data));
 
     private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodData data) =>
-        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
+            declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
                                                    // TODO: Should probably resolve these generic parameter signatures and verify them too
                                                    && (m.Signature?.ReturnType is GenericParameterSignature or GenericInstanceTypeSignature ||
                                                        (m.Signature?.ReturnType is TypeSpecificationSignature tss &&
@@ -183,6 +182,7 @@ internal class Resolver
                                                        m.Signature?.ReturnType?.FullName ==
                                                        ResolveType(data.ReturnType.Position)?.FullName)
                                                    && VerifyMethodParameters(m, data));
+    
     public IMethodDescriptor? ResolveMethod(int position)
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
@@ -207,6 +207,8 @@ internal class Resolver
             return null;
         }
 
+        var declaringTypeDefOrRefUnadorned = declaringTypeDefOrRef.Resolve();
+        
         var returnType = ResolveType(data.ReturnType.Position);
         if (returnType == null)
         {
@@ -214,12 +216,11 @@ internal class Resolver
             return null;
         }
 
-        // there's probably a better way to check if a type is outside the assembly / module
         if (declaringTypeDefOrRef.Scope?.GetAssembly()?.Name != Ctx.Module.Assembly?.Name)
         {
             var importedMemberRef = Ctx.Module.GetImportedMemberReferences().FirstOrDefault(x =>
                 x.IsMethod
-                && x.DeclaringType?.FullName == declaringTypeDefOrRef.FullName
+                && x.DeclaringType?.FullName == (declaringTypeDefOrRefUnadorned is null ? declaringTypeDefOrRef.FullName : declaringTypeDefOrRefUnadorned.FullName)
                 && x.Name == data.Name
                 && x.Signature is MethodSignature ms
                 // TODO: Fix resolving imported member references of methods returning a generic parameter
@@ -318,52 +319,43 @@ internal class Resolver
         };
     }
 
-    public IMethodDescriptor? ResolveEazCall(VMEazCallData eazCallData)
-    {
-        return ResolveMethod(eazCallData.VMMethodPosition);
-    }
+    public IMethodDescriptor? ResolveEazCall(VMEazCallData eazCallData) => 
+        ResolveMethod(eazCallData.VMMethodPosition);
 
     public IMethodDescriptor? ResolveEazCall(int value)
     {
         var noGenericArgs = (value & 0x80000000) != 0; 
-        // var maybeForceResolveGenericVarsIdk  = (value & 0x40000000) != 0;
+        // var maybeSomethingWithDeclaringType  = (value & 0x40000000) != 0;
         var position = value & 0x3FFFFFFF;
-        
-        // TODO: verify support for generic arguments to type and method
 
-        IMethodDescriptor? methodDescriptor = null;
-        if (!noGenericArgs)
-        {
-            methodDescriptor = ResolveMethod(position);
-            if (methodDescriptor == null)
-            {
-                Ctx.Console.Error($"Failed to resolve vm eaz call with generic arguments {value}!");
-                return null;
-            }
+        return noGenericArgs ? ResolveEazCall_Helper(position, null, null) : ResolveMethod(position);
+    }
 
-            position &= -1073741825; // 0xBFFFFFFF
-        }
-        
+    private IMethodDescriptor? ResolveEazCall_Helper(int position, ITypeDefOrRef[]? genericTypes, ITypeDefOrRef[]? declaringGenericTypes)
+    {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
 
         var methodInfo = new VMMethodInfo(VMStreamReader);
 
-        var declaringType = ResolveType(methodInfo.VMDeclaringType)?.Resolve();
-        if (declaringType == null)
+        var declaringType = ResolveType(methodInfo.VMDeclaringType);
+        if (declaringType is null)
+            throw new Exception("Failed to resolve eaz call declaring type!");
+        
+        var returnType = ResolveType(methodInfo.VMReturnType);
+        if (returnType == null)
         {
-            Ctx.Console.Error($"Failed to resolve vm eaz call {methodInfo.Name} declaring type {declaringType?.Name} as TypeDef!");
+            Ctx.Console.Error($"Failed to resolve eaz call {methodInfo.Name} return type!");
             return null;
         }
 
-        // might error on return if generic args exist
-        var method = ResolveMethod(declaringType, methodInfo);
-        if (method != null)
-            return noGenericArgs
-                ? method.ImportWith(Ctx.Importer)
-                : (IMethodDescriptor?)methodDescriptor!.ImportWith(Ctx.Importer);
-        
-        Ctx.Console.Error($"Failed to resolve vm eaz call {methodInfo.Name}");
-        return null;
+        var method = ResolveMethod(declaringType.Resolve(), methodInfo);
+        if (method is null)
+        {
+            Ctx.Console.Error($"Failed to resolve eaz call {methodInfo.Name}!");
+            return null;
+        }
+
+        return method;
     }
 
     public string ResolveString(int position)
