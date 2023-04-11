@@ -15,6 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\deps\Echo\src\Platforms\Echo.Platforms.AsmResolver\Echo.Platforms.AsmResolver.csproj" />
       <ProjectReference Include="..\..\deps\src\Platforms\Echo.Platforms.AsmResolver\Echo.Platforms.AsmResolver.csproj" />
     </ItemGroup>
     
