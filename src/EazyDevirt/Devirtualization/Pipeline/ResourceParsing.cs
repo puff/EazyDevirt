@@ -12,7 +12,7 @@ using Org.BouncyCastle.Math;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
-internal sealed class ResourceParsing : Stage
+internal sealed class ResourceParsing : StageBase
 {
     private MethodDefinition? _resourceGetterMethod;
     private MethodDefinition? _resourceInitializationMethod;

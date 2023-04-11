@@ -1,90 +1,37 @@
-﻿namespace EazyDevirt.Core.IO;
+﻿using EazyDevirt.Core.Abstractions;
+
+namespace EazyDevirt.Core.IO;
 
 /// <summary>
-/// Stream used to read data about virtualized methods.
+///     Stream that performs cryptographic operations using version 3 of the encryption scheme.
 /// </summary>
-public class CryptoStreamV3 : Stream
+public class CryptoStreamV3 : CryptoStreamBase
 {
-    private Stream Stream;
-    private int Key;
-    private bool LeaveOpen;
+    private const uint CONSTANT = 0xDEADDE4D;
 
-    /// <param name="stream">Base stream</param>
-    /// <param name="key">Crypto key</param>
-    /// <param name="leaveOpen">Determines whether the base stream should be disposed.</param>
-    public CryptoStreamV3(Stream stream, int key, bool leaveOpen = false)
+    /// <summary>
+    ///     Initializes a new instance of the CryptoStreamV3 class with the specified stream, encryption key, and leaveOpen
+    ///     flag.
+    /// </summary>
+    /// <param name="stream">The stream to perform cryptographic operations on.</param>
+    /// <param name="key">The encryption key to use.</param>
+    /// <param name="leaveOpen">True to leave the stream open after the CryptoStreamV3 object is disposed; otherwise, false.</param>
+    public CryptoStreamV3(Stream stream, int key, bool leaveOpen = false) : base(stream, key, leaveOpen)
     {
-        Stream = stream;
-        Key = key ^ -559030707; // 0xDEADDE4D in signed two's complements. This is consistent across every sample I've seen.
-        LeaveOpen = leaveOpen;
+        CryptoKey = (int)(key ^ CONSTANT); // 0xDEADDE4D in signed two's complements. This is consistent across every sample I've seen.
     }
 
-    private byte Crypt(byte byte_0, uint uint_0)
+    private int CryptoKey { get; }
+
+    /// <summary>
+    ///     Overrides the abstract method Crypt to perform the cryptographic operation using the version 3 encryption scheme.
+    /// </summary>
+    /// <param name="inputByte">The byte to encrypt/decrypt.</param>
+    /// <param name="inputKey">The key to use for encryption/decryption.</param>
+    /// <returns>The encrypted/decrypted byte.</returns>
+    protected override byte Crypt(byte inputByte, uint inputKey)
     {
-        var b = (byte)(Key ^ (int)uint_0);
-        return (byte)(byte_0 ^ b);
-    }
-    
-    public override int Read(byte[] buffer, int offset, int count)
-    {
-        var num = (uint)Stream.Position;
-        var num2 = Stream.Read(buffer, offset, count);
-        var num3 = offset + num2;
-        for (var i = offset; i < num3; i++)
-            buffer[i] = Crypt(buffer[i], num++);
-        return num2;
-    }
-    
-    public override void Write(byte[] buffer, int offset, int count)
-    {
-        var num = (uint)Stream.Position;
-        var array = new byte[count];
-        var num2 = 0U;
-        while (num2 < (ulong)count)
-        {
-            array[num2] = Crypt(buffer[(int)(IntPtr)unchecked(num2 + (ulong)offset)], num + num2);
-            num2++;
-        }
-
-        Stream.Write(array, 0, count);
-    }
-
-
-    public override void Flush()
-    {
-        Stream.Flush();
-    }
-    
-    public override long Seek(long offset, SeekOrigin origin)
-    {
-        return Stream.Seek(offset, origin);
-    }
-
-    public override void SetLength(long value)
-    {
-        Stream.SetLength(value);
-    }
-    
-    public override void Close()
-    {
-        if (!LeaveOpen)
-            Stream.Close();
-
-        Stream = null;
-        base.Close();
-    }
-    
-    public override bool CanRead => Stream.CanRead;
-
-    public override bool CanSeek => Stream.CanSeek;
-
-    public override bool CanWrite => Stream.CanWrite;
-
-    public override long Length => Stream.Length;
-
-    public override long Position
-    {
-        get => Stream.Position;
-        set => Stream.Position = value;
+        var xoredKey = (byte)(CryptoKey ^ (int)inputKey);
+        return (byte)(inputByte ^ xoredKey);
     }
 }

@@ -7,7 +7,7 @@ using EazyDevirt.Core.IO;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
-internal class MethodDevirtualizer : Stage
+internal class MethodDevirtualizer : StageBase
 {
     private CryptoStreamV3 VMStream { get; set; }
     private VMBinaryReader VMStreamReader { get; set; }
@@ -143,8 +143,7 @@ internal class MethodDevirtualizer : Stage
                     Ctx.Console.Warning($"Placing stind instruction at #{vmMethod.Instructions.Count}");
 
                 var instruction =
-                    new CilInstruction(vmOpCode.CilOpCode.Value,
-                        vmOpCode.IsIdentified ? operand : operand); // TODO: remember to switch the alternate to null
+                    new CilInstruction(vmOpCode.CilOpCode.Value, operand); // TODO: remember to switch the alternate to null
                 vmMethod.Instructions.Add(instruction);
             }
         }

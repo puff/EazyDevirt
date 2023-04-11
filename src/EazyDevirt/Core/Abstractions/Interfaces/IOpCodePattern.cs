@@ -1,7 +1,7 @@
 ﻿using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Architecture;
 
-namespace EazyDevirt.Core.Abstractions;
+namespace EazyDevirt.Core.Abstractions.Interfaces;
 
 internal interface IOpCodePattern : IPattern
 {

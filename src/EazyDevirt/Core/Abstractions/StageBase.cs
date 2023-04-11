@@ -2,9 +2,9 @@
 
 namespace EazyDevirt.Core.Abstractions;
 
-internal abstract class Stage
+internal abstract class StageBase
 {
-    protected Stage(DevirtualizationContext ctx)
+    protected StageBase(DevirtualizationContext ctx)
     {
         Name = GetType().Name;
         Ctx = ctx;
@@ -23,7 +23,6 @@ internal abstract class Stage
     /// <summary>
     /// Initializes the stage.
     /// </summary>
-    /// <param name="ctx"></param>
     /// <returns>Whether initialization was successful.</returns>
     private protected virtual bool Init() => true;
 

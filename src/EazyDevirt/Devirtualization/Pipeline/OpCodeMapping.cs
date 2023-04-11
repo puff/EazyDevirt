@@ -10,7 +10,7 @@ using EazyDevirt.PatternMatching.Patterns.OpCodes;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
-internal class OpCodeMapping : Stage
+internal class OpCodeMapping : StageBase
 {
     private protected override bool Init()
     {

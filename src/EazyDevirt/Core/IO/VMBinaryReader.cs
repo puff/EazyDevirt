@@ -1,10 +1,15 @@
 ﻿using System.Text;
+using EazyDevirt.Core.Abstractions;
 
 namespace EazyDevirt.Core.IO;
 
 // TODO: The endianness is scrambled across samples. See issue #4
-internal class VMBinaryReader : BinaryReader
+// Add Echo emulation for the VMBinaryReader
+internal class VMBinaryReader : VMBinaryReaderBase
 {
+    public VMBinaryReader(Stream input, bool leaveOpen = false) : base(input, Encoding.UTF8, leaveOpen)
+    { }
+    
     public override sbyte ReadSByte()
     {
         var bytes = ReadBytes(1);
@@ -16,15 +21,8 @@ internal class VMBinaryReader : BinaryReader
         var bytes = ReadBytes(4);
         return (bytes[2] << 8) | (bytes[3] << 16) | bytes[1] | (bytes[0] << 24);
     }
-    
-    /// <summary>
-    /// Used in reading code instructions.
-    /// </summary>
-    /// <remarks>
-    /// This is from a separate stream, called VMMemoryStream in the sample.
-    /// The endianness of this is also scrambled across samples, see #4.
-    /// </remarks>
-    public int ReadInt32Special()
+
+    public override int ReadInt32Special()
     {
         var bytes = ReadBytes(4);
         return (bytes[3] << 16) | (bytes[2] << 8) | bytes[1] | (bytes[0] << 24);
@@ -123,9 +121,5 @@ internal class VMBinaryReader : BinaryReader
         memoryStream.Write(input, 0, input.Length);
         memoryStream.Position = 0L;
         return binaryReader;
-    }
-    
-    public VMBinaryReader(Stream input, bool leaveOpen = false) : base(input, Encoding.UTF8, leaveOpen)
-    {
     }
 }
