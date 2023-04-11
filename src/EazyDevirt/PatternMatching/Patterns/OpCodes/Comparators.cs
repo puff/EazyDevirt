@@ -3,6 +3,7 @@ using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
+using EazyDevirt.Core.Abstractions.Interfaces;
 using EazyDevirt.Core.Architecture;
 
 namespace EazyDevirt.PatternMatching.Patterns.OpCodes;

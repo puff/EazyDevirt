@@ -2,7 +2,7 @@
 using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.PE.DotNet.Cil;
 
-namespace EazyDevirt.Core.Abstractions;
+namespace EazyDevirt.Core.Abstractions.Interfaces;
 
 internal interface IPattern
 {

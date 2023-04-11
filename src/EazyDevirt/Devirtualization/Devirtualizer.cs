@@ -8,7 +8,7 @@ internal class Devirtualizer
     public Devirtualizer(DevirtualizationContext ctx)
     {
         Ctx = ctx;
-        Pipeline = new List<Stage>
+        Pipeline = new List<StageBase>
         {
             new ResourceParsing(ctx),
             // TODO: add binaryreader and field order matching stage
@@ -20,7 +20,7 @@ internal class Devirtualizer
     }
     
     private DevirtualizationContext Ctx { get; }
-    private List<Stage> Pipeline { get; }
+    private List<StageBase> Pipeline { get; }
 
     public bool Run()
     {

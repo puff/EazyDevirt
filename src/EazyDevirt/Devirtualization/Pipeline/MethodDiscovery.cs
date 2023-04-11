@@ -6,7 +6,7 @@ using EazyDevirt.Core.Architecture;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
-internal sealed class MethodDiscovery : Stage
+internal sealed class MethodDiscovery : StageBase
 {
     private protected override bool Init()
     {

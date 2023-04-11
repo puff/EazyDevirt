@@ -1,4 +1,4 @@
-﻿namespace EazyDevirt.Core.Abstractions;
+﻿namespace EazyDevirt.Core.Abstractions.Interfaces;
 
 internal interface ILogger
 {
