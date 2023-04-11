@@ -8,53 +8,83 @@ namespace EazyDevirt.Devirtualization.Pipeline;
 
 internal sealed class MethodDiscovery : StageBase
 {
+    public MethodDiscovery(DevirtualizationContext ctx) : base(ctx)
+    {
+    }
+
     private protected override bool Init()
     {
-        foreach (var t in Ctx.Module.GetAllTypes())
+        var module = Ctx.Module;
+
+        var methods = module
+            .GetAllTypes()
+            .SelectMany(t => t.Methods)
+            .Where(m => m.CilMethodBody != null);
+
+        foreach (var method in methods)
         {
-            if (Ctx.MethodCryptoKey != 0) break;
-            foreach (var m in t.Methods)
+            if (!IsLoadVMPositionMethod(method))
+                continue;
+
+            var cilMethodBody = method.CilMethodBody;
+            var instructions = cilMethodBody?.Instructions;
+
+            // The instruction indices are the same across all samples I've analyzed.
+            if (instructions?[1].Operand is SerializedMethodDefinition cryptoKeyMethod)
             {
-                if (!IsLoadVMPositionMethod(m)) continue;
-                
-                // The instruction indices are the same across all samples I've analyzed.
-                var getVMMethodCryptoKeyMethod = (SerializedMethodDefinition)m.CilMethodBody!.Instructions[1].Operand!;
-                if (!IsCryptoKeyMethod(getVMMethodCryptoKeyMethod))
+                if (!IsCryptoKeyMethod(cryptoKeyMethod))
                     continue;
-                
-                Ctx.MethodCryptoKey = getVMMethodCryptoKeyMethod.CilMethodBody!.Instructions[0].GetLdcI4Constant();
+
+                var cryptoKeyBody = cryptoKeyMethod.CilMethodBody;
+                var cryptoKeyInstructions = cryptoKeyBody!.Instructions;
+
+                Ctx.MethodCryptoKey = cryptoKeyInstructions[0].GetLdcI4Constant();
+
                 if (Ctx.Options.Verbose)
                 {
                     Ctx.Console.Success("Found VM method crypto key!");
+
                     if (Ctx.Options.VeryVerbose)
                         Ctx.Console.InfoStr("VM Method Crypto Key", Ctx.MethodCryptoKey);
                 }
 
                 // this should be in the same method
-                var decryptVMPositionMethod = (SerializedMethodDefinition)m.CilMethodBody!.Instructions[15].Operand!;
-                if (!IsDecryptPositionMethod(decryptVMPositionMethod))
+                if (instructions?[15].Operand is SerializedMethodDefinition decryptVMPositionMethod)
                 {
-                    Ctx.Console.Error("Failed to find VM position decrypt method.");
-                    return false;
-                }
+                    var vmPositionBody = decryptVMPositionMethod.CilMethodBody;
+                    var vmPositionInstructions = vmPositionBody!.Instructions;
 
-                var getVMPositionCryptoKeyMethod = (SerializedMethodDefinition)decryptVMPositionMethod.CilMethodBody!.Instructions[6].Operand!;
-                if (!IsCryptoKeyMethod(getVMPositionCryptoKeyMethod))
-                {
-                    Ctx.Console.Error("Failed to find VM position crypto key.");
-                    return false;
-                }
+                    if (!IsDecryptPositionMethod(decryptVMPositionMethod))
+                    {
+                        Ctx.Console.Error("Failed to find VM position decrypt method.");
+                        return false;
+                    }
 
-                Ctx.PositionCryptoKey = getVMPositionCryptoKeyMethod.CilMethodBody!.Instructions[0].GetLdcI4Constant();
-                if (Ctx.Options.Verbose)
-                {
-                    Ctx.Console.Success("Found VM position crypto key!");
-                    if (Ctx.Options.VeryVerbose)
-                        Ctx.Console.InfoStr("VM Position Crypto Key", Ctx.PositionCryptoKey);
-                }
+                    if (vmPositionInstructions[6].Operand is SerializedMethodDefinition
+                        positionCryptoKeyMethod)
+                    {
+                        var positionCryptoKeyBody = positionCryptoKeyMethod.CilMethodBody;
+                        var positionCryptoInstr = positionCryptoKeyBody!.Instructions;
 
-                break;
+                        if (!IsCryptoKeyMethod(positionCryptoKeyMethod))
+                        {
+                            Ctx.Console.Error("Failed to find VM position crypto key.");
+                            return false;
+                        }
+
+                        Ctx.PositionCryptoKey = positionCryptoInstr[0].GetLdcI4Constant();
+
+                        if (Ctx.Options.Verbose)
+                        {
+                            Ctx.Console.Success("Found VM position crypto key!");
+                            if (Ctx.Options.VeryVerbose)
+                                Ctx.Console.InfoStr("VM Position Crypto Key", Ctx.PositionCryptoKey);
+                        }
+                    }
+                }
             }
+
+            break;
         }
 
         if (Ctx.MethodCryptoKey == 0)
@@ -64,52 +94,79 @@ internal sealed class MethodDiscovery : StageBase
         }
 
         Ctx.VMMethods = new List<VMMethod>();
-
         return true;
     }
 
     public override bool Run()
     {
-        if (!Init()) return false;
+        if (!Init())
+            return false;
 
-        foreach (var t in Ctx.Module.GetAllTypes())
-        foreach (var m in t.Methods)
+        var module = Ctx.Module;
+
+        var methods = module
+            .GetAllTypes()
+            .SelectMany(t => t.Methods)
+            .Where(m => m.CilMethodBody != null);
+
+        // TODO: Use echo?
+        foreach (var method in methods)
         {
-            if (m.CilMethodBody == null) continue;
+            var cilMethodBody = method.CilMethodBody;
+            if (cilMethodBody is null)
+                continue;
 
-            var instructions = m.CilMethodBody.Instructions;
+            var instructions = cilMethodBody.Instructions;
             var index = -1;
+
             for (var i = 0; i < instructions.Count; i++)
             {
                 var ins = instructions[i];
-                if (ins.OpCode != CilOpCodes.Call
-                    || ins.Operand!.GetType() != typeof(SerializedMethodDefinition)
-                    || ((SerializedMethodDefinition)ins.Operand).MetadataToken != Ctx.VMResourceGetterMdToken)
+
+                if (ins.OpCode.Code is not CilCode.Call ||
+                    ins.Operand is not SerializedMethodDefinition operand ||
+                    operand.MetadataToken != Ctx.VMResourceGetterMdToken)
                     continue;
+
                 index = i;
                 break;
             }
+
+            //[0] = {CilInstruction} IL_0000: call VM VMGetter::GetVMInstance()
+            //[1] = {CilInstruction} IL_0005: call System.IO.Stream VMGetter::GetVMResourceStream()                         // this is the one we want
+            //[2] = {CilInstruction} IL_000A: ldstr "5<^5Q+Z_VC"                                                            // this is the one we want
+            //[3] = {CilInstruction} IL_000F: ldnull
+            //[4] = {CilInstruction} IL_0010: call System.Object VM::ExecuteVMPosition(System.IO.Stream, System.String, System.Object[])
+            //[5] = {CilInstruction} IL_0015: unbox System.Int32
+            //[6] = {CilInstruction} IL_001A: ldobj System.Int32
+            //[7] = {CilInstruction} IL_001F: ret
+            
             if (index == -1)
                 continue;
 
             // hack fix for virtualized methods using out parameters
             if (instructions[index + 1].IsStloc())
                 index += 3;
-            
-            if (instructions[index + 1].OpCode != CilOpCodes.Ldstr)
+
+            if (instructions[index + 1].OpCode.Code is not CilCode.Ldstr)
             {
                 if (Ctx.Options.Verbose)
-                    Ctx.Console.Error($"Expected ldstr on instruction {index + 1} for method {m.MetadataToken}");
-                
+                    Ctx.Console.Error($"Expected ldstr on instruction {index + 1} for method {method.MetadataToken}");
                 continue;
             }
             
-            if (Ctx.Options.VeryVerbose)
-                Ctx.Console.InfoStr("Virtualized method found", m.MetadataToken);
+            if (instructions[index + 1].Operand is not string encodedMethodKey)
+            {
+                Ctx.Console.Error($"Failed to get encoded method key for method {method.MetadataToken}");
+                continue;
+            }
 
-            Ctx.VMMethods.Add(new VMMethod(m, (string)instructions[index + 1].Operand!));
+            if (Ctx.Options.VeryVerbose)
+                Ctx.Console.InfoStr("Virtualized method found", method.MetadataToken);
+
+            
+            Ctx.VMMethods.Add(new VMMethod(method, encodedMethodKey));
         }
-        
 
         if (Ctx.Options.Verbose)
             Ctx.Console.Success($"Discovered {Ctx.VMMethods.Count} virtualized methods!");
@@ -117,31 +174,33 @@ internal sealed class MethodDiscovery : StageBase
         return true;
     }
 
-    private static bool IsDecryptPositionMethod(MethodDefinition method) =>
-        method.Signature?.ReturnType.FullName == typeof(long).FullName
-        && method.Parameters.Count == 1
-        && method.Parameters[0].ParameterType.FullName == typeof(string).FullName
-        && method.CilMethodBody != null
-        && method.CilMethodBody.Instructions[6].OpCode == CilOpCodes.Call; // 6	000E	call	instance int32 VM::GetVMPositionCryptoKey()
-
-    private static bool IsCryptoKeyMethod(MethodDefinition method) =>
-        method.Signature?.ReturnType.FullName == typeof(int).FullName
-        && method.CilMethodBody != null
-        && method.CilMethodBody.Instructions.Count == 2
-        && method.CilMethodBody.Instructions[0].IsLdcI4();
-
-    private static bool IsLoadVMPositionMethod(MethodDefinition method) =>
-        !method.IsStatic
-        && method.Signature is { ReturnsValue: false }
-        && method.Parameters.Count == 3
-        && method.Parameters[0].ParameterType.FullName == typeof(Stream).FullName
-        && method.Parameters[1].ParameterType.FullName == typeof(long).FullName
-        && method.Parameters[2].ParameterType.FullName == typeof(string).FullName
-        && method.CilMethodBody != null
-        && method.CilMethodBody.Instructions[1].OpCode == CilOpCodes.Call // 1	0001	call	instance int32 VM::GetVMMethodCryptoKey()
-        && method.CilMethodBody.Instructions[15].OpCode == CilOpCodes.Call; // 15	0020	call	instance int64 VM::DecryptPosition(string)
-
-    public MethodDiscovery(DevirtualizationContext ctx) : base(ctx)
+    private static bool IsDecryptPositionMethod(MethodDefinition method)
     {
+        return method.Signature?.ReturnType.FullName == typeof(long).FullName
+               && method.Parameters.Count == 1
+               && method.Parameters[0].ParameterType.FullName == typeof(string).FullName
+               && method.CilMethodBody != null
+               && method.CilMethodBody.Instructions[6].OpCode ==
+               CilOpCodes.Call; // 6	000E	call	instance int32 VM::GetVMPositionCryptoKey()
+    }
+
+    private static bool IsCryptoKeyMethod(MethodDefinition method)
+    {
+        return method.Signature?.ReturnType.FullName == typeof(int).FullName
+               && method.CilMethodBody is { Instructions.Count: 2 }
+               && method.CilMethodBody.Instructions[0].IsLdcI4();
+    }
+
+    private static bool IsLoadVMPositionMethod(MethodDefinition method)
+    {
+        return method is { IsStatic: false, Signature.ReturnsValue: false, Parameters.Count: 3 }
+               && method.Parameters[0].ParameterType.FullName == typeof(Stream).FullName
+               && method.Parameters[1].ParameterType.FullName == typeof(long).FullName
+               && method.Parameters[2].ParameterType.FullName == typeof(string).FullName
+               && method.CilMethodBody is not null
+               && method.CilMethodBody.Instructions[1].OpCode ==
+               CilOpCodes.Call // 1	    0001	call	instance int32 VM::GetVMMethodCryptoKey()
+               && method.CilMethodBody.Instructions[15].OpCode ==
+               CilOpCodes.Call; // 15	0020	call	instance int64 VM::DecryptPosition(string)
     }
 }
