@@ -1,0 +1,3 @@
+[submodule "deps/Echo"]
+	path = deps/Echo
+	url = https://github.com/Washi1337/Echo.git
