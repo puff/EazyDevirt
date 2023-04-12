@@ -14,8 +14,7 @@ internal class Resolver
     {
         Ctx = ctx;
         //VMStreamReader = new VMBinaryReader(new CryptoStreamV3(Ctx.VMResolverStream, Ctx.MethodCryptoKey, true));
-        var em = new BinaryEndiannessEmulator(Ctx.Module);
-        VMStreamReader = new VMBinaryReaderEmulator(new CryptoStreamV3(Ctx.VMResolverStream, Ctx.MethodCryptoKey, true), em);
+        VMStreamReader = new VMBinaryReaderEmulator(new CryptoStreamV3(Ctx.VMResolverStream, Ctx.MethodCryptoKey, true), BinaryEndiannessEmulator.Instance);
     }
     
     private DevirtualizationContext Ctx { get; }

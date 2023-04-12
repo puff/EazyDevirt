@@ -2,6 +2,7 @@
 using AsmResolver.DotNet.Collections;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
+using EazyDevirt.Core.Abstractions.IO;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.IO;
 
@@ -10,7 +11,7 @@ namespace EazyDevirt.Devirtualization.Pipeline;
 internal class MethodDevirtualizer : StageBase
 {
     private CryptoStreamV3 VMStream { get; set; }
-    private VMBinaryReader VMStreamReader { get; set; }
+    private VMBinaryReaderBase VMStreamReader { get; set; }
     
     private Resolver Resolver { get; set; }
     
@@ -19,7 +20,7 @@ internal class MethodDevirtualizer : StageBase
         if (!Init()) return false;
         
         VMStream = new CryptoStreamV3(Ctx.VMStream, Ctx.MethodCryptoKey, true);
-        VMStreamReader = new VMBinaryReader(VMStream);
+        VMStreamReader = new VMBinaryReaderEmulator(VMStream, BinaryEndiannessEmulator.Instance);
         
         Resolver = new Resolver(Ctx);
         foreach (var vmMethod in Ctx.VMMethods)

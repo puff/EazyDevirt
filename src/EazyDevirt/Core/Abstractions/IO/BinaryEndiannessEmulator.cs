@@ -4,18 +4,25 @@ using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.DotNet.Signatures;
 using AsmResolver.DotNet.Signatures.Types;
 using AsmResolver.PE.DotNet.Cil;
+using EazyDevirt.Devirtualization;
 using Echo.DataFlow;
 using Echo.DataFlow.Analysis;
 using Echo.Memory;
 using Echo.Platforms.AsmResolver;
 using Echo.Platforms.AsmResolver.Emulation;
 using Echo.Platforms.AsmResolver.Emulation.Dispatch;
+using Echo.Platforms.AsmResolver.Emulation.Stack;
 
 namespace EazyDevirt.Core.Abstractions.IO;
 
 // BIG thank you to void-stack for this!
 public class BinaryEndiannessEmulator
 {
+    public static BinaryEndiannessEmulator Instance
+    {
+        get;
+    } = new(DevirtualizationContext.Instance.Module);
+    
     private static readonly CilCode[] AllowedCodes =
     {
         CilCode.Add, CilCode.Add_Ovf, CilCode.Add_Ovf_Un,
@@ -23,9 +30,9 @@ public class BinaryEndiannessEmulator
         CilCode.Mul, CilCode.Mul_Ovf, CilCode.Mul_Ovf_Un,
 
         CilCode.Div, CilCode.Div_Un, CilCode.Rem, CilCode.Rem_Un,
-        CilCode.Xor, CilCode.And, CilCode.Or, CilCode.Shl,
+        CilCode.Xor, CilCode.And, CilCode.Or,
 
-        CilCode.Shr, CilCode.Shr_Un,
+        CilCode.Shl, CilCode.Shr, CilCode.Shr_Un,
         CilCode.Ceq, CilCode.Cgt, CilCode.Cgt_Un, CilCode.Clt, CilCode.Clt_Un,
 
         CilCode.Conv_I8,
@@ -64,7 +71,7 @@ public class BinaryEndiannessEmulator
     }
 
     private BitVector GetInitialEndianness(CilInstructionCollection instructions,
-        DataFlowGraph<CilInstruction> dfg, IEnumerable bytes, BinaryReader? reader = null!)
+        DataFlowGraph<CilInstruction> dfg, IEnumerable<byte> bytes, BinaryReader? reader = null!)
     {
         var useReader = reader is not null;
         var lastInstruction = instructions.Last();
@@ -73,7 +80,9 @@ public class BinaryEndiannessEmulator
         _vm.CallStack.Push(instructions.Owner.Owner);
 
         var factory = _vm.ContextModule.CorLibTypeFactory;
-        _vm.Dispatcher.BeforeInstructionDispatch += SpoofBufferField(bytes, factory);
+        var enumerable = bytes as byte[] ?? bytes.ToArray();
+        var eventHandler = SpoofBufferField(enumerable, factory);
+        _vm.Dispatcher.BeforeInstructionDispatch += eventHandler;
 
         var frame = _context.CurrentFrame;
         var stack = frame.EvaluationStack;
@@ -93,10 +102,11 @@ public class BinaryEndiannessEmulator
                 _vm.Dispatcher.Dispatch(_context, contents);
         }
 
+        _vm.Dispatcher.BeforeInstructionDispatch -= eventHandler;
         return stack.Pop().Contents;
     }
 
-    private static EventHandler<CilDispatchEventArgs>? SpoofBufferField(IEnumerable bytes, CorLibTypeFactory factory)
+    private static EventHandler<CilDispatchEventArgs>? SpoofBufferField(IEnumerable<byte> bytes, CorLibTypeFactory factory)
     {
         return delegate(object? sender, CilDispatchEventArgs args)
         {
@@ -105,7 +115,6 @@ public class BinaryEndiannessEmulator
                 /* Fake the Ldfld of _buffer with our buffer */
                 case CilCode.Ldfld:
                 {
-                    //args.IsHandled = true;
                     var comparer = SignatureComparer.Default;
 
                     if (args.Instruction.Operand is FieldDefinition { Signature: not null } field &&
@@ -122,6 +131,21 @@ public class BinaryEndiannessEmulator
                         evalStack.Push(result, field.Signature.FieldType);
                     }
 
+                    break;
+                }
+                case CilCode.Ldelem_U1:
+                {
+                    args.IsHandled = true;
+
+                    var evalStack = args.Context.CurrentFrame.EvaluationStack;
+                    var valueFactory = args.Context.Machine.ValueFactory;
+
+                    var index = evalStack.Pop().Contents.AsSpan().I32;
+                    var value = bytes.ToArray()[index];
+                    var result = valueFactory.BitVectorPool.Rent(8, false);
+                    
+                    result.AsSpan().Write(value);
+                    evalStack.Push(result, factory.Byte.Type.ToTypeSignature());
                     break;
                 }
                 default:

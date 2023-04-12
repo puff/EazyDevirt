@@ -1,4 +1,5 @@
-﻿using EazyDevirt.Util;
+﻿using EazyDevirt.Core.Abstractions.IO;
+using EazyDevirt.Util;
 using Org.BouncyCastle.Crypto.Encodings;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -120,7 +121,8 @@ internal class VMCipherStream : Stream
     {
         var decoded = Ascii85.FromAscii85String(positionString);
 
-        using var reader = new VMBinaryReader(new CryptoStreamV3(new MemoryStream(decoded), positionKey));
+        // using var reader = new VMBinaryReader(new CryptoStreamV3(new MemoryStream(decoded), positionKey));
+        using var reader = new VMBinaryReaderEmulator(new CryptoStreamV3(new MemoryStream(decoded), positionKey), BinaryEndiannessEmulator.Instance);
         return reader.ReadInt64();
     }
 
@@ -285,7 +287,7 @@ internal class VMCipherStream : Stream
         }
 
         using var cryptoStream = new CryptoStreamV3(ResourceStream, 0, true);
-        using var lengthBinaryReader = new VMBinaryReader(cryptoStream);
+        using var lengthBinaryReader = new VMBinaryReaderEmulator(cryptoStream, BinaryEndiannessEmulator.Instance);
 
         _Length = lengthBinaryReader.ReadInt32();
         LengthPart1 = _Length / OutputBlockSize;

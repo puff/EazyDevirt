@@ -38,4 +38,44 @@ internal class VMBinaryReaderEmulator : VMBinaryReaderBase
         var bytes = ReadBytes(4);
         return _emulator.InferScrambledEndianness<int>(method, bytes, this);
     }
+    
+    public override uint ReadUInt32()
+    {
+        var method = _emulator.Module.LookupMember<MethodDefinition>((uint)0x06000280);
+        var bytes = ReadBytes(4);
+
+        return _emulator.InferScrambledEndianness<uint>(method, bytes);
+    }
+    
+    public override long ReadInt64()
+    {
+        var method = _emulator.Module.LookupMember<MethodDefinition>((uint)0x06000281);
+        var bytes = ReadBytes(8);
+
+        return _emulator.InferScrambledEndianness<long>(method, bytes);
+    }
+    
+    public override ulong ReadUInt64()
+    {
+        var method = _emulator.Module.LookupMember<MethodDefinition>((uint)0x06000282);
+        var bytes = ReadBytes(8);
+
+        return _emulator.InferScrambledEndianness<ulong>(method, bytes);
+    }
+    
+    public override short ReadInt16()
+    {
+        var method = _emulator.Module.LookupMember<MethodDefinition>((uint)0x06000283);
+        var bytes = ReadBytes(2);
+
+        return _emulator.InferScrambledEndianness<short>(method, bytes);
+    }
+    
+    public override ushort ReadUInt16()
+    {
+        var method = _emulator.Module.LookupMember<MethodDefinition>((uint) 0x06000284 );
+        var bytes = ReadBytes(2);
+
+        return _emulator.InferScrambledEndianness<ushort>(method, bytes);
+    }
 }
