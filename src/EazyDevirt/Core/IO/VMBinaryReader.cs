@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using EazyDevirt.Core.Abstractions;
+using EazyDevirt.Core.Abstractions.IO;
 
 namespace EazyDevirt.Core.IO;
 

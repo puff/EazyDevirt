@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using EazyDevirt.Core.Abstractions.Interfaces;
 
-namespace EazyDevirt.Core.Abstractions;
+namespace EazyDevirt.Core.Abstractions.IO;
 
 internal abstract class VMBinaryReaderBase : BinaryReader, IVMBinaryReader
 {

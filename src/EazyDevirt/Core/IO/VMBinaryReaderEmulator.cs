@@ -1,6 +1,6 @@
 using System.Text;
 using AsmResolver.DotNet;
-using EazyDevirt.Core.Abstractions;
+using EazyDevirt.Core.Abstractions.IO;
 
 namespace EazyDevirt.Core.IO;
 

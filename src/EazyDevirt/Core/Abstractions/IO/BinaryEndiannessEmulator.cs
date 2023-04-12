@@ -11,7 +11,7 @@ using Echo.Platforms.AsmResolver;
 using Echo.Platforms.AsmResolver.Emulation;
 using Echo.Platforms.AsmResolver.Emulation.Dispatch;
 
-namespace EazyDevirt.Core.Abstractions;
+namespace EazyDevirt.Core.Abstractions.IO;
 
 // BIG thank you to void-stack for this!
 public class BinaryEndiannessEmulator
