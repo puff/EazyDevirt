@@ -26,16 +26,19 @@ internal class Devirtualizer
 
     public bool Run()
     {
+        var logger = Ctx.Console;
+
         foreach (var stage in Pipeline)
         {
-            Ctx.Console.Info($"Executing {stage.Name}...", VerboseLevel.None);
+            logger.Info($"Executing {stage.Name}...", VerboseLevel.None);
+            
             if (!stage.Run())
             {
-                Ctx.Console.Error($"Failed executing {stage.Name}!");
+                logger.Error($"Failed executing {stage.Name}!");
                 return false;
             }
 
-            Ctx.Console.Success($"Executed {stage.Name}!", VerboseLevel.None);
+            logger.Success($"Executed {stage.Name}!", VerboseLevel.None);
         }
 
         return true;
