@@ -1,8 +1,10 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
+using EazyDevirt.Core;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
+using EazyDevirt.Logging;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
@@ -20,6 +22,7 @@ internal sealed class MethodDiscovery : StageBase
             .GetAllTypes()
             .SelectMany(t => t.Methods)
             .Where(m => m.CilMethodBody != null);
+
 
         foreach (var method in methods)
         {
@@ -40,13 +43,8 @@ internal sealed class MethodDiscovery : StageBase
 
                 Ctx.MethodCryptoKey = cryptoKeyInstructions[0].GetLdcI4Constant();
 
-                if (Ctx.Options.Verbose)
-                {
-                    Ctx.Console.Success("Found VM method crypto key!");
-
-                    if (Ctx.Options.VeryVerbose)
-                        Ctx.Console.InfoStr("VM Method Crypto Key", Ctx.MethodCryptoKey);
-                }
+                Logger.Success("Found VM method crypto key!", VerboseLevel.Verbose);
+                Logger.InfoStr("VM Method Crypto Key", Ctx.MethodCryptoKey, VerboseLevel.Verbose);
 
                 // this should be in the same method
                 if (instructions?[15].Operand is SerializedMethodDefinition decryptVMPositionMethod)
@@ -56,7 +54,7 @@ internal sealed class MethodDiscovery : StageBase
 
                     if (!IsDecryptPositionMethod(decryptVMPositionMethod))
                     {
-                        Ctx.Console.Error("Failed to find VM position decrypt method.");
+                        Logger.Error("Failed to find VM position decrypt method.");
                         return false;
                     }
 
@@ -68,18 +66,14 @@ internal sealed class MethodDiscovery : StageBase
 
                         if (!IsCryptoKeyMethod(positionCryptoKeyMethod))
                         {
-                            Ctx.Console.Error("Failed to find VM position crypto key.");
+                            Logger.Error("Failed to find VM position crypto key.");
                             return false;
                         }
 
                         Ctx.PositionCryptoKey = positionCryptoInstr[0].GetLdcI4Constant();
 
-                        if (Ctx.Options.Verbose)
-                        {
-                            Ctx.Console.Success("Found VM position crypto key!");
-                            if (Ctx.Options.VeryVerbose)
-                                Ctx.Console.InfoStr("VM Position Crypto Key", Ctx.PositionCryptoKey);
-                        }
+                        Logger.Success("Found VM position crypto key!", VerboseLevel.Verbose);
+                        Logger.InfoStr("VM Position Crypto Key", Ctx.PositionCryptoKey, VerboseLevel.VeryVerbose);
                     }
                 }
             }
@@ -89,7 +83,7 @@ internal sealed class MethodDiscovery : StageBase
 
         if (Ctx.MethodCryptoKey == 0)
         {
-            Ctx.Console.Error("Failed to find vm method crypto key.");
+            Logger.Error("Failed to find vm method crypto key.");
             return false;
         }
 
@@ -140,7 +134,7 @@ internal sealed class MethodDiscovery : StageBase
             //[5] = {CilInstruction} IL_0015: unbox System.Int32
             //[6] = {CilInstruction} IL_001A: ldobj System.Int32
             //[7] = {CilInstruction} IL_001F: ret
-            
+
             if (index == -1)
                 continue;
 
@@ -151,25 +145,21 @@ internal sealed class MethodDiscovery : StageBase
             if (instructions[index + 1].OpCode.Code is not CilCode.Ldstr)
             {
                 if (Ctx.Options.Verbose)
-                    Ctx.Console.Error($"Expected ldstr on instruction {index + 1} for method {method.MetadataToken}");
+                    Logger.Error($"Expected ldstr on instruction {index + 1} for method {method.MetadataToken}");
                 continue;
             }
-            
+
             if (instructions[index + 1].Operand is not string encodedMethodKey)
             {
-                Ctx.Console.Error($"Failed to get encoded method key for method {method.MetadataToken}");
+                Logger.Error($"Failed to get encoded method key for method {method.MetadataToken}");
                 continue;
             }
 
-            if (Ctx.Options.VeryVerbose)
-                Ctx.Console.InfoStr("Virtualized method found", method.MetadataToken);
-
-            
+            Logger.InfoStr("Virtualized method found", method.MetadataToken, VerboseLevel.VeryVerbose);
             Ctx.VMMethods.Add(new VMMethod(method, encodedMethodKey));
         }
 
-        if (Ctx.Options.Verbose)
-            Ctx.Console.Success($"Discovered {Ctx.VMMethods.Count} virtualized methods!");
+        Logger.Success($"Discovered {Ctx.VMMethods.Count} virtualized methods!", VerboseLevel.Verbose);
 
         return true;
     }

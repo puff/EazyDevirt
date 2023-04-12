@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-    <Import Condition=" '$(EAZFUSCATOR_NET_HOME)' != '' and Exists('$(EAZFUSCATOR_NET_HOME)\Integration\MSBuild\Eazfuscator.NET.targets') " Project="$(EAZFUSCATOR_NET_HOME)\Integration\MSBuild\Eazfuscator.NET.targets" />
+    <Import Condition=" '$(EAZFUSCATOR_NET_HOME)' != '' and Exists('$(EAZFUSCATOR_NET_HOME)\Integration\MSBuild\Eazfuscator.NET.targets') " Project="$(EAZFUSCATOR_NET_HOME)\Integration\MSBuild\Eazfuscator.NET.targets"/>
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -18,21 +18,21 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <!-- <None Remove="Resources\PXL_20211023_102536344.jpg" /> -->
-      <EmbeddedResource Include="Resources\encrypted.jpg" />
-      <!-- <None Remove="Resources\encrypted and compressed.png" /> -->
-      <EmbeddedResource Include="Resources\encrypted and compressed.png" />
+        <!-- <None Remove="Resources\PXL_20211023_102536344.jpg" /> -->
+        <EmbeddedResource Include="Resources\encrypted.jpg"/>
+        <!-- <None Remove="Resources\encrypted and compressed.png" /> -->
+        <EmbeddedResource Include="Resources\encrypted and compressed.png"/>
     </ItemGroup>
 
     <!-- Add all output files to a group so we can copy them -->
     <ItemGroup>
-        <_CopyItems Include="$(OutDir)*.*" />
+        <_CopyItems Include="$(OutDir)*.*"/>
     </ItemGroup>
-    
+
     <!-- Don't overwrite sample in Debug mode. Eazfuscator.NET only obfuscates in Release mode. -->
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(ConfigurationName)' == 'Release'">
-       <!-- <Exec Command="xcopy $(OutDir) ..\samples\EazSample /Y /I" /> -->
-        <Copy SourceFiles="@(_CopyItems)" DestinationFolder="../samples/EazSample-new" />
+        <!-- <Exec Command="xcopy $(OutDir) ..\samples\EazSample /Y /I" /> -->
+        <Copy SourceFiles="@(_CopyItems)" DestinationFolder="../samples/EazSample-new"/>
     </Target>
 
 </Project>

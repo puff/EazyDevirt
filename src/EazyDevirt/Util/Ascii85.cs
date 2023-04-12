@@ -3,15 +3,15 @@
 public static class Ascii85
 {
     /// <summary>
-    /// Magic numbers.
+    ///     Magic numbers.
     /// </summary>
     /// <remarks>
-    /// Powers of 85: 4, 3, 2, 1, 0 respectively.
+    ///     Powers of 85: 4, 3, 2, 1, 0 respectively.
     /// </remarks>
-    private static readonly uint[] Powers = { 52200625U, 614125U, 7225U, 85U, 1U};
-    
+    private static readonly uint[] Powers = { 52200625U, 614125U, 7225U, 85U, 1U };
+
     /// <summary>
-    /// Decodes an ascii85 string.
+    ///     Decodes an ascii85 string.
     /// </summary>
     /// <param name="str">Ascii85 Encoded string.</param>
     /// <remarks>Most of this is copied from decompilation.</remarks>
@@ -27,9 +27,10 @@ public static class Ascii85
             var num2 = 0u;
 
             foreach (var c in str)
-            {
                 if (c == 'z' && num == 0)
+                {
                     WriteValue(memoryStream, num2, 0);
+                }
                 else
                 {
                     if (c is < '!' or > 'u')
@@ -38,13 +39,13 @@ public static class Ascii85
                     {
                         num2 += (uint)(Powers[num] * (ulong)checked(c - '!'));
                     }
+
                     num++;
                     if (num != 5) continue;
                     WriteValue(memoryStream, num2, 0);
                     num = 0;
                     num2 = 0u;
                 }
-            }
 
             switch (num)
             {
@@ -57,6 +58,7 @@ public static class Ascii85
                         {
                             num2 += 84u * Powers[j];
                         }
+
                     WriteValue(memoryStream, num2, 5 - num);
                     break;
                 }
@@ -80,6 +82,6 @@ public static class Ascii85
         if (int_0 == 2) return;
         stream.WriteByte((byte)(val >> 8 /*& 255u*/));
         if (int_0 == 1) return;
-        stream.WriteByte((byte)(val /*& 255u*/));
+        stream.WriteByte((byte)val /*& 255u*/);
     }
 }

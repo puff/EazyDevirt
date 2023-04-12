@@ -1,114 +1,144 @@
-﻿
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace EazyDevirt.Core.Architecture;
-
 
 // From saneki's eazdevirt
 
 /// <summary>
-/// Convenience class for interpreting the type names found in the
-/// encrypted virtualization resources file.
+///     Convenience class for interpreting the type names found in the
+///     encrypted virtualization resources file.
 /// </summary>
 public class TypeName
 {
-	/// <summary>
-	/// Full name as given in constructor.
-	/// </summary>
-	public string FullName { get; private set; }
-
-	public TypeName(string fullName)
-	{
-		// Eazfuscator.NET uses '+' to indicate a nested type name follows, while
-		// dnlib uses '+'
-		// FullName = fullName.Replace('+', '+');
-		FullName = fullName;
-	}
+    public TypeName(string fullName)
+    {
+        // Eazfuscator.NET uses '+' to indicate a nested type name follows, while
+        // dnlib uses '+'
+        // FullName = fullName.Replace('+', '+');
+        FullName = fullName;
+    }
 
     /// <summary>
-    /// Full assembly name.
+    ///     Full name as given in constructor.
     /// </summary>
-    public string AssemblyFullName =>
-        FullName[(FullName.IndexOf(", ", StringComparison.Ordinal) + 2)..];
-    
-    /// <summary>
-    /// Assembly name.
-    /// </summary>
-    public AssemblyName AssemblyName => new(AssemblyFullName);
+    public string FullName { get; }
 
     /// <summary>
-    /// Type name without namespace.
+    ///     Full assembly name.
     /// </summary>
-    public string NameWithoutNamespace => Name.Contains('.') ? Name.Split('.').Last() : Name;
+    public string AssemblyFullName
+    {
+        get { return FullName[(FullName.IndexOf(", ", StringComparison.Ordinal) + 2)..]; }
+    }
 
-	/// <summary>
-	/// Namespace.
-	/// </summary>
-	public string Namespace => Name.Contains('.')
-		? string.Join(".",
-			Name.Split('.').Reverse().Skip(1).Reverse().ToArray())
-		: string.Empty;
+    /// <summary>
+    ///     Assembly name.
+    /// </summary>
+    public AssemblyName AssemblyName
+    {
+        get { return new AssemblyName(AssemblyFullName); }
+    }
 
-	/// <summary>
-	/// Type name without assembly info.
-	/// </summary>
-	public string Name
-	{
-		get
-		{
-			if (!FullName.Contains(", ")) return FullName;
-			GetModifiersStack(FullName.Split(',')[0], out var fixedName);
-			return fixedName;
-		}
-	}
+    /// <summary>
+    ///     Type name without namespace.
+    /// </summary>
+    public string NameWithoutNamespace
+    {
+        get { return Name.Contains('.') ? Name.Split('.').Last() : Name; }
+    }
 
-	public Stack<string> Modifiers => FullName.Contains(", ")
-		? GetModifiersStack(FullName.Split(',')[0], out _)
-		: new Stack<string>();
+    /// <summary>
+    ///     Namespace.
+    /// </summary>
+    public string Namespace
+    {
+        get
+        {
+            return Name.Contains('.')
+                ? string.Join(".",
+                    Name.Split('.').Reverse().Skip(1).Reverse().ToArray())
+                : string.Empty;
+        }
+    }
 
-	/// <summary>
-	/// Whether or not this name indicates the type is nested.
-	/// </summary>
-	public bool IsNested => Name.Contains('+');
+    /// <summary>
+    ///     Type name without assembly info.
+    /// </summary>
+    public string Name
+    {
+        get
+        {
+            if (!FullName.Contains(", ")) return FullName;
+            GetModifiersStack(FullName.Split(',')[0], out var fixedName);
+            return fixedName;
+        }
+    }
 
-	/// <summary>
-	/// The parent type name if nested. If not nested, an empty string.
-	/// </summary>
-	public string ParentName => IsNested
-		? string.Join("+",
-			Name.Split('+').Reverse().Skip(1).Reverse().ToArray())
-		: string.Empty;
+    public Stack<string> Modifiers
+    {
+        get
+        {
+            return FullName.Contains(", ")
+                ? GetModifiersStack(FullName.Split(',')[0], out _)
+                : new Stack<string>();
+        }
+    }
 
-	/// <summary>
-	/// The nested child type name if nested. If not nested, null.
-	/// </summary>
-	public string NestedName => IsNested ? Name.Split('+').Last() : string.Empty;
+    /// <summary>
+    ///     Whether or not this name indicates the type is nested.
+    /// </summary>
+    public bool IsNested
+    {
+        get { return Name.Contains('+'); }
+    }
 
-	/// <summary>
-	/// Get a modifiers stack from a deserialized type name, and also
-	/// provide the fixed name.
-	/// </summary>
-	/// <param name="rawName">Deserialized name</param>
-	/// <param name="fixedName">Fixed name</param>
-	/// <returns>Modifiers stack</returns>
-	private static Stack<string> GetModifiersStack(string rawName, out string fixedName)
-	{
-		var stack = new Stack<string>();
+    /// <summary>
+    ///     The parent type name if nested. If not nested, an empty string.
+    /// </summary>
+    public string ParentName
+    {
+        get
+        {
+            return IsNested
+                ? string.Join("+",
+                    Name.Split('+').Reverse().Skip(1).Reverse().ToArray())
+                : string.Empty;
+        }
+    }
 
-		while (true)
-		{
-			if (rawName.EndsWith("[]"))
-				stack.Push("[]");
-			else if (rawName.EndsWith("*"))
-				stack.Push("*");
-			else if (rawName.EndsWith("&"))
-				stack.Push("&");
-			else break;
+    /// <summary>
+    ///     The nested child type name if nested. If not nested, null.
+    /// </summary>
+    public string NestedName
+    {
+        get { return IsNested ? Name.Split('+').Last() : string.Empty; }
+    }
 
-			rawName = rawName[..^stack.Peek().Length];
-		}
+    /// <summary>
+    ///     Get a modifiers stack from a deserialized type name, and also
+    ///     provide the fixed name.
+    /// </summary>
+    /// <param name="rawName">Deserialized name</param>
+    /// <param name="fixedName">Fixed name</param>
+    /// <returns>Modifiers stack</returns>
+    private static Stack<string> GetModifiersStack(string rawName, out string fixedName)
+    {
+        var stack = new Stack<string>();
 
-		fixedName = rawName;
-		return stack;
-	}
+        while (true)
+        {
+            if (rawName.EndsWith("[]"))
+                stack.Push("[]");
+            else if (rawName.EndsWith("*"))
+                stack.Push("*");
+            else if (rawName.EndsWith("&"))
+                stack.Push("&");
+            else break;
+
+            rawName = rawName[..^stack.Peek().Length];
+        }
+
+        fixedName = rawName;
+        return stack;
+    }
 }

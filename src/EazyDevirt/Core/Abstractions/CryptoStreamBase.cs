@@ -1,20 +1,23 @@
 ﻿namespace EazyDevirt.Core.Abstractions;
 
 /// <summary>
-/// Abstract base class for cryptographic streams. Implements basic stream functionality and exposes an abstract method for byte-level encryption/decryption.
+///     Abstract base class for cryptographic streams. Implements basic stream functionality and exposes an abstract method
+///     for byte-level encryption/decryption.
 /// </summary>
 public abstract class CryptoStreamBase : Stream
 {
+    private readonly bool _leaveOpen;
+
+    private Stream _stream;
+
     /// <summary>
-    /// The key used for encryption/decryption.
+    ///     The key used for encryption/decryption.
     /// </summary>
     protected int Key;
 
-    private Stream _stream;
-    private readonly bool _leaveOpen;
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="CryptoStreamBase"/> class with the specified base stream, key, and whether to leave the base stream open.
+    ///     Initializes a new instance of the <see cref="CryptoStreamBase" /> class with the specified base stream, key, and
+    ///     whether to leave the base stream open.
     /// </summary>
     /// <param name="baseStream">The base stream to read from or write to.</param>
     /// <param name="key">The key used for encryption/decryption.</param>
@@ -27,7 +30,7 @@ public abstract class CryptoStreamBase : Stream
     }
 
     /// <summary>
-    /// Encrypts/decrypts a byte using the given input key.
+    ///     Encrypts/decrypts a byte using the given input key.
     /// </summary>
     /// <param name="inputByte">The byte to encrypt/decrypt.</param>
     /// <param name="inputKey">The input key to use for encryption/decryption.</param>
@@ -35,6 +38,7 @@ public abstract class CryptoStreamBase : Stream
     protected abstract byte Crypt(byte inputByte, uint inputKey);
 
     #region Basic Stream Overrides
+
     public override int Read(byte[] buffer, int offset, int count)
     {
         var num = (uint)_stream.Position;
@@ -85,28 +89,29 @@ public abstract class CryptoStreamBase : Stream
 
     public override bool CanRead
     {
-        get => _stream.CanRead;
+        get { return _stream.CanRead; }
     }
 
     public override bool CanSeek
     {
-        get => _stream.CanSeek;
+        get { return _stream.CanSeek; }
     }
 
     public override bool CanWrite
     {
-        get => _stream.CanWrite;
+        get { return _stream.CanWrite; }
     }
 
     public override long Length
     {
-        get => _stream.Length;
+        get { return _stream.Length; }
     }
 
     public override long Position
     {
-        get => _stream.Position;
-        set => _stream.Position = value;
+        get { return _stream.Position; }
+        set { _stream.Position = value; }
     }
+
     #endregion
 }

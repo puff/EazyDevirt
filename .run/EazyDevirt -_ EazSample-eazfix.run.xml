@@ -4,7 +4,7 @@
     <option name="PROGRAM_PARAMETERS" value="$PROJECT_DIR$/samples/EazSample/EazSample-eazfix.dll -v 3 -kt --preserve-all --save-anyway true --only-save-devirted false" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/EazyDevirt/bin/Debug/net6.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
-    <option name="USE_EXTERNAL_CONSOLE" value="0" />
+    <option name="USE_EXTERNAL_CONSOLE" value="1" />
     <option name="USE_MONO" value="0" />
     <option name="RUNTIME_ARGUMENTS" value="" />
     <option name="PROJECT_PATH" value="$PROJECT_DIR$/src/EazyDevirt/EazyDevirt.csproj" />

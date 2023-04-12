@@ -3,7 +3,7 @@ using AsmResolver.DotNet.Signatures;
 using AsmResolver.DotNet.Signatures.Types;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.Architecture.InlineOperands;
-using EazyDevirt.Devirtualization;
+using EazyDevirt.Logging;
 
 namespace EazyDevirt.Core.IO;
 
@@ -14,9 +14,9 @@ internal class Resolver
         Ctx = ctx;
         VMStreamReader = new VMBinaryReader(new CryptoStreamV3(Ctx.VMResolverStream, Ctx.MethodCryptoKey, true));
     }
-    
+
     private Context Ctx { get; }
-    
+
     private VMBinaryReader VMStreamReader { get; }
 
     private TypeSignature ApplySigModifiers(TypeSignature baseTypeSig, Stack<string> mods)
@@ -35,7 +35,7 @@ internal class Resolver
 
         return baseTypeSig;
     }
-    
+
     public ITypeDefOrRef? ResolveType(int position)
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
@@ -43,7 +43,7 @@ internal class Resolver
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
             return Ctx.Module.LookupMember<ITypeDefOrRef>(inlineOperand.Token);
-        
+
         if (!inlineOperand.HasData || inlineOperand.Data is not VMTypeData data)
             throw new Exception("VM inline operand expected to have type data!");
 
@@ -51,22 +51,26 @@ internal class Resolver
         {
             if (data.GenericArgumentIndex != -1)
             {
-                var typeGenericParameterSignature = new GenericParameterSignature(Ctx.Module, GenericParameterType.Method, data.GenericArgumentIndex);
+                var typeGenericParameterSignature = new GenericParameterSignature(Ctx.Module,
+                    GenericParameterType.Method, data.GenericArgumentIndex);
                 return typeGenericParameterSignature.ToTypeDefOrRef();
             }
-            
+
             if (data.DeclaringTypeGenericArgumentIndex != -1)
             {
-                var typeGenericParameterSignature = new GenericParameterSignature(Ctx.Module, GenericParameterType.Type, data.GenericArgumentIndex);
+                var typeGenericParameterSignature = new GenericParameterSignature(Ctx.Module, GenericParameterType.Type,
+                    data.GenericArgumentIndex);
                 return typeGenericParameterSignature.ToTypeDefOrRef();
             }
         }
-        
+
         // Try to find type definition or reference
         var typeDefOrRef = (ITypeDefOrRef?)Ctx.Module.GetAllTypes()
                                .FirstOrDefault(x => x.FullName == data.TypeName.Name) ??
                            (ITypeDefOrRef?)Ctx.Module.GetImportedTypeReferences()
-                               .FirstOrDefault(x => x.FullName == data.TypeName.Name && x.Scope?.Name == data.TypeName.AssemblyName.Name);
+                               .FirstOrDefault(x =>
+                                   x.FullName == data.TypeName.Name &&
+                                   x.Scope?.Name == data.TypeName.AssemblyName.Name);
         if (typeDefOrRef != null)
         {
             var typeSig = typeDefOrRef.ToTypeSignature();
@@ -74,7 +78,7 @@ internal class Resolver
                 typeSig = typeDefOrRef
                     .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature())
                         .ToArray());
-            
+
             return ApplySigModifiers(typeSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
         }
 
@@ -85,7 +89,7 @@ internal class Resolver
                 data.TypeName.AssemblyName.GetPublicKey() ?? data.TypeName.AssemblyName.GetPublicKeyToken());
         if (assemblyRef == null!)
         {
-            Ctx.Console.Warning($"Failed to find vm type {data.Name} assembly reference!");
+            Ctx.Console.Warning($"Failed to find vm type {data.Name} assembly reference!", VerboseLevel.Verbose);
             return null!;
         }
 
@@ -98,32 +102,35 @@ internal class Resolver
 
         return ApplySigModifiers(typeBaseSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
     }
-    
+
     public IFieldDescriptor? ResolveField(int position)
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
-        
+
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
             return Ctx.Module.LookupMember<IFieldDescriptor>(inlineOperand.Token);
-        
+
         if (!inlineOperand.HasData || inlineOperand.Data is not VMFieldData data)
             throw new Exception("VM inline operand expected to have field data!");
-        
+
         var declaringTypeSig = ResolveType(data.DeclaringType.Position);
         var declaringType = declaringTypeSig?.Resolve();
         if (declaringType != null)
             return declaringType.Fields.FirstOrDefault(f => f.Name == data.Name)?.ImportWith(Ctx.Importer);
-        
-        Ctx.Console.Error($"Unable to resolve vm field {data.Name} declaring type {declaringTypeSig?.Name} to a TypeDef!");
+
+        Ctx.Console.Error(
+            $"Unable to resolve vm field {data.Name} declaring type {declaringTypeSig?.Name} to a TypeDef!");
         return null;
     }
-    
-    private bool VerifyMethodParameters(MethodSignatureBase method, VMMethodData data) =>
-        method.ParameterTypes.Count == data.Parameters.Length && method.ParameterTypes
+
+    private bool VerifyMethodParameters(MethodSignatureBase method, VMMethodData data)
+    {
+        return method.ParameterTypes.Count == data.Parameters.Length && method.ParameterTypes
             .Zip(data.Parameters).All(x =>
                 x.First is GenericParameterSignature or GenericInstanceTypeSignature || x.First.FullName ==
                 ResolveType(x.Second.Position)?.FullName);
+    }
 
     private bool VerifyMethodParameters(MethodDefinition method, VMMethodInfo data)
     {
@@ -133,7 +140,8 @@ internal class Resolver
             ResolveType(data.VMParameters[0].VMType)?.FullName)
             skip++;
 
-        return (method.Parameters.Count == data.VMParameters.Count || method.Parameters.Count == data.VMParameters.Count - skip) && method.Parameters
+        return (method.Parameters.Count == data.VMParameters.Count ||
+                method.Parameters.Count == data.VMParameters.Count - skip) && method.Parameters
             .Zip(data.VMParameters.Skip(skip)).All(x =>
                 x.First.ParameterType is GenericParameterSignature or GenericInstanceTypeSignature ||
                 (x.First.ParameterType is TypeSpecificationSignature tss &&
@@ -141,7 +149,7 @@ internal class Resolver
                   tss.BaseType.FullName == ResolveType(x.Second.VMType)?.FullName)) ||
                 x.First.ParameterType?.FullName == ResolveType(x.Second.VMType)?.FullName);
     }
-    
+
     private bool VerifyMethodParameters(MethodDefinition method, VMMethodData data)
     {
         var skip = 0;
@@ -151,7 +159,8 @@ internal class Resolver
             skip++;
 
 
-        return (method.Parameters.Count == data.Parameters.Length || method.Parameters.Count == data.Parameters.Length - skip) && method.Parameters
+        return (method.Parameters.Count == data.Parameters.Length ||
+                method.Parameters.Count == data.Parameters.Length - skip) && method.Parameters
             .Zip(data.Parameters.Skip(skip)).All(x =>
                 // TODO: Should probably resolve these generic parameter signatures and verify them too
                 x.First.ParameterType is GenericParameterSignature or GenericInstanceTypeSignature ||
@@ -161,28 +170,40 @@ internal class Resolver
                 x.First.ParameterType?.FullName == ResolveType(x.Second.Position)?.FullName);
         ;
     }
-    
-    private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodInfo data) =>
-        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
-                                                   && (m.Signature?.ReturnType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                                                       (m.Signature?.ReturnType is TypeSpecificationSignature tss &&
-                                                        (tss.BaseType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                                                         tss.BaseType.FullName == ResolveType(data.VMReturnType)?.FullName)) ||
-                                                       m.Signature?.ReturnType?.FullName ==
-                                                       ResolveType(data.VMReturnType)?.FullName)
-                                                   && VerifyMethodParameters(m, data));
 
-    private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodData data) =>
-            declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
-                                                   // TODO: Should probably resolve these generic parameter signatures and verify them too
-                                                   && (m.Signature?.ReturnType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                                                       (m.Signature?.ReturnType is TypeSpecificationSignature tss &&
-                                                        (tss.BaseType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                                                         tss.BaseType.FullName == ResolveType(data.ReturnType.Position)?.FullName)) ||
-                                                       m.Signature?.ReturnType?.FullName ==
-                                                       ResolveType(data.ReturnType.Position)?.FullName)
-                                                   && VerifyMethodParameters(m, data));
-    
+    private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodInfo data)
+    {
+        return declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
+                                                          && (m.Signature?.ReturnType is GenericParameterSignature
+                                                                  or GenericInstanceTypeSignature ||
+                                                              (m.Signature?.ReturnType is TypeSpecificationSignature
+                                                                   tss &&
+                                                               (tss.BaseType is GenericParameterSignature
+                                                                    or GenericInstanceTypeSignature ||
+                                                                tss.BaseType.FullName == ResolveType(data.VMReturnType)
+                                                                    ?.FullName)) ||
+                                                              m.Signature?.ReturnType?.FullName ==
+                                                              ResolveType(data.VMReturnType)?.FullName)
+                                                          && VerifyMethodParameters(m, data));
+    }
+
+    private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodData data)
+    {
+        return declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
+                                                          // TODO: Should probably resolve these generic parameter signatures and verify them too
+                                                          && (m.Signature?.ReturnType is GenericParameterSignature
+                                                                  or GenericInstanceTypeSignature ||
+                                                              (m.Signature?.ReturnType is TypeSpecificationSignature
+                                                                   tss &&
+                                                               (tss.BaseType is GenericParameterSignature
+                                                                    or GenericInstanceTypeSignature ||
+                                                                tss.BaseType.FullName ==
+                                                                ResolveType(data.ReturnType.Position)?.FullName)) ||
+                                                              m.Signature?.ReturnType?.FullName ==
+                                                              ResolveType(data.ReturnType.Position)?.FullName)
+                                                          && VerifyMethodParameters(m, data));
+    }
+
     public IMethodDescriptor? ResolveMethod(int position)
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
@@ -190,7 +211,7 @@ internal class Resolver
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
             return Ctx.Module.LookupMember<IMethodDescriptor>(inlineOperand.Token);
-        
+
         if (!inlineOperand.HasData)
             throw new Exception("VM inline operand expected to have data!");
 
@@ -208,7 +229,7 @@ internal class Resolver
         }
 
         var declaringTypeDefOrRefUnadorned = declaringTypeDefOrRef.Resolve();
-        
+
         var returnType = ResolveType(data.ReturnType.Position);
         if (returnType == null)
         {
@@ -220,7 +241,9 @@ internal class Resolver
         {
             var importedMemberRef = Ctx.Module.GetImportedMemberReferences().FirstOrDefault(x =>
                 x.IsMethod
-                && x.DeclaringType?.FullName == (declaringTypeDefOrRefUnadorned is null ? declaringTypeDefOrRef.FullName : declaringTypeDefOrRefUnadorned.FullName)
+                && x.DeclaringType?.FullName == (declaringTypeDefOrRefUnadorned is null
+                    ? declaringTypeDefOrRef.FullName
+                    : declaringTypeDefOrRefUnadorned.FullName)
                 && x.Name == data.Name
                 && x.Signature is MethodSignature ms
                 // TODO: Fix resolving imported member references of methods returning a generic parameter
@@ -259,7 +282,6 @@ internal class Resolver
         var parameters = data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray();
         var newParams = new List<TypeSignature>();
         foreach (var parameter in parameters)
-        {
             if (declaringTypeSig is GenericInstanceTypeSignature declaringTypeGenericSig)
             {
                 var f = declaringTypeGenericSig.TypeArguments.FirstOrDefault(x => x.FullName == parameter.FullName);
@@ -268,8 +290,9 @@ internal class Resolver
                         declaringTypeGenericSig.TypeArguments.IndexOf(f)));
             }
             else
+            {
                 newParams.Add(parameter);
-        }
+            }
 
         var memberRef = declaringTypeDefOrRef
             .CreateMemberReference(data.Name, data.IsStatic
@@ -291,7 +314,7 @@ internal class Resolver
     public IMemberDescriptor? ResolveToken(int position)
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
-        
+
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
         {
@@ -301,7 +324,8 @@ internal class Resolver
                 ITypeDescriptor typeDesc => typeDesc.ToTypeSignature(),
                 IFieldDescriptor fieldDesc => fieldDesc,
                 IMethodDescriptor methodDesc => methodDesc,
-                _ => throw new ArgumentOutOfRangeException(nameof(member), member.GetType().FullName, "Member not a type, field, or method definition.")
+                _ => throw new ArgumentOutOfRangeException(nameof(member), member.GetType().FullName,
+                    "Member not a type, field, or method definition.")
             };
         }
 
@@ -315,23 +339,27 @@ internal class Resolver
             VMInlineOperandType.Method => ResolveMethod(position),
             VMInlineOperandType.EazCall => ResolveEazCall(position),
             // VMInlineOperandType.UserString => ResolveString(position),
-            _ => throw new ArgumentOutOfRangeException(nameof(inlineOperand.Data.Type), inlineOperand.Data.Type, "VM inline operand data is neither Type, Field, Method, nor EazCall!")
+            _ => throw new ArgumentOutOfRangeException(nameof(inlineOperand.Data.Type), inlineOperand.Data.Type,
+                "VM inline operand data is neither Type, Field, Method, nor EazCall!")
         };
     }
 
-    public IMethodDescriptor? ResolveEazCall(VMEazCallData eazCallData) => 
-        ResolveMethod(eazCallData.VMMethodPosition);
+    public IMethodDescriptor? ResolveEazCall(VMEazCallData eazCallData)
+    {
+        return ResolveMethod(eazCallData.VMMethodPosition);
+    }
 
     public IMethodDescriptor? ResolveEazCall(int value)
     {
-        var noGenericArgs = (value & 0x80000000) != 0; 
+        var noGenericArgs = (value & 0x80000000) != 0;
         // var maybeSomethingWithDeclaringType  = (value & 0x40000000) != 0;
         var position = value & 0x3FFFFFFF;
 
         return noGenericArgs ? ResolveEazCall_Helper(position, null, null) : ResolveMethod(position);
     }
 
-    private IMethodDescriptor? ResolveEazCall_Helper(int position, ITypeDefOrRef[]? genericTypes, ITypeDefOrRef[]? declaringGenericTypes)
+    private IMethodDescriptor? ResolveEazCall_Helper(int position, ITypeDefOrRef[]? genericTypes,
+        ITypeDefOrRef[]? declaringGenericTypes)
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
 
@@ -340,7 +368,7 @@ internal class Resolver
         var declaringType = ResolveType(methodInfo.VMDeclaringType);
         if (declaringType is null)
             throw new Exception("Failed to resolve eaz call declaring type!");
-        
+
         var returnType = ResolveType(methodInfo.VMReturnType);
         if (returnType == null)
         {
@@ -361,14 +389,14 @@ internal class Resolver
     public string ResolveString(int position)
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
-        
+
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
             return Ctx.Module.LookupString(inlineOperand.Token);
-        
-        if (!inlineOperand.HasData || inlineOperand.Data is not VMStringData data) 
+
+        if (!inlineOperand.HasData || inlineOperand.Data is not VMStringData data)
             throw new Exception("VM inline operand expected to have string data!");
-        
+
         return data.Value;
     }
 }

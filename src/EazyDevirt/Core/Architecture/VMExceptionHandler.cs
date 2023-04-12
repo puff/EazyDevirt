@@ -4,6 +4,16 @@ namespace EazyDevirt.Core.Architecture;
 
 internal record VMExceptionHandler
 {
+    public VMExceptionHandler(BinaryReader reader)
+    {
+        VMHandlerType = reader.ReadByte();
+        CatchType = reader.ReadInt32();
+        HandlerStart = reader.ReadUInt32();
+        TryStart = reader.ReadUInt32();
+        FilterStart = reader.ReadUInt32();
+        TryLength = reader.ReadUInt32();
+    }
+
     public int VMHandlerType { get; }
     public int CatchType { get; }
     public uint TryStart { get; }
@@ -25,18 +35,10 @@ internal record VMExceptionHandler
             };
         }
     }
-    
-    public VMExceptionHandler(BinaryReader reader)
-    {
-        VMHandlerType = reader.ReadByte();
-        CatchType = reader.ReadInt32();
-        HandlerStart = reader.ReadUInt32();
-        TryStart = reader.ReadUInt32();
-        FilterStart = reader.ReadUInt32();
-        TryLength = reader.ReadUInt32();
-    }
 
-    public override string ToString() =>
-        $"VMHandlerType: {VMHandlerType} | HandlerType: {HandlerType} | CatchType: {CatchType} " +
-        $"| TryStart: {TryStart} | HandlerStart: {HandlerStart} | TryLength: {TryLength} | FilterStart: {FilterStart}";
+    public override string ToString()
+    {
+        return $"VMHandlerType: {VMHandlerType} | HandlerType: {HandlerType} | CatchType: {CatchType} " +
+               $"| TryStart: {TryStart} | HandlerStart: {HandlerStart} | TryLength: {TryLength} | FilterStart: {FilterStart}";
+    }
 }

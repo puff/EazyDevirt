@@ -18,7 +18,8 @@ public class CryptoStreamV3 : CryptoStreamBase
     /// <param name="leaveOpen">True to leave the stream open after the CryptoStreamV3 object is disposed; otherwise, false.</param>
     public CryptoStreamV3(Stream stream, int key, bool leaveOpen = false) : base(stream, key, leaveOpen)
     {
-        CryptoKey = (int)(key ^ CONSTANT); // 0xDEADDE4D in signed two's complements. This is consistent across every sample I've seen.
+        CryptoKey = (int)(key ^
+                          CONSTANT); // 0xDEADDE4D in signed two's complements. This is consistent across every sample I've seen.
     }
 
     private int CryptoKey { get; }

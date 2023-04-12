@@ -7,114 +7,67 @@ using Org.BouncyCastle.Math;
 namespace EazyDevirt.Core.IO;
 
 /// <summary>
-/// Cipher stream used for reading VM resource data.
+///     Cipher stream used for reading VM resource data.
 /// </summary>
 /// <remarks>
-/// This is the inner stream when you decompile. It appears to be a modified CipherStream from BouncyCastle.
-/// The outer stream seems to just be a wrapper with a cache.
-/// Looks to be the same across Eazfuscator versions.
+///     This is the inner stream when you decompile. It appears to be a modified CipherStream from BouncyCastle.
+///     The outer stream seems to just be a wrapper with a cache.
+///     Looks to be the same across Eazfuscator versions.
 /// </remarks>
 internal class VMCipherStream : Stream
 {
-    #region Fields
-    /// <summary>
-    /// Rsa/PKSC1 input block size.
-    /// </summary>
-    private const int InputBlockSize = 0x100;
-    
-    /// <summary>
-    /// Rsa/PKSC1 output block size.
-    /// </summary>
-    private const int OutputBlockSize = 0xF5;
-
-    /// <summary>
-    /// Inner resource stream
-    /// </summary>
-    public MemoryStream ResourceStream { get; }
-
-    /// <summary>
-    /// Rsa/PKSC1 engine for decrypting data.
-    /// </summary>
-    private Pkcs1Encoding Rsa { get; }
-    
-    /// <summary>
-    /// This is used to calculate the new position.
-    /// </summary>
-    /// <remarks>
-    /// This is equal to (Position / OutputBlockSize)
-    /// </remarks>
-    private int PositionPart1 { get; set; }
-
-    /// <summary>
-    /// This is used to calculate the new position.
-    /// </summary>
-    /// <remarks>
-    /// This is equal to (Position % OutputBlockSize)
-    /// </remarks>
-    private int PositionPart2 { get; set; }
-    
-    /// <summary>
-    /// Whether to set the inner resource stream's position during an Rsa read.
-    /// </summary>
-    private bool SetResourcePosition { get; set; }
-    
-    /// <summary>
-    /// Whether the Rsa portion was already read.
-    /// </summary>
-    private bool AlreadyReadRsa { get; set; }
-    
-    /// <summary>
-    /// Whether the Rsa read faled
-    /// </summary>
-    private bool RsaReadFailed { get; set; }
-    
-    /// <summary>
-    /// Amount of bytes read in the Rsa read function.
-    /// </summary>
-    private int RsaBytesRead { get; set; }
-    
-    /// <summary>
-    /// Whether the length of the stream was initialized.
-    /// </summary>
-    private bool LengthInitialized { get; set; }
-    
-    /// <summary>
-    /// This exists because we cannot directly set the stream's length.
-    /// </summary>
-    private int _Length { get; set; }
-    
-    /// <summary>
-    /// This is used to calculate the position and number of bytes to read.
-    /// </summary>
-    /// <remarks>
-    /// This is equal to (Length / OutputBlockSize)
-    /// </remarks>
-    private int LengthPart1 { get; set; }
-
-    /// <summary>
-    /// This is used to calculate the position and number of bytes to read.
-    /// </summary>
-    /// <remarks>
-    /// This is equal to (Length % OutputBlockSize)
-    /// </remarks>
-    private int LengthPart2 { get; set; }
-    
-    private byte[] InputBlockBuffer { get; }
-    private byte[] OutputBlockBuffer { get; set; }
-    
-    #endregion Fields
-    
     public VMCipherStream(byte[] buffer, BigInteger mod, BigInteger exp)
     {
         ResourceStream = new MemoryStream(buffer);
         InputBlockBuffer = new byte[InputBlockSize];
         OutputBlockBuffer = new byte[OutputBlockSize];
-        
+
         var rsaEngine = new RsaEngine();
         Rsa = new Pkcs1Encoding(rsaEngine);
-        Rsa.Init(false, new RsaKeyParameters(true /* The key is public, but the PKSC1 encoding requires this to work correctly. */, mod, exp));
+        Rsa.Init(false,
+            new RsaKeyParameters(true /* The key is public, but the PKSC1 encoding requires this to work correctly. */,
+                mod, exp));
     }
-    
+
+    public override bool CanRead
+    {
+        get { return true; }
+    }
+
+    public override bool CanSeek
+    {
+        get { return true; }
+    }
+
+    public override bool CanWrite
+    {
+        get { return false; }
+    }
+
+    public override long Length
+    {
+        get
+        {
+            if (!LengthInitialized) InitializeLength();
+            return _Length;
+        }
+    }
+
+    public override long Position
+    {
+        get { return PositionPart1 * OutputBlockSize + PositionPart2; }
+        set
+        {
+            var num = (int)value / OutputBlockSize;
+            PositionPart2 = (int)value % OutputBlockSize;
+            if (PositionPart1 == num) return;
+
+            PositionPart1 = num;
+            SetResourcePosition = true;
+            AlreadyReadRsa = false;
+        }
+    }
+
     // TODO: Move this somewhere else.
     public static long DecodeMethodKey(string positionString, int positionKey)
     {
@@ -131,29 +84,32 @@ internal class VMCipherStream : Stream
         {
             var num = ResourceStream.Read(InputBlockBuffer, i, InputBlockSize - i);
             if (num != 0)
+            {
                 i += num;
+            }
             else
             {
                 if (i != 0)
                     throw new InvalidOperationException();
-                
+
                 RsaReadFailed = true;
                 return false;
             }
         }
+
         OutputBlockBuffer = Rsa.ProcessBlock(InputBlockBuffer, 0, InputBlockSize);
         RsaBytesRead = OutputBlockBuffer.Length;
         if (int8 == LengthPart1)
             RsaBytesRead = LengthPart2;
-        
-        return true;   
+
+        return true;
     }
-    
+
     private void ReadRsaBlock()
     {
         if (!LengthInitialized) InitializeLength();
         if (AlreadyReadRsa) return;
-        
+
         AlreadyReadRsa = true;
         RsaReadFailed = false;
         var num = PositionPart1;
@@ -177,7 +133,7 @@ internal class VMCipherStream : Stream
 
         AlreadyReadRsa = true;
     }
-    
+
     public override int Read(byte[] buffer, int offset, int count)
     {
         if (offset < 0)
@@ -185,7 +141,8 @@ internal class VMCipherStream : Stream
         if (count < 0)
             throw new ArgumentOutOfRangeException(nameof(count), count, "Less than 0");
         if (buffer.Length - offset < count)
-            throw new ArgumentOutOfRangeException(nameof(buffer), buffer.Length - offset, "Less than count with offset factored in");
+            throw new ArgumentOutOfRangeException(nameof(buffer), buffer.Length - offset,
+                "Less than count with offset factored in");
         if (count == 0)
             return 0;
 
@@ -207,10 +164,10 @@ internal class VMCipherStream : Stream
             Buffer.BlockCopy(OutputBlockBuffer, PositionPart2, buffer, offset, num2);
             i -= num2;
             num += num2;
-            
+
             Position += num2; // we hate Seek();
             ReadRsaBlock();
-            
+
             Buffer.BlockCopy(OutputBlockBuffer, offset, buffer, num, i);
 
             Position += count - num2; // subtract num2 because it's added to position earlier
@@ -234,6 +191,7 @@ internal class VMCipherStream : Stream
                 PositionPart2 = i;
                 return count;
             }
+
             Buffer.BlockCopy(OutputBlockBuffer, 0, buffer, num, num3);
             num += num3;
             i -= num3;
@@ -257,13 +215,14 @@ internal class VMCipherStream : Stream
                 Position = Length + offset;
                 break;
         }
+
         return Position;
     }
 
     public override void Flush()
     {
     }
-    
+
     public override void SetLength(long value)
     {
         throw new NotSupportedException();
@@ -277,7 +236,7 @@ internal class VMCipherStream : Stream
     private void InitializeLength()
     {
         if (LengthInitialized) return;
-        
+
         if (ResourceStream.Position != 0L)
         {
             ResourceStream.Position = 0L;
@@ -293,31 +252,92 @@ internal class VMCipherStream : Stream
         LengthInitialized = true;
     }
 
-    public override bool CanRead => true;
-    public override bool CanSeek => true;
-    public override bool CanWrite => false;
-    
-    public override long Length
-    {
-        get
-        {
-            if (!LengthInitialized) InitializeLength();
-            return _Length;
-        }
-    }
+    #region Fields
 
-    public override long Position
-    {
-        get => PositionPart1 * OutputBlockSize + PositionPart2;
-        set
-        {
-            var num = (int)value / OutputBlockSize;
-            PositionPart2 = (int)value % OutputBlockSize;
-            if (PositionPart1 == num) return;
-            
-            PositionPart1 = num;
-            SetResourcePosition = true;
-            AlreadyReadRsa = false;
-        }
-    }
+    /// <summary>
+    ///     Rsa/PKSC1 input block size.
+    /// </summary>
+    private const int InputBlockSize = 0x100;
+
+    /// <summary>
+    ///     Rsa/PKSC1 output block size.
+    /// </summary>
+    private const int OutputBlockSize = 0xF5;
+
+    /// <summary>
+    ///     Inner resource stream
+    /// </summary>
+    public MemoryStream ResourceStream { get; }
+
+    /// <summary>
+    ///     Rsa/PKSC1 engine for decrypting data.
+    /// </summary>
+    private Pkcs1Encoding Rsa { get; }
+
+    /// <summary>
+    ///     This is used to calculate the new position.
+    /// </summary>
+    /// <remarks>
+    ///     This is equal to (Position / OutputBlockSize)
+    /// </remarks>
+    private int PositionPart1 { get; set; }
+
+    /// <summary>
+    ///     This is used to calculate the new position.
+    /// </summary>
+    /// <remarks>
+    ///     This is equal to (Position % OutputBlockSize)
+    /// </remarks>
+    private int PositionPart2 { get; set; }
+
+    /// <summary>
+    ///     Whether to set the inner resource stream's position during an Rsa read.
+    /// </summary>
+    private bool SetResourcePosition { get; set; }
+
+    /// <summary>
+    ///     Whether the Rsa portion was already read.
+    /// </summary>
+    private bool AlreadyReadRsa { get; set; }
+
+    /// <summary>
+    ///     Whether the Rsa read faled
+    /// </summary>
+    private bool RsaReadFailed { get; set; }
+
+    /// <summary>
+    ///     Amount of bytes read in the Rsa read function.
+    /// </summary>
+    private int RsaBytesRead { get; set; }
+
+    /// <summary>
+    ///     Whether the length of the stream was initialized.
+    /// </summary>
+    private bool LengthInitialized { get; set; }
+
+    /// <summary>
+    ///     This exists because we cannot directly set the stream's length.
+    /// </summary>
+    private int _Length { get; set; }
+
+    /// <summary>
+    ///     This is used to calculate the position and number of bytes to read.
+    /// </summary>
+    /// <remarks>
+    ///     This is equal to (Length / OutputBlockSize)
+    /// </remarks>
+    private int LengthPart1 { get; set; }
+
+    /// <summary>
+    ///     This is used to calculate the position and number of bytes to read.
+    /// </summary>
+    /// <remarks>
+    ///     This is equal to (Length % OutputBlockSize)
+    /// </remarks>
+    private int LengthPart2 { get; set; }
+
+    private byte[] InputBlockBuffer { get; }
+    private byte[] OutputBlockBuffer { get; set; }
+
+    #endregion Fields
 }

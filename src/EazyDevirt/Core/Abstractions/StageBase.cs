@@ -1,4 +1,4 @@
-﻿using EazyDevirt.Devirtualization;
+﻿using EazyDevirt.Logging;
 
 namespace EazyDevirt.Core.Abstractions;
 
@@ -11,24 +11,31 @@ internal abstract class StageBase
     }
 
     /// <summary>
-    /// Name of stage.
+    ///     Name of stage.
     /// </summary>
     public string Name { get; }
-    
+
     /// <summary>
-    /// Devirtualization Context.
+    ///     Devirtualization Context.
     /// </summary>
     private protected Context Ctx { get; }
 
+    protected ConsoleLogger Logger
+    {
+        get { return Ctx.Console; }
+    }
+
     /// <summary>
-    /// Initializes the stage.
+    ///     Initializes the stage.
     /// </summary>
     /// <returns>Whether initialization was successful.</returns>
-    private protected virtual bool Init() => true;
+    private protected virtual bool Init()
+    {
+        return true;
+    }
 
     /// <summary>
-    /// Executes the stage.
+    ///     Executes the stage.
     /// </summary>
     public abstract bool Run();
-
 }

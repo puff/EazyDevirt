@@ -8,8 +8,9 @@ namespace EazyDevirt.Core.IO;
 internal class VMBinaryReader : VMBinaryReaderBase
 {
     public VMBinaryReader(Stream input, bool leaveOpen = false) : base(input, Encoding.UTF8, leaveOpen)
-    { }
-    
+    {
+    }
+
     public override sbyte ReadSByte()
     {
         var bytes = ReadBytes(1);
@@ -37,13 +38,15 @@ internal class VMBinaryReader : VMBinaryReaderBase
     public override long ReadInt64()
     {
         var bytes = ReadBytes(8);
-        return (long)((uint)((bytes[0] << 16) | (bytes[1] << 24) | bytes[4] | (bytes[2] << 8)) | (ulong)(bytes[6] | (bytes[3] << 16) | (bytes[5] << 8) | (bytes[7] << 24)) << 32);
+        return (long)((uint)((bytes[0] << 16) | (bytes[1] << 24) | bytes[4] | (bytes[2] << 8)) |
+                      ((ulong)(bytes[6] | (bytes[3] << 16) | (bytes[5] << 8) | (bytes[7] << 24)) << 32));
     }
 
     public override ulong ReadUInt64()
     {
         var bytes = ReadBytes(8);
-        return (uint)((bytes[6] << 16) | (bytes[0] << 24) | bytes[7] | (bytes[4] << 8)) | (ulong)((bytes[2] << 24) | (bytes[1] << 8) | (bytes[5] << 16) | bytes[3]) << 32;
+        return (uint)((bytes[6] << 16) | (bytes[0] << 24) | bytes[7] | (bytes[4] << 8)) |
+               ((ulong)((bytes[2] << 24) | (bytes[1] << 8) | (bytes[5] << 16) | bytes[3]) << 32);
     }
 
     public override short ReadInt16()
@@ -51,7 +54,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         var bytes = ReadBytes(2);
         return (short)((bytes[1] << 8) | bytes[0]);
     }
-    
+
     public override ushort ReadUInt16()
     {
         var bytes = ReadBytes(2);
@@ -66,7 +69,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         array[1] = bytes[1];
         array[2] = bytes[0];
         array[3] = bytes[2];
-        
+
         using var reader = ToBinaryReader(array);
         return reader.ReadSingle();
     }
@@ -83,7 +86,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         array2[4] = bytes[1];
         array2[1] = bytes[6];
         array2[2] = bytes[7];
-        
+
         using var reader = ToBinaryReader(array2);
         return reader.ReadDouble();
     }
@@ -91,7 +94,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     public override decimal ReadDecimal()
     {
         var bytes = ReadBytes(16);
-        var array2 = new byte[16]; 
+        var array2 = new byte[16];
         array2[6] = bytes[5];
         array2[12] = bytes[9];
         array2[1] = bytes[7];

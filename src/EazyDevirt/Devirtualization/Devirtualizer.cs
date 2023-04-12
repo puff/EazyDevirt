@@ -1,5 +1,7 @@
-﻿using EazyDevirt.Core.Abstractions;
+﻿using EazyDevirt.Core;
+using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Devirtualization.Pipeline;
+using EazyDevirt.Logging;
 
 namespace EazyDevirt.Devirtualization;
 
@@ -14,11 +16,11 @@ internal class Devirtualizer
             // TODO: add binaryreader and field order matching stage
             new OpCodeMapping(ctx),
             new MethodDiscovery(ctx),
-            new MethodDevirtualizer(ctx),
+            new MethodDevirtualizer(ctx)
             // TODO: add data devirtualizer
         };
     }
-    
+
     private Context Ctx { get; }
     private List<StageBase> Pipeline { get; }
 
@@ -26,14 +28,14 @@ internal class Devirtualizer
     {
         foreach (var stage in Pipeline)
         {
-            Ctx.Console.Info($"Executing {stage.Name}...");
+            Ctx.Console.Info($"Executing {stage.Name}...", VerboseLevel.None);
             if (!stage.Run())
             {
                 Ctx.Console.Error($"Failed executing {stage.Name}!");
                 return false;
             }
-            
-            Ctx.Console.Success($"Executed {stage.Name}!");
+
+            Ctx.Console.Success($"Executed {stage.Name}!", VerboseLevel.None);
         }
 
         return true;
