@@ -3,16 +3,13 @@ using EazyDevirt.Core.Abstractions.Interfaces;
 
 namespace EazyDevirt.Logging;
 
-internal  class ConsoleLogger : ILogger
+internal class ConsoleLogger : ILogger
 {
+    // make singleton
     public void Success(object message) => WriteLine(message, ConsoleColor.Cyan, '+');
-
     public void Warning(object message) => WriteLine(message, ConsoleColor.Yellow, '-');
-
     public void Error(object message) => WriteLine(message, ConsoleColor.Red, '!');
-
     public void Info(object message) => WriteLine(message, ConsoleColor.Gray, '*');
-
     public void InfoStr(object message, object message2) => WriteLineInfo(message, ConsoleColor.Red, message2);
     
     public void ShowInfo(Version version, Version eazVersion)

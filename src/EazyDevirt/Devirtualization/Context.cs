@@ -8,17 +8,20 @@ using EazyDevirt.PatternMatching;
 
 namespace EazyDevirt.Devirtualization;
 
-internal record DevirtualizationContext
+internal record Context
 {
-    // got lazy
-    public static DevirtualizationContext Instance { get; set; } = null!;
+    public static Context Instance { get; set; } = null!;
     
     public DevirtualizationOptions Options { get; }
     public ModuleDefinition Module { get; }
-    public PatternMatcher PatternMatcher { get; }
-    public ConsoleLogger Console { get; }
-    public ReferenceImporter Importer { get; }
+    public static PatternMatcher PatternMatcher
+    {
+        get { return PatternMatcher.GetInstance(); }
+    }
+
+    public ConsoleLogger Console { get; } = new();
     
+    public ReferenceImporter Importer { get; }
     public MetadataToken VMResourceGetterMdToken { get; set; }
     
     /// <summary>
@@ -47,14 +50,12 @@ internal record DevirtualizationContext
 
     public List<VMMethod> VMMethods { get; set; }
 
-    public DevirtualizationContext(DevirtualizationOptions opts)
+    public Context(DevirtualizationOptions opts)
     {
         Options = opts;
         Module = ModuleDefinition.FromFile(Options.Assembly.FullName);
-        PatternMatcher = new PatternMatcher();
-        Console = new ConsoleLogger();
+
         Importer = Module.DefaultImporter;
-        // hacky fix for resolved types within current assembly / module
-        Importer.ImportScope(new AssemblyReference(Module.Assembly!));
+        Importer.ImportScope(new AssemblyReference(Module.Assembly));
     }
 }

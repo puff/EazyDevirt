@@ -1,7 +1,6 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.PE.DotNet.Cil;
-using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Abstractions.Interfaces;
 using EazyDevirt.Core.Architecture;
 
@@ -9,7 +8,8 @@ namespace EazyDevirt.PatternMatching;
 
 internal class PatternMatcher
 {
-    public PatternMatcher()
+    private static PatternMatcher? _instance;
+    private PatternMatcher()
     {
         OpCodes = new Dictionary<int, VMOpCode>();
         OpCodePatterns = new List<IOpCodePattern>();
@@ -18,25 +18,39 @@ internal class PatternMatcher
                 if (Activator.CreateInstance(type) is IOpCodePattern instance)
                     OpCodePatterns.Add(instance);
     }
-    
+
     private Dictionary<int, VMOpCode> OpCodes { get; }
     private List<IOpCodePattern> OpCodePatterns { get; }
-    
-    public void SetOpCodeValue(int value, VMOpCode opCode) => OpCodes[value] = opCode;
+    public static PatternMatcher GetInstance()
+    {
+        if (_instance == null)
+            _instance = new PatternMatcher();
 
-    public VMOpCode GetOpCodeValue(int value) => OpCodes.TryGetValue(value, out var opc) ? opc : VMOpCode.DefaultNopOpCode;
+        return _instance;
+    }
+
+    public void SetOpCodeValue(int value, VMOpCode opCode)
+    {
+        OpCodes[value] = opCode;
+    }
+
+    public VMOpCode GetOpCodeValue(int value)
+    {
+        return OpCodes.TryGetValue(value, out var opc) ? opc : VMOpCode.DefaultNopOpCode;
+    }
 
     public IOpCodePattern FindOpCode(VMOpCode vmOpCode, int index = 0)
     {
         if (!vmOpCode.SerializedDelegateMethod.HasMethodBody) return null!;
-        
+
         foreach (var pat in OpCodePatterns)
         {
-            if (pat.MatchEntireBody 
-                    ? !MatchesEntire(pat, vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions, index) || !pat.Verify(vmOpCode, index)
+            if (pat.MatchEntireBody
+                    ? !MatchesEntire(pat, vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions, index) ||
+                      !pat.Verify(vmOpCode, index)
                     : GetAllMatchingInstructions(pat, vmOpCode, index).Count <= 0)
                 continue;
-            
+
             if (!pat.AllowMultiple)
                 OpCodePatterns.Remove(pat);
             return pat;
@@ -46,7 +60,7 @@ internal class PatternMatcher
     }
 
     /// <summary>
-    /// Checks if pattern matches a method's instructions body
+    ///     Checks if pattern matches a method's instructions body
     /// </summary>
     /// <param name="pattern">Pattern to match instructions against</param>
     /// <param name="method">Method to match body against</param>
@@ -56,14 +70,14 @@ internal class PatternMatcher
     {
         if (!vmOpCode.SerializedDelegateMethod.HasMethodBody) return false;
 
-        return pattern.MatchEntireBody 
+        return pattern.MatchEntireBody
             ? MatchesEntire(pattern, vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions, index) &&
-              pattern.Verify(vmOpCode, index) 
+              pattern.Verify(vmOpCode, index)
             : GetAllMatchingInstructions(pattern, vmOpCode, index).Count > 0;
     }
-    
+
     /// <summary>
-    /// Checks if pattern matches a method's instructions body
+    ///     Checks if pattern matches a method's instructions body
     /// </summary>
     /// <param name="pattern">Pattern to match instructions against</param>
     /// <param name="method">Method to match body against</param>
@@ -72,26 +86,28 @@ internal class PatternMatcher
     public static bool MatchesPattern(IPattern pattern, MethodDefinition? method, int index = 0)
     {
         if (!(method?.HasMethodBody).GetValueOrDefault()) return false;
-        
-        return pattern.MatchEntireBody 
+
+        return pattern.MatchEntireBody
             ? MatchesEntire(pattern, method!.CilMethodBody!.Instructions, index) &&
-              pattern.Verify(method, index) 
+              pattern.Verify(method, index)
             : GetAllMatchingInstructions(pattern, method!, index).Count > 0;
     }
 
 
     /// <summary>
-    /// Checks if pattern matches a method's instructions body.
+    ///     Checks if pattern matches a method's instructions body.
     /// </summary>
     /// <param name="pattern">Pattern to match instructions against.</param>
     /// <param name="instructions">Instructions to match body against</param>
     /// <param name="index">Index of the instructions collection to start matching at</param>
     /// <returns>Whether the pattern matches the given instructions</returns>
-    public static bool MatchesPattern(IPattern pattern, CilInstructionCollection instructions, int index = 0) =>
-        pattern.MatchEntireBody
+    public static bool MatchesPattern(IPattern pattern, CilInstructionCollection instructions, int index = 0)
+    {
+        return pattern.MatchEntireBody
             ? MatchesEntire(pattern, instructions, index) &&
               pattern.Verify(instructions, index)
             : GetAllMatchingInstructions(pattern, instructions, index).Count > 0;
+    }
 
     private static bool CanInterchange(IPattern pat, CilInstruction ins, CilOpCode patOpCode)
     {
@@ -107,12 +123,13 @@ internal class PatternMatcher
 
         return false;
     }
-    
+
     private static bool MatchesEntire(IPattern pattern, CilInstructionCollection instructions, int index)
     {
         var pat = pattern.Pattern;
-        if (index + pat.Count > instructions.Count || (pattern.MatchEntireBody && pat.Count != instructions.Count)) return false;
-        
+        if (index + pat.Count > instructions.Count ||
+            (pattern.MatchEntireBody && pat.Count != instructions.Count)) return false;
+
         for (var i = 0; i < pat.Count; i++)
         {
             if (pat[i] == CilOpCodes.Nop)
@@ -125,15 +142,16 @@ internal class PatternMatcher
 
         return true;
     }
-    
+
     /// <summary>
-    /// Gets all matching instruction sets in a method's instructions body.
+    ///     Gets all matching instruction sets in a method's instructions body.
     /// </summary>
     /// <param name="pattern">Pattern to match instructions against.</param>
     /// <param name="instructions">CIL instruction body to match pattern against</param>
     /// <param name="index">Index of method's instruction body to start matching at.</param>
     /// <returns>List of matching instruction sets</returns>
-    public static List<CilInstruction[]> GetAllMatchingInstructions(IPattern pattern, CilInstructionCollection instructions, int index = 0)
+    public static List<CilInstruction[]> GetAllMatchingInstructions(IPattern pattern,
+        CilInstructionCollection instructions, int index = 0)
     {
         var pat = pattern.Pattern;
         if (index + pat.Count > instructions.Count) return new List<CilInstruction[]>();
@@ -143,7 +161,7 @@ internal class PatternMatcher
         {
             var current = new List<CilInstruction>();
 
-            for(int j = i, k = 0; j < instructions.Count && k < pat.Count; j++, k++)
+            for (int j = i, k = 0; j < instructions.Count && k < pat.Count; j++, k++)
             {
                 var instruction = instructions[j];
                 if (instruction.OpCode != pat[k] && !CanInterchange(pattern, instruction, pat[k]))
@@ -159,17 +177,18 @@ internal class PatternMatcher
     }
 
     /// <summary>
-    /// Gets all matching instruction sets in a method's instructions body.
+    ///     Gets all matching instruction sets in a method's instructions body.
     /// </summary>
     /// <param name="pattern">Pattern to match instructions against.</param>
     /// <param name="method">Method to match pattern against</param>
     /// <param name="index">Index of method's instruction body to start matching at.</param>
     /// <returns>List of matching instruction sets</returns>
-    public static List<CilInstruction[]> GetAllMatchingInstructions(IPattern pattern, MethodDefinition method, int index = 0)
+    public static List<CilInstruction[]> GetAllMatchingInstructions(IPattern pattern, MethodDefinition method,
+        int index = 0)
     {
         if (!method.HasMethodBody) return new List<CilInstruction[]>();
         var instructions = method.CilMethodBody!.Instructions;
-        
+
         var pat = pattern.Pattern;
         if (index + pat.Count > instructions.Count) return new List<CilInstruction[]>();
 
@@ -178,7 +197,7 @@ internal class PatternMatcher
         {
             var current = new List<CilInstruction>();
 
-            for(int j = i, k = 0; j < instructions.Count && k < pat.Count; j++, k++)
+            for (int j = i, k = 0; j < instructions.Count && k < pat.Count; j++, k++)
             {
                 var instruction = instructions[j];
                 if (instruction.OpCode != pat[k] && !CanInterchange(pattern, instruction, pat[k]))
@@ -192,19 +211,20 @@ internal class PatternMatcher
 
         return matchingInstructions;
     }
-    
+
     /// <summary>
-    /// Gets all matching instruction sets in a vm opcode delegate method instructions body.
+    ///     Gets all matching instruction sets in a vm opcode delegate method instructions body.
     /// </summary>
     /// <param name="pattern">Pattern to match instructions against.</param>
     /// <param name="vmOpCode">VM Opcode to match pattern against</param>
     /// <param name="index">Index of method's instruction body to start matching at.</param>
     /// <returns>List of matching instruction sets</returns>
-    public static List<CilInstruction[]> GetAllMatchingInstructions(IOpCodePattern pattern, VMOpCode vmOpCode, int index = 0)
+    public static List<CilInstruction[]> GetAllMatchingInstructions(IOpCodePattern pattern, VMOpCode vmOpCode,
+        int index = 0)
     {
         if (!vmOpCode.SerializedDelegateMethod.HasMethodBody) return new List<CilInstruction[]>();
         var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
-        
+
         var pat = pattern.Pattern;
         if (index + pat.Count > instructions.Count) return new List<CilInstruction[]>();
 
@@ -213,7 +233,7 @@ internal class PatternMatcher
         {
             var current = new List<CilInstruction>();
 
-            for(int j = i, k = 0; j < instructions.Count && k < pat.Count; j++, k++)
+            for (int j = i, k = 0; j < instructions.Count && k < pat.Count; j++, k++)
             {
                 var instruction = instructions[j];
                 if (instruction.OpCode != pat[k] && !CanInterchange(pattern, instruction, pat[k]))

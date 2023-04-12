@@ -72,7 +72,7 @@ internal record Ldind_Ref : IOpCodePattern
         PatternMatcher.MatchesPattern(new LdindInnerPattern(),
             (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!)
         && vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[1].Operand is SerializedFieldDefinition fieldDef
-        && DevirtualizationContext.Instance.VMTypeFields.All(x =>
+        && Context.Instance.VMTypeFields.All(x =>
             x.Key.MetadataToken != fieldDef.MetadataToken);
 }
 
@@ -94,7 +94,7 @@ internal record Ldind_I : IOpCodePattern
         PatternMatcher.MatchesPattern(new LdindInnerPattern(),
             (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!)
         && vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[1].Operand is SerializedFieldDefinition fieldDef
-        && DevirtualizationContext.Instance.VMTypeFields.Any(x =>
+        && Context.Instance.VMTypeFields.Any(x =>
             x.Key.MetadataToken == fieldDef.MetadataToken && x.Value.FullName is "System.IntPtr");
 }
 

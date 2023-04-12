@@ -9,13 +9,13 @@ namespace EazyDevirt.Core.IO;
 
 internal class Resolver
 {
-    public Resolver(DevirtualizationContext ctx)
+    public Resolver(Context ctx)
     {
         Ctx = ctx;
         VMStreamReader = new VMBinaryReader(new CryptoStreamV3(Ctx.VMResolverStream, Ctx.MethodCryptoKey, true));
     }
     
-    private DevirtualizationContext Ctx { get; }
+    private Context Ctx { get; }
     
     private VMBinaryReader VMStreamReader { get; }
 

@@ -48,7 +48,7 @@ internal record PushArgumentToStackPattern : IPattern
 
     public bool Verify(MethodDefinition method, int index = 0) =>
         method.CilMethodBody!.Instructions[2].Operand as SerializedFieldDefinition ==
-        DevirtualizationContext.Instance.VMArgumentsField;
+        Context.Instance.VMArgumentsField;
 }
 
 internal record Ldarg : IOpCodePattern
@@ -129,7 +129,7 @@ internal record Ldarga : IOpCodePattern
     {
         var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
         var argumentsField = instructions[7].Operand as SerializedFieldDefinition;
-        if (argumentsField != DevirtualizationContext.Instance.VMArgumentsField) return false;
+        if (argumentsField != Context.Instance.VMArgumentsField) return false;
         
         var getOperandMethod = instructions[9].Operand as SerializedMethodDefinition;
         return getOperandMethod?.Signature!.ReturnType.FullName == "System.UInt16";
@@ -163,7 +163,7 @@ internal record Ldarga_S : IOpCodePattern
     {
         var instructions = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions;
         var argumentsField = instructions[7].Operand as SerializedFieldDefinition;
-        if (argumentsField != DevirtualizationContext.Instance.VMArgumentsField) return false;
+        if (argumentsField != Context.Instance.VMArgumentsField) return false;
         
         var getOperandMethod = instructions[9].Operand as SerializedMethodDefinition;
         return getOperandMethod?.Signature!.ReturnType.FullName == "System.Byte";
@@ -261,7 +261,7 @@ internal record StoreArgumentPattern : IPattern
 
     public bool Verify(MethodDefinition method, int index = 0) =>
         method.CilMethodBody!.Instructions[4].Operand as SerializedFieldDefinition ==
-        DevirtualizationContext.Instance.VMArgumentsField;
+        Context.Instance.VMArgumentsField;
 }
 
 internal record Starg : IOpCodePattern

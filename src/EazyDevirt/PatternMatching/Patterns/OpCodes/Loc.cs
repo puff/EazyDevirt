@@ -26,7 +26,7 @@ internal record PushLocalToStackPattern : IPattern
 
     public bool Verify(MethodDefinition method, int index = 0) =>
         method.CilMethodBody!.Instructions[2].Operand as SerializedFieldDefinition ==
-        DevirtualizationContext.Instance.VMLocalsField;
+        Context.Instance.VMLocalsField;
 }
 
 internal record Ldloc : IOpCodePattern
@@ -253,7 +253,7 @@ internal record StoreLocalPattern : IPattern
 
     public bool Verify(MethodDefinition method, int index = 0) =>
         method.CilMethodBody!.Instructions[index + 1].Operand as SerializedFieldDefinition ==
-        DevirtualizationContext.Instance.VMLocalsField;
+        Context.Instance.VMLocalsField;
 }
 
 #region Stloc

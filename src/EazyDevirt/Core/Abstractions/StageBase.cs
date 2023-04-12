@@ -4,7 +4,7 @@ namespace EazyDevirt.Core.Abstractions;
 
 internal abstract class StageBase
 {
-    protected StageBase(DevirtualizationContext ctx)
+    protected StageBase(Context ctx)
     {
         Name = GetType().Name;
         Ctx = ctx;
@@ -18,7 +18,7 @@ internal abstract class StageBase
     /// <summary>
     /// Devirtualization Context.
     /// </summary>
-    private protected DevirtualizationContext Ctx { get; }
+    private protected Context Ctx { get; }
 
     /// <summary>
     /// Initializes the stage.

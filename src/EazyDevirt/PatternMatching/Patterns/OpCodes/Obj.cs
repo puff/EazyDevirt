@@ -95,7 +95,7 @@ internal record InitobjInnerPattern : IPattern
 
         return instructions.Any(x =>
             x.OpCode == CilOpCodes.Ldfld && x.Operand as SerializedFieldDefinition ==
-            DevirtualizationContext.Instance.VMLocalsField);
+            Context.Instance.VMLocalsField);
     }
 }
 

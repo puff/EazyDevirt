@@ -22,8 +22,8 @@ internal static class Program
 
     private static void Run(DevirtualizationOptions options)
     {
-        var ctx = new DevirtualizationContext(options);
-        DevirtualizationContext.Instance = ctx;
+        var ctx = new Context(options);
+        Context.Instance = ctx;
         ctx.Console.ShowInfo(CurrentVersion, CurrentEazVersion);
         
         var devirtualizer = new Devirtualizer(ctx);

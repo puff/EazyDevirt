@@ -5,7 +5,7 @@ namespace EazyDevirt.Devirtualization;
 
 internal class Devirtualizer
 {
-    public Devirtualizer(DevirtualizationContext ctx)
+    public Devirtualizer(Context ctx)
     {
         Ctx = ctx;
         Pipeline = new List<StageBase>
@@ -19,7 +19,7 @@ internal class Devirtualizer
         };
     }
     
-    private DevirtualizationContext Ctx { get; }
+    private Context Ctx { get; }
     private List<StageBase> Pipeline { get; }
 
     public bool Run()

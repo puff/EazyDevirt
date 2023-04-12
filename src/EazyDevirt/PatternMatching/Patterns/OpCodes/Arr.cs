@@ -129,7 +129,7 @@ internal record Ldelem_Ref : IOpCodePattern
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
             (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!)
         && vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[1].Operand is SerializedFieldDefinition fieldDef
-        && DevirtualizationContext.Instance.VMTypeFields.All(x =>
+        && Context.Instance.VMTypeFields.All(x =>
             x.Key.MetadataToken != fieldDef.MetadataToken);
 }
 
@@ -151,7 +151,7 @@ internal record Ldelem_I : IOpCodePattern
         PatternMatcher.MatchesPattern(new LdelemInnerPattern(),
             (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!)
         && vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[1].Operand is SerializedFieldDefinition fieldDef
-        && DevirtualizationContext.Instance.VMTypeFields.Any(x =>
+        && Context.Instance.VMTypeFields.Any(x =>
             x.Key.MetadataToken == fieldDef.MetadataToken && x.Value.FullName is "System.IntPtr");
 }
 
@@ -474,7 +474,7 @@ internal record Stelem_Ref : IOpCodePattern
         PatternMatcher.MatchesPattern(new StelemInnerHelperPattern(),
             (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!)
         && vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[1].Operand is SerializedFieldDefinition fieldDef
-        && DevirtualizationContext.Instance.VMTypeFields.All(x =>
+        && Context.Instance.VMTypeFields.All(x =>
             x.Key.MetadataToken != fieldDef.MetadataToken);
 }
 
@@ -495,7 +495,7 @@ internal record Stelem_I : IOpCodePattern
         PatternMatcher.MatchesPattern(new StelemInnerHelperPattern(),
             (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!)
         && vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[1].Operand is SerializedFieldDefinition fieldDef
-        && DevirtualizationContext.Instance.VMTypeFields.Any(x =>
+        && Context.Instance.VMTypeFields.Any(x =>
             x.Key.MetadataToken == fieldDef.MetadataToken && x.Value.FullName is "System.IntPtr");
 }
 

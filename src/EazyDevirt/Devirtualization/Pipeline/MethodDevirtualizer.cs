@@ -116,7 +116,7 @@ internal class MethodDevirtualizer : StageBase
         {
             vmMethod.CodePosition = vmMethod.CodeSize - (finalPosition - VMStream.Position);
             var virtualOpCode = VMStreamReader.ReadInt32Special();
-            var vmOpCode = Ctx.PatternMatcher.GetOpCodeValue(virtualOpCode);
+            var vmOpCode = Context.PatternMatcher.GetOpCodeValue(virtualOpCode);
             if (!vmOpCode.HasVirtualCode)
             {
                 if (Ctx.Options.VeryVerbose)
@@ -312,7 +312,7 @@ internal class MethodDevirtualizer : StageBase
     private static bool IsInlineArgument(CilOpCode? opCode) => opCode?.OperandType is CilOperandType.InlineArgument or CilOperandType.ShortInlineArgument;
 
 #pragma warning disable CS8618
-    public MethodDevirtualizer(DevirtualizationContext ctx) : base(ctx)
+    public MethodDevirtualizer(Context ctx) : base(ctx)
     {
     }
 #pragma warning restore CS8618

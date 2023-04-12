@@ -154,7 +154,7 @@ internal sealed class ResourceParsing : StageBase
         return false;
     }
 
-    public ResourceParsing(DevirtualizationContext ctx) : base(ctx)
+    public ResourceParsing(Context ctx) : base(ctx)
     {
     }
 }

@@ -172,7 +172,7 @@ internal class OpCodeMapping : StageBase
                 continue;
             }
 
-            var opCodePat = Ctx.PatternMatcher.FindOpCode(vmOpCode);
+            var opCodePat = Context.PatternMatcher.FindOpCode(vmOpCode);
             if (opCodePat != null)
             {
                 vmOpCode.IsIdentified = true;
@@ -183,7 +183,7 @@ internal class OpCodeMapping : StageBase
             else if (Ctx.Options.VeryVeryVerbose)
                 Ctx.Console.Warning($"Failed to identify VM opcode [{vmOpCode}]");
 
-            Ctx.PatternMatcher.SetOpCodeValue(vmOpCode.VirtualCode, vmOpCode);
+            Context.PatternMatcher.SetOpCodeValue(vmOpCode.VirtualCode, vmOpCode);
 
             if (!vmOpCode.IsIdentified) continue;
             identified++;
@@ -203,7 +203,7 @@ internal class OpCodeMapping : StageBase
                                                              method.Signature.ReturnType.FullName.StartsWith("System.Collections.Generic.Dictionary")
         )!;
 
-    public OpCodeMapping(DevirtualizationContext ctx) : base(ctx)
+    public OpCodeMapping(Context ctx) : base(ctx)
     {
     }
 }

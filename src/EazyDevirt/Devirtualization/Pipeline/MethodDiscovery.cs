@@ -8,7 +8,7 @@ namespace EazyDevirt.Devirtualization.Pipeline;
 
 internal sealed class MethodDiscovery : StageBase
 {
-    public MethodDiscovery(DevirtualizationContext ctx) : base(ctx)
+    public MethodDiscovery(Context ctx) : base(ctx)
     {
     }
 
