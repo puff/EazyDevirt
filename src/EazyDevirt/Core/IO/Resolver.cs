@@ -1,6 +1,7 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Signatures;
 using AsmResolver.DotNet.Signatures.Types;
+using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.Architecture.InlineOperands;
 using EazyDevirt.Devirtualization;
@@ -12,12 +13,14 @@ internal class Resolver
     public Resolver(DevirtualizationContext ctx)
     {
         Ctx = ctx;
-        VMStreamReader = new VMBinaryReader(new CryptoStreamV3(Ctx.VMResolverStream, Ctx.MethodCryptoKey, true));
+        //VMStreamReader = new VMBinaryReader(new CryptoStreamV3(Ctx.VMResolverStream, Ctx.MethodCryptoKey, true));
+        var em = new BinaryEndiannessEmulator(Ctx.Module);
+        VMStreamReader = new VMBinaryReaderEmulator(new CryptoStreamV3(Ctx.VMResolverStream, Ctx.MethodCryptoKey, true), em);
     }
     
     private DevirtualizationContext Ctx { get; }
     
-    private VMBinaryReader VMStreamReader { get; }
+    private VMBinaryReaderBase VMStreamReader { get; }
 
     private TypeSignature ApplySigModifiers(TypeSignature baseTypeSig, Stack<string> mods)
     {

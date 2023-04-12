@@ -3,8 +3,6 @@ using EazyDevirt.Core.Abstractions;
 
 namespace EazyDevirt.Core.IO;
 
-// TODO: The endianness is scrambled across samples. See issue #4
-// Add Echo emulation for the VMBinaryReader
 internal class VMBinaryReader : VMBinaryReaderBase
 {
     public VMBinaryReader(Stream input, bool leaveOpen = false) : base(input, Encoding.UTF8, leaveOpen)

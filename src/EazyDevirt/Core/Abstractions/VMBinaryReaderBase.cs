@@ -3,7 +3,6 @@ using EazyDevirt.Core.Abstractions.Interfaces;
 
 namespace EazyDevirt.Core.Abstractions;
 
-// TODO: The endianness is scrambled across samples. See issue #4
 internal abstract class VMBinaryReaderBase : BinaryReader, IVMBinaryReader
 {
     protected VMBinaryReaderBase(Stream input, Encoding encoding, bool leaveOpen = false) 
