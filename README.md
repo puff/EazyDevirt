@@ -65,7 +65,7 @@ First off, thanks for taking the time to contribute! Contributions are what make
 See [CONTRIBUTING.md] for guidelines on general workflow and code style.
 
 ## Credits
-- clifford for helping with [Eazfuscator.NET]'s VM.
+- [void-stack] for the many contributions.
 - [saneki] for the well-documented [eazdevirt] project.
 - [TobitoFatitoRE] for the [HexDevirt] project.
 - [Washi1337] for the wonderful [AsmResolver] library.
@@ -78,6 +78,7 @@ See [CONTRIBUTING.md] for guidelines on general workflow and code style.
 [eazdevirt]:https://github.com/saneki/eazdevirt
 [HexDevirt]:https://github.com/TobitoFatitoRE/HexDevirt
 [TobitoFatitoRE]:https://github.com/TobitoFatitoRE
+[void-stack]:https://github.com/void-stack/
 [saneki]:https://github.com/saneki
 [Washi1337]:https://github.com/Washi1337
 [AsmResolver]:https://github.com/Washi1337/AsmResolver
