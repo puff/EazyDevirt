@@ -53,7 +53,7 @@ internal  class ConsoleLogger : ILogger
         WriteMiddle(@"Thanks to - ", ConsoleColor.DarkMagenta);
         
         Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine("clifford for helping with Eazfuscator.NET's VM."); 
+        Console.WriteLine("void-stack for the many contributions."); 
         
         // 55 = ("saneki for the well-documented eazdevirt project.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
         Console.WriteLine(string.Format("{0," + (Console.WindowWidth / 2
