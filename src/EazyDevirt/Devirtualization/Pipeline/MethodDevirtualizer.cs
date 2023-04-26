@@ -108,7 +108,7 @@ internal class MethodDevirtualizer : StageBase
     private void ReadInstructions(VMMethod vmMethod)
     {
         vmMethod.Instructions = new List<CilInstruction>();
-        vmMethod.CodeSize = VMStreamReader.ReadInt32Emulator();
+        vmMethod.CodeSize = VMStreamReader.ReadInt32();
         vmMethod.InitialCodeStreamPosition = VMStream.Position;
         vmMethod.SuccessfullyDevirtualized = true;
         var finalPosition = VMStream.Position + vmMethod.CodeSize;
