@@ -1,11 +1,13 @@
 ﻿using System.Text;
 using AsmResolver.DotNet;
+using AsmResolver.DotNet.Signatures.Types;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Devirtualization;
 using Echo.Memory;
 using Echo.Platforms.AsmResolver.Emulation;
 using Echo.Platforms.AsmResolver.Emulation.Dispatch;
+using Echo.Platforms.AsmResolver.Emulation.Stack;
 
 namespace EazyDevirt.Core.IO;
 
@@ -23,6 +25,9 @@ internal class VMBinaryReader : VMBinaryReaderBase
     private static MethodDefinition _readUInt64MethodDef = null!;
     private static MethodDefinition _readInt16MethodDef = null!;
     private static MethodDefinition _readUInt16MethodDef = null!;
+    private static MethodDefinition _readSingleMethodDef = null!;
+    private static MethodDefinition _readDoubleMethodDef = null!;
+    private static MethodDefinition _readDecimalMethodDef = null!;
     
     private readonly CilVirtualMachine _vm;
     private BitVector InstanceObj;
@@ -51,6 +56,9 @@ internal class VMBinaryReader : VMBinaryReaderBase
         _readUInt64MethodDef = Ctx.Module.LookupMember<MethodDefinition>(0x06000282);
         _readInt16MethodDef = Ctx.Module.LookupMember<MethodDefinition>(0x06000283);
         _readUInt16MethodDef = Ctx.Module.LookupMember<MethodDefinition>(0x06000284);
+        _readSingleMethodDef = Ctx.Module.LookupMember<MethodDefinition>(0x06000286);
+        _readDoubleMethodDef = Ctx.Module.LookupMember<MethodDefinition>(0x06000287);
+        _readDecimalMethodDef = Ctx.Module.LookupMember<MethodDefinition>(0x06000288);
 
         _instanceType = _readInt32MethodDef.DeclaringType!;
         _isMemoryStreamFieldDef = Ctx.Module.LookupMember<FieldDefinition>(0x040000C8);
@@ -70,7 +78,8 @@ internal class VMBinaryReader : VMBinaryReaderBase
     {
         var ins = e.Instruction;
         var frame = e.Context.CurrentFrame;
-        var factory = e.Context.Machine.ValueFactory;
+        var vm = e.Context.Machine;
+        var factory = vm.ValueFactory;
         switch (ins.OpCode.Code)
         {
             case CilCode.Ldarg_0:
@@ -79,6 +88,60 @@ internal class VMBinaryReader : VMBinaryReaderBase
                 frame.ReadArgument(0, arg.AsSpan());
                 frame.EvaluationStack.Push(arg, instanceTypeSig);
                 break;
+            
+            case CilCode.Call:
+                var method = (ins.Operand as IMethodDescriptor)!;
+                if (method.Signature is { ReturnsValue: true })
+                {
+                    if (method.DeclaringType!.FullName == "System.IO.BinaryReader")
+                    {
+                        switch (method.Signature.ReturnType.FullName)
+                        {
+                            // this.ToBinaryReader(array2).ReadSingle();
+                            case "System.Single":
+                                var readerF = vm.ObjectMarshaller.ToObject<BinaryReader>(
+                                    frame.EvaluationStack.Pop(
+                                        Ctx.Importer.ImportTypeSignature(typeof(BinaryReader))))!;
+                                frame.EvaluationStack.Push(new StackSlot(
+                                    vm.ObjectMarshaller.ToBitVector(readerF.ReadSingle()), StackSlotTypeHint.Float));
+                                break;
+                            
+                            // this.ToBinaryReader(array2).ReadDouble();
+                            case "System.Double":
+                                var readerD = vm.ObjectMarshaller.ToObject<BinaryReader>(
+                                    frame.EvaluationStack.Pop(
+                                        Ctx.Importer.ImportTypeSignature(typeof(BinaryReader))))!;
+                                frame.EvaluationStack.Push(new StackSlot(
+                                    vm.ObjectMarshaller.ToBitVector(readerD.ReadDouble()), StackSlotTypeHint.Float));
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        switch (method.Signature.ReturnType.FullName)
+                        {
+                            // byte[] array2 = this.method_25();
+                            case "System.Byte[]":
+                                var byteArray = vm.ObjectMarshaller.ToBitVector(new byte[16]);
+                                frame.EvaluationStack.Push(byteArray, new SzArrayTypeSignature(Ctx.Module.CorLibTypeFactory.Byte));
+                                break;
+                            
+                            // this.ToBinaryReader(array2)
+                            case "System.IO.BinaryReader":
+                                var bytes = vm.ObjectMarshaller.ToObject<byte[]>(
+                                    frame.EvaluationStack.Pop(
+                                        new SzArrayTypeSignature(Ctx.Module.CorLibTypeFactory.Byte)))!;
+                                var reader = ToBinaryReader(bytes);
+                                var readerMarshalled = vm.ObjectMarshaller.ToBitVector(reader);
+                                frame.EvaluationStack.Push(readerMarshalled,
+                                    Ctx.Importer.ImportTypeSignature(typeof(BinaryReader)));
+                                break;
+                        }
+                    }
+                }
+
+                break;
+
             default:
                 return;
         }
@@ -87,7 +150,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         frame.ProgramCounter += ins.Size;
     }
 
-    private BitVector ReadEmulated<T>(byte[] bytes)
+    private T ReadEmulated<T>(byte[] bytes)
     {
         var instanceObjectSpan = _vm.Heap.GetObjectSpan(InstanceObj.AsSpan().I64);
         
@@ -97,8 +160,8 @@ internal class VMBinaryReader : VMBinaryReaderBase
         _vm.CallStack.Peek().WriteArgument(0, InstanceObj);
         _vm.Run();
         
-        var typeSig = Ctx.Module.DefaultImporter.ImportTypeSignature(typeof(T));
-        return _vm.CallStack.Peek().EvaluationStack.Pop(typeSig);
+        var typeSig = Ctx.Importer.ImportTypeSignature(typeof(T));
+        return _vm.ObjectMarshaller.ToObject<T>(_vm.CallStack.Peek().EvaluationStack.Pop(typeSig))!;
     }
 
     public override sbyte ReadSByte()
@@ -112,8 +175,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         var bytes = ReadBytes(4);
 
         _vm.CallStack.Push(_readInt32MethodDef);
-        return ReadEmulated<int>(bytes).AsSpan().I32;
-        // return (bytes[2] << 8) | (bytes[3] << 16) | bytes[1] | (bytes[0] << 24);
+        return ReadEmulated<int>(bytes);
     }
 
     // this always has the same endianness as ReadInt32 in the samples i've seen
@@ -122,8 +184,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         var bytes = ReadBytes(4);
         
         _vm.CallStack.Push(_readInt32MethodDef);
-        return ReadEmulated<int>(bytes).AsSpan().I32;
-        // return (bytes[3] << 16) | (bytes[2] << 8) | bytes[1] | (bytes[0] << 24);
+        return ReadEmulated<int>(bytes);
     }
 
     public override uint ReadUInt32()
@@ -131,8 +192,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         var bytes = ReadBytes(4);
         
         _vm.CallStack.Push(_readUInt32MethodDef);
-        return ReadEmulated<uint>(bytes).AsSpan().U32;
-        // return (uint)((bytes[0] << 24) | (bytes[2] << 16) | (bytes[1] << 8) | bytes[3]);
+        return ReadEmulated<uint>(bytes);
     }
 
     public override long ReadInt64()
@@ -140,8 +200,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         var bytes = ReadBytes(8);
                 
         _vm.CallStack.Push(_readInt64MethodDef);
-        return ReadEmulated<long>(bytes).AsSpan().I64;
-        // return (long)((uint)((bytes[0] << 16) | (bytes[1] << 24) | bytes[4] | (bytes[2] << 8)) | (ulong)(bytes[6] | (bytes[3] << 16) | (bytes[5] << 8) | (bytes[7] << 24)) << 32);
+        return ReadEmulated<long>(bytes);
     }
 
     public override ulong ReadUInt64()
@@ -149,8 +208,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         var bytes = ReadBytes(8);
                 
         _vm.CallStack.Push(_readUInt64MethodDef);
-        return ReadEmulated<ulong>(bytes).AsSpan().U64;
-        // return (uint)((bytes[6] << 16) | (bytes[0] << 24) | bytes[7] | (bytes[4] << 8)) | (ulong)((bytes[2] << 24) | (bytes[1] << 8) | (bytes[5] << 16) | bytes[3]) << 32;
+        return ReadEmulated<ulong>(bytes);
     }
 
     public override short ReadInt16()
@@ -158,8 +216,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         var bytes = ReadBytes(2);
                 
         _vm.CallStack.Push(_readInt16MethodDef);
-        return ReadEmulated<short>(bytes).AsSpan().I16;
-        // return (short)((bytes[1] << 8) | bytes[0]);
+        return ReadEmulated<short>(bytes);
     }
     
     public override ushort ReadUInt16()
@@ -167,65 +224,33 @@ internal class VMBinaryReader : VMBinaryReaderBase
         var bytes = ReadBytes(2);
                 
         _vm.CallStack.Push(_readUInt16MethodDef);
-        return ReadEmulated<ushort>(bytes).AsSpan().U16;
-        // return (ushort)((bytes[0] << 8) | bytes[1]);
+        return ReadEmulated<ushort>(bytes);
     }
-
-    // TODO: Emulate ReadSingle, ReadDouble, ReadDecimal
+    
+    // TODO: Emulated ReadSingle, ReadDouble, ReadDecimal are untested
     
     public override float ReadSingle()
     {
         var bytes = ReadBytes(4);
-        var array = new byte[4];
-        array[0] = bytes[3];
-        array[1] = bytes[1];
-        array[2] = bytes[0];
-        array[3] = bytes[2];
         
-        using var reader = ToBinaryReader(array);
-        return reader.ReadSingle();
+        _vm.CallStack.Push(_readSingleMethodDef);
+        return ReadEmulated<float>(bytes);
     }
 
     public override double ReadDouble()
     {
         var bytes = ReadBytes(8);
-        var array2 = new byte[8];
-        array2[0] = bytes[5];
-        array2[5] = bytes[4];
-        array2[6] = bytes[2];
-        array2[7] = bytes[3];
-        array2[3] = bytes[0];
-        array2[4] = bytes[1];
-        array2[1] = bytes[6];
-        array2[2] = bytes[7];
         
-        using var reader = ToBinaryReader(array2);
-        return reader.ReadDouble();
+        _vm.CallStack.Push(_readDoubleMethodDef);
+        return ReadEmulated<double>(bytes);
     }
 
     public override decimal ReadDecimal()
     {
         var bytes = ReadBytes(16);
-        var array2 = new byte[16]; 
-        array2[6] = bytes[5];
-        array2[12] = bytes[9];
-        array2[1] = bytes[7];
-        array2[3] = bytes[4];
-        array2[11] = bytes[11];
-        array2[9] = bytes[1];
-        array2[7] = bytes[2];
-        array2[4] = bytes[0];
-        array2[13] = bytes[8];
-        array2[10] = bytes[15];
-        array2[15] = bytes[14];
-        array2[2] = bytes[12];
-        array2[8] = bytes[13];
-        array2[5] = bytes[6];
-        array2[0] = bytes[3];
-        array2[14] = bytes[10];
 
-        using var reader = ToBinaryReader(array2);
-        return reader.ReadDecimal();
+        _vm.CallStack.Push(_readDecimalMethodDef);
+        return ReadEmulated<decimal>(bytes);
     }
 
     private static BinaryReader ToBinaryReader(byte[] input)
