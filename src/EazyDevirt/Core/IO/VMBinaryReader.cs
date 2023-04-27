@@ -8,7 +8,6 @@ using EazyDevirt.Devirtualization;
 using Echo.Memory;
 using Echo.Platforms.AsmResolver.Emulation;
 using Echo.Platforms.AsmResolver.Emulation.Dispatch;
-using Echo.Platforms.AsmResolver.Emulation.Stack;
 
 namespace EazyDevirt.Core.IO;
 
@@ -342,14 +341,4 @@ internal class VMBinaryReader : VMBinaryReaderBase
     }
     
     #endregion Overrides
-
-    private static BinaryReader ToBinaryReader(byte[] input)
-    {
-        var memoryStream = new MemoryStream(8);
-        var binaryReader = new BinaryReader(memoryStream);
-        binaryReader.BaseStream.Position = 0L;
-        memoryStream.Write(input, 0, input.Length);
-        memoryStream.Position = 0L;
-        return binaryReader;
-    }
 }
