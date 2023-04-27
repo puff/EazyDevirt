@@ -189,6 +189,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
                 frame.EvaluationStack.Push(arg, instanceTypeSig);
                 break;
             
+            case CilCode.Callvirt:
             case CilCode.Call:
                 var method = (ins.Operand as IMethodDescriptor)!;
                 if (method.Signature is { ReturnsValue: true })
@@ -199,20 +200,14 @@ internal class VMBinaryReader : VMBinaryReaderBase
                         {
                             // this.ToBinaryReader(array2).ReadSingle();
                             case "System.Single":
-                                var readerF = vm.ObjectMarshaller.ToObject<BinaryReader>(
-                                    frame.EvaluationStack.Pop(
-                                        Ctx.Importer.ImportTypeSignature(typeof(BinaryReader))))!;
-                                frame.EvaluationStack.Push(new StackSlot(
-                                    vm.ObjectMarshaller.ToBitVector(readerF.ReadSingle()), StackSlotTypeHint.Float));
+                                var s = frame.EvaluationStack.Pop(vm.ContextModule.CorLibTypeFactory.Single);
+                                frame.EvaluationStack.Push(s, vm.ContextModule.CorLibTypeFactory.Single);
                                 break;
                             
                             // this.ToBinaryReader(array2).ReadDouble();
                             case "System.Double":
-                                var readerD = vm.ObjectMarshaller.ToObject<BinaryReader>(
-                                    frame.EvaluationStack.Pop(
-                                        Ctx.Importer.ImportTypeSignature(typeof(BinaryReader))))!;
-                                frame.EvaluationStack.Push(new StackSlot(
-                                    vm.ObjectMarshaller.ToBitVector(readerD.ReadDouble()), StackSlotTypeHint.Float));
+                                var d = frame.EvaluationStack.Pop(vm.ContextModule.CorLibTypeFactory.Double);
+                                frame.EvaluationStack.Push(d, vm.ContextModule.CorLibTypeFactory.Double);
                                 break;
                         }
                     }
@@ -224,17 +219,6 @@ internal class VMBinaryReader : VMBinaryReaderBase
                             case "System.Byte[]":
                                 var byteArray = vm.ObjectMarshaller.ToBitVector(new byte[16]);
                                 frame.EvaluationStack.Push(byteArray, new SzArrayTypeSignature(Ctx.Module.CorLibTypeFactory.Byte));
-                                break;
-                            
-                            // this.ToBinaryReader(array2)
-                            case "System.IO.BinaryReader":
-                                var bytes = vm.ObjectMarshaller.ToObject<byte[]>(
-                                    frame.EvaluationStack.Pop(
-                                        new SzArrayTypeSignature(Ctx.Module.CorLibTypeFactory.Byte)))!;
-                                var reader = ToBinaryReader(bytes);
-                                var readerMarshalled = vm.ObjectMarshaller.ToBitVector(reader);
-                                frame.EvaluationStack.Push(readerMarshalled,
-                                    Ctx.Importer.ImportTypeSignature(typeof(BinaryReader)));
                                 break;
                         }
                     }
