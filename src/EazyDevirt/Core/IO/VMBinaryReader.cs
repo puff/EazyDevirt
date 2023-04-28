@@ -200,13 +200,17 @@ internal class VMBinaryReader : VMBinaryReaderBase
                             // this.ToBinaryReader(array2).ReadSingle();
                             case "System.Single":
                                 var s = frame.EvaluationStack.Pop(vm.ContextModule.CorLibTypeFactory.Single);
-                                frame.EvaluationStack.Push(s, vm.ContextModule.CorLibTypeFactory.Single);
+                                var sBytes = vm.ObjectMarshaller.ToObject<byte[]>(s)!;
+                                var sValue = ToBinaryReader(sBytes).ReadSingle();
+                                frame.EvaluationStack.Push(sValue, vm.ContextModule.CorLibTypeFactory.Single);
                                 break;
                             
                             // this.ToBinaryReader(array2).ReadDouble();
                             case "System.Double":
                                 var d = frame.EvaluationStack.Pop(vm.ContextModule.CorLibTypeFactory.Double);
-                                frame.EvaluationStack.Push(d, vm.ContextModule.CorLibTypeFactory.Double);
+                                var dBytes = vm.ObjectMarshaller.ToObject<byte[]>(d)!;
+                                var dValue = ToBinaryReader(dBytes).ReadDouble();
+                                frame.EvaluationStack.Push(dValue, vm.ContextModule.CorLibTypeFactory.Double);
                                 break;
                         }
                     }
@@ -314,8 +318,6 @@ internal class VMBinaryReader : VMBinaryReaderBase
         return ReadEmulated<ushort>(bytes);
     }
     
-    // TODO: Emulated ReadSingle, ReadDouble, ReadDecimal are untested
-    
     public override float ReadSingle()
     {
         var bytes = ReadBytes(4);
@@ -332,6 +334,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         return ReadEmulated<double>(bytes);
     }
 
+    // untested, looks to be unused
     public override decimal ReadDecimal()
     {
         var bytes = ReadBytes(16);
@@ -341,4 +344,14 @@ internal class VMBinaryReader : VMBinaryReaderBase
     }
     
     #endregion Overrides
+    
+    private static BinaryReader ToBinaryReader(byte[] input)
+    {
+        var memoryStream = new MemoryStream(8);
+        var binaryReader = new BinaryReader(memoryStream);
+        binaryReader.BaseStream.Position = 0L;
+        memoryStream.Write(input, 0, input.Length);
+        memoryStream.Position = 0L;
+        return binaryReader;
+    }
 }
