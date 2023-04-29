@@ -52,15 +52,22 @@ public class TypeName
 	/// <summary>
 	/// Type name without assembly info.
 	/// </summary>
-	public string Name
-	{
-		get
-		{
-			if (!FullName.Contains(", ")) return FullName;
-			GetModifiersStack(FullName.Split(',')[0], out var fixedName);
-			return fixedName;
-		}
-	}
+    public string Name
+    {
+        get
+        {
+            if (_nameInitialized) return _name;
+            if (!FullName.Contains(", ")) return FullName;
+            
+            GetModifiersStack(FullName.Split(',')[0], out var fixedName);
+            _name = fixedName;
+            _nameInitialized = true;
+            return fixedName;
+        }
+    }
+
+    private bool _nameInitialized;
+    private string _name = string.Empty;
 
 	public Stack<string> Modifiers => FullName.Contains(", ")
 		? GetModifiersStack(FullName.Split(',')[0], out _)
