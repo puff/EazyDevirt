@@ -101,7 +101,9 @@ internal class VMCipherStream : Stream
     
     private byte[] InputBlockBuffer { get; }
     private byte[] OutputBlockBuffer { get; set; }
-    
+
+    private Dictionary<long, byte[]> BufferCache { get; }
+
     #endregion Fields
     
     public VMCipherStream(byte[] buffer, BigInteger mod, BigInteger exp)
@@ -109,6 +111,7 @@ internal class VMCipherStream : Stream
         ResourceStream = new MemoryStream(buffer);
         InputBlockBuffer = new byte[InputBlockSize];
         OutputBlockBuffer = new byte[OutputBlockSize];
+        BufferCache = new Dictionary<long, byte[]>();
         
         var rsaEngine = new RsaEngine();
         Rsa = new Pkcs1Encoding(rsaEngine);
@@ -126,22 +129,29 @@ internal class VMCipherStream : Stream
 
     private bool ReadAndProcessRsaBlock(int int8)
     {
-        var i = 0;
-        while (i < InputBlockSize)
+        if (BufferCache.TryGetValue(Position, out var value))
+            OutputBlockBuffer = value;
+        else
         {
-            var num = ResourceStream.Read(InputBlockBuffer, i, InputBlockSize - i);
-            if (num != 0)
-                i += num;
-            else
+            var i = 0;
+            while (i < InputBlockSize)
             {
-                if (i != 0)
-                    throw new InvalidOperationException();
-                
-                RsaReadFailed = true;
-                return false;
+                var num = ResourceStream.Read(InputBlockBuffer, i, InputBlockSize - i);
+                if (num != 0)
+                    i += num;
+                else
+                {
+                    if (i != 0)
+                        throw new InvalidOperationException();
+
+                    RsaReadFailed = true;
+                    return false;
+                }
             }
+            OutputBlockBuffer = Rsa.ProcessBlock(InputBlockBuffer, 0, InputBlockSize);
+            BufferCache[Position] = OutputBlockBuffer;
         }
-        OutputBlockBuffer = Rsa.ProcessBlock(InputBlockBuffer, 0, InputBlockSize);
+        
         RsaBytesRead = OutputBlockBuffer.Length;
         if (int8 == LengthPart1)
             RsaBytesRead = LengthPart2;
@@ -188,6 +198,7 @@ internal class VMCipherStream : Stream
             throw new ArgumentOutOfRangeException(nameof(buffer), buffer.Length - offset, "Less than count with offset factored in");
         if (count == 0)
             return 0;
+        
 
         var i = count;
         var num = offset;
