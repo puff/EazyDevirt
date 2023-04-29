@@ -1,4 +1,5 @@
-﻿using AsmResolver.DotNet.Code.Cil;
+﻿using AsmResolver.DotNet;
+using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
@@ -324,3 +325,73 @@ internal record Castclass : IOpCodePattern
         };
 }
 #endregion Castclass
+
+#region Ldftn
+
+internal record Ldftn : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    { 
+        CilOpCodes.Ldarg_1,     // 0	0000	ldarg.1
+        CilOpCodes.Castclass,   // 1	0001	castclass	VMIntOperand
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Ldloc_0,     // 4	0008	ldloc.0
+        CilOpCodes.Callvirt,    // 5	0009	callvirt	instance int32 VMIntOperand::method_3()
+        CilOpCodes.Callvirt,    // 6	000E	callvirt	instance class [mscorlib]System.Reflection.MethodBase VM::ResolveMethod(int32)
+        CilOpCodes.Stloc_1,     // 7	0013	stloc.1
+        CilOpCodes.Ldarg_0,     // 8	0014	ldarg.0
+        CilOpCodes.Newobj,      // 9	0015	newobj	instance void VMMethodBaseOperand::.ctor()
+        CilOpCodes.Dup,         // 10	001A	dup
+        CilOpCodes.Ldloc_1,     // 11	001B	ldloc.1
+        CilOpCodes.Callvirt,    // 12	001C	callvirt	instance void VMMethodBaseOperand::method_4(class [mscorlib]System.Reflection.MethodBase)
+        CilOpCodes.Callvirt,    // 13	0021	callvirt	instance void VM::PushStack(class VMOperandType)
+        CilOpCodes.Ret          // 14	0026	ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Ldftn;
+    
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) =>
+        vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[6].Operand is IMethodDescriptor
+        {
+            Signature.ReturnType.FullName: "System.Reflection.MethodBase"
+        };
+}
+#endregion Ldftn
+
+#region Ldvirtftn
+
+internal record Ldvirtftn : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    { 
+        CilOpCodes.Ldloc_2,     // 52	0075	ldloc.2
+        CilOpCodes.Ldloc_0,     // 53	0076	ldloc.0
+        CilOpCodes.Callvirt,    // 54	0077	callvirt	instance string [mscorlib]System.Reflection.MemberInfo::get_Name()
+        CilOpCodes.Ldc_I4,      // 55	007C	ldc.i4	0x13036
+        CilOpCodes.Ldnull,      // 56	0081	ldnull
+        CilOpCodes.Ldc_I4_3,    // 57	0082	ldc.i4.3
+        CilOpCodes.Ldloc_S,     // 58	0083	ldloc.s	V_6 (6)
+        CilOpCodes.Ldnull,      // 59	0085	ldnull
+        CilOpCodes.Callvirt,    // 60	0086	callvirt	instance class [mscorlib]System.Reflection.MethodInfo [mscorlib]System.Type::GetMethod(string, valuetype [mscorlib]System.Reflection.BindingFlags, class [mscorlib]System.Reflection.Binder, valuetype [mscorlib]System.Reflection.CallingConventions, class [mscorlib]System.Type[], valuetype [mscorlib]System.Reflection.ParameterModifier[])
+        CilOpCodes.Stloc_S,     // 61	008B	stloc.s	V_5 (5)
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Ldvirtftn;
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeLdcI4OpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) =>
+        vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[index + 8].Operand is IMethodDescriptor
+        {
+            Signature.ReturnType.FullName: "System.Reflection.MethodInfo"
+        };
+}
+
+#endregion
