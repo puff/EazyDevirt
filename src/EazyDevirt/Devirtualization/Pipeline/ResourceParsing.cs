@@ -130,7 +130,6 @@ internal sealed class ResourceParsing : StageBase
                          m.Signature?.ReturnType.FullName == typeof(Stream).FullName))
             {
                 if (_resourceGetterMethod != null && _resourceInitializationMethod != null) return true;
-                // TODO: make a better way of using non-vm patterns
                 if (_resourceGetterMethod != null ||
                     !PatternMatcher.MatchesPattern(new GetVMStreamPattern(), method)) continue;
                 
