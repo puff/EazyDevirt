@@ -117,9 +117,8 @@ internal record VMMethodData : VMInlineOperandData
     {
         DeclaringType = VMInlineOperand.ReadInternal(reader);
         Flags = reader.ReadByte();
-        // these constants are also different between versions (#3)
-        IsStatic = (Flags & 1) > 0;
-        HasGenericArguments = (Flags & 2) > 0;
+        IsStatic = (Flags & 2) > 0;
+        HasGenericArguments = (Flags & 1) > 0;
         Name = reader.ReadString();
         ReturnType = VMInlineOperand.ReadInternal(reader);
         Parameters = VMInlineOperand.ReadArrayInternal(reader);
