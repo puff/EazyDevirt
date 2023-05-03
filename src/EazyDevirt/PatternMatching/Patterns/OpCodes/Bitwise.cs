@@ -138,3 +138,62 @@ internal record Shr_Un : IOpCodePattern
     }
 }
 #endregion Shr
+
+#region And
+
+internal record AndOperandsPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_1,     // 8	0017	ldarg.1
+        CilOpCodes.Castclass,   // 9	0018	castclass	VMIntOperand
+        CilOpCodes.Callvirt,    // 10	001D	callvirt	instance int32 VMIntOperand::method_3()
+        CilOpCodes.Stloc_S,     // 11	0022	stloc.s	V_6 (6)
+        CilOpCodes.Ldarg_2,     // 12	0024	ldarg.2
+        CilOpCodes.Castclass,   // 13	0025	castclass	VMIntOperand
+        CilOpCodes.Callvirt,    // 14	002A	callvirt	instance int32 VMIntOperand::method_3()
+        CilOpCodes.Stloc_S,     // 15	002F	stloc.s	V_7 (7)
+        CilOpCodes.Newobj,      // 16	0031	newobj	instance void VMIntOperand::.ctor()
+        CilOpCodes.Dup,         // 17	0036	dup
+        CilOpCodes.Ldloc_S,     // 18	0037	ldloc.s	V_6 (6)
+        CilOpCodes.Ldloc_S,     // 19	0039	ldloc.s	V_7 (7)
+        CilOpCodes.And,         // 20	003B	and
+        CilOpCodes.Callvirt,    // 21	003C	callvirt	instance void VMIntOperand::method_4(int32)
+        CilOpCodes.Ret,         // 22	0041	ret
+    };
+
+    public bool MatchEntireBody => false;
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+}
+
+internal record And : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Callvirt,    // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_1,     // 5	000D	stloc.1
+        CilOpCodes.Ldarg_0,     // 6	000E	ldarg.0
+        CilOpCodes.Ldarg_0,     // 7	000F	ldarg.0
+        CilOpCodes.Ldloc_1,     // 8	0010	ldloc.1
+        CilOpCodes.Ldloc_0,     // 9	0011	ldloc.0
+        CilOpCodes.Callvirt,    // 10	0012	callvirt	instance class VMOperandType VM::AndOperands(class VMOperandType, class VMOperandType)
+        CilOpCodes.Callvirt,    // 11	0017	callvirt	instance void VM::PushStack(class VMOperandType)
+        CilOpCodes.Ret          // 12	001C	ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.And;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0)
+    {
+        var andOperandsHelperMethod =
+            vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[10].Operand as SerializedMethodDefinition;
+
+        return PatternMatcher.MatchesPattern(new AndOperandsPattern(), andOperandsHelperMethod!);
+    }
+}
+#endregion And
