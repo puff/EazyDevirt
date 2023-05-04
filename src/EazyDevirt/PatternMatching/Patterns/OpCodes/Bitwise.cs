@@ -197,3 +197,53 @@ internal record And : IOpCodePattern
     }
 }
 #endregion And
+
+#region Not
+
+internal record NotOperandsPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_1,     // 4	000A	ldarg.1
+        CilOpCodes.Castclass,   // 5	000B	castclass	VMIntOperand
+        CilOpCodes.Callvirt,    // 6	0010	callvirt	instance int32 VMIntOperand::method_3()
+        CilOpCodes.Stloc_0,     // 7	0015	stloc.0
+        CilOpCodes.Newobj,      // 8	0016	newobj	instance void VMIntOperand::.ctor()
+        CilOpCodes.Dup,         // 9	001B	dup
+        CilOpCodes.Ldloc_0,     // 10	001C	ldloc.0
+        CilOpCodes.Not,         // 11	001D	not
+        CilOpCodes.Callvirt,    // 12	001E	callvirt	instance void VMIntOperand::method_4(int32)
+        CilOpCodes.Ret,         // 13	0023	ret
+    };
+
+    public bool MatchEntireBody => false;
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+}
+
+internal record Not : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Ldarg_0,     // 4	0008	ldarg.0
+        CilOpCodes.Ldloc_0,     // 5	0009	ldloc.0
+        CilOpCodes.Callvirt,    // 6	000A	callvirt	instance class VMOperandType VM::NotOperands(class VMOperandType)
+        CilOpCodes.Callvirt,    // 7	000F	callvirt	instance void VM::PushStack(class VMOperandType)
+        CilOpCodes.Ret          // 8	0014	ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Not;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0)
+    {
+        var notOperandsHelperMethod =
+            vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[6].Operand as SerializedMethodDefinition;
+
+        return PatternMatcher.MatchesPattern(new NotOperandsPattern(), notOperandsHelperMethod!);
+    }
+}
+#endregion Not
