@@ -51,6 +51,55 @@ internal record Xor : IOpCodePattern
 }
 #endregion Xor
 
+#region Shl
+
+internal record ShlOperandsPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloc_0,     // 15	002B	ldloc.0
+        CilOpCodes.Ldc_I4_S,    // 16	002C	ldc.i4.s	0x1F
+        CilOpCodes.And,         // 17	002E	and
+        CilOpCodes.Shl,         // 18	002F	shl
+        CilOpCodes.Newobj,      // 19	0030	newobj	instance void VMIntOperand::.ctor(int32)
+        CilOpCodes.Ret,         // 20	0035	ret
+    };
+
+    public bool MatchEntireBody => false;
+    public bool InterchangeLdlocOpCodes => true;
+}
+
+internal record Shl : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Callvirt,    // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_1,     // 5	000D	stloc.1
+        CilOpCodes.Ldarg_0,     // 6	000E	ldarg.0
+        CilOpCodes.Ldarg_0,     // 7	000F	ldarg.0
+        CilOpCodes.Ldloc_1,     // 8	0010	ldloc.1
+        CilOpCodes.Ldloc_0,     // 9	0011	ldloc.0
+        CilOpCodes.Callvirt,    // 10	0012	callvirt	instance class VMOperandType VM::ShlOperands(class VMOperandType, class VMOperandType)
+        CilOpCodes.Callvirt,    // 11	0017	callvirt	instance void VM::PushStack(class VMOperandType)
+        CilOpCodes.Ret          // 12	001C	ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Shl;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0)
+    {
+        var shlOperandsHelperMethod =
+            vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[10].Operand as SerializedMethodDefinition;
+
+        return PatternMatcher.MatchesPattern(new ShlOperandsPattern(), shlOperandsHelperMethod!);
+    }
+}
+#endregion Shl
+
 #region Shr
 
 internal record ShrOperandsPattern : IPattern
