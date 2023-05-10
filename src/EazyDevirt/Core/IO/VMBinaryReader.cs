@@ -199,7 +199,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
                         {
                             // this.ToBinaryReader(array2).ReadSingle();
                             case "System.Single":
-                                var s = frame.EvaluationStack.Pop(vm.ContextModule.CorLibTypeFactory.Single);
+                                var s = frame.EvaluationStack.Pop(new SzArrayTypeSignature(Ctx.Module.CorLibTypeFactory.Byte));
                                 var sBytes = vm.ObjectMarshaller.ToObject<byte[]>(s)!;
                                 var sValue = ToBinaryReader(sBytes).ReadSingle();
                                 frame.EvaluationStack.Push(sValue, vm.ContextModule.CorLibTypeFactory.Single);
@@ -207,7 +207,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
                             
                             // this.ToBinaryReader(array2).ReadDouble();
                             case "System.Double":
-                                var d = frame.EvaluationStack.Pop(vm.ContextModule.CorLibTypeFactory.Double);
+                                var d = frame.EvaluationStack.Pop(new SzArrayTypeSignature(Ctx.Module.CorLibTypeFactory.Byte));
                                 var dBytes = vm.ObjectMarshaller.ToObject<byte[]>(d)!;
                                 var dValue = ToBinaryReader(dBytes).ReadDouble();
                                 frame.EvaluationStack.Push(dValue, vm.ContextModule.CorLibTypeFactory.Double);
