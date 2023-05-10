@@ -236,7 +236,6 @@ internal class MethodDevirtualizer : StageBase
             
             vmMethod.Parent.CilMethodBody?.ExceptionHandlers.Add(exceptionHandler);
         }
-        
     }
 
     private object? ReadOperand(VMOpCode vmOpCode, VMMethod vmMethod) =>
@@ -247,13 +246,13 @@ internal class MethodDevirtualizer : StageBase
             CilOperandType.InlineI8 => VMStreamReader.ReadInt64(),
             CilOperandType.InlineR => VMStreamReader.ReadDouble(),
             CilOperandType.ShortInlineR => VMStreamReader.ReadSingle(),
-            CilOperandType.InlineVar => IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, VMStreamReader.ReadUInt16()) : GetLocal(vmMethod, VMStreamReader.ReadUInt16()),
-            CilOperandType.ShortInlineVar => IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, VMStreamReader.ReadByte()) : GetLocal(vmMethod, VMStreamReader.ReadByte()),
+            CilOperandType.InlineVar => VMStreamReader.ReadUInt16(),    // IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, VMStreamReader.ReadUInt16()) : GetLocal(vmMethod, VMStreamReader.ReadUInt16()),
+            CilOperandType.ShortInlineVar => VMStreamReader.ReadByte(), // IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, VMStreamReader.ReadByte()) : GetLocal(vmMethod, VMStreamReader.ReadByte()),
             CilOperandType.InlineTok => ReadInlineTok(vmOpCode),
             CilOperandType.InlineSwitch => ReadInlineSwitch(),
             CilOperandType.InlineBrTarget => VMStreamReader.ReadUInt32(),
-            CilOperandType.InlineArgument => GetArgument(vmMethod, VMStreamReader.ReadUInt16()),    // this doesn't seem to be used, might not be correct
-            CilOperandType.ShortInlineArgument => GetArgument(vmMethod, VMStreamReader.ReadByte()), // this doesn't seem to be used, might not be correct
+            CilOperandType.InlineArgument => VMStreamReader.ReadUInt16(),    // GetArgument(vmMethod, VMStreamReader.ReadUInt16()),  // this doesn't seem to be used, might not be correct
+            CilOperandType.ShortInlineArgument => VMStreamReader.ReadByte(), // GetArgument(vmMethod, VMStreamReader.ReadByte()),    // this doesn't seem to be used, might not be correct
             CilOperandType.InlineNone => null,
             _ => null
         };
@@ -304,9 +303,6 @@ internal class MethodDevirtualizer : StageBase
     //         _ => vmOpCode.CilOpCode
     //     };
     
-    private static Parameter GetArgument(VMMethod vmMethod, int index) => (index < vmMethod.Parent.Parameters.Count ? vmMethod.Parent.Parameters[index] : null)!;
-    // private static TypeSignature GetArgument(VMMethod vmMethod, int index) => (index < vmMethod.Parameters.Count ? vmMethod.Parameters[index] : null)!;
-
     private static CilLocalVariable GetLocal(VMMethod vmMethod, int index) => (index < vmMethod.Locals.Count ? vmMethod.Locals[index] : null)!;
 
     private static bool IsInlineArgument(CilOpCode? opCode) => opCode?.OperandType is CilOperandType.InlineArgument or CilOperandType.ShortInlineArgument;
