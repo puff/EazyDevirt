@@ -37,8 +37,8 @@ internal record VMMethodInfo
     public int VMDeclaringType { get; }
     public string Name { get; }
     public byte BindingFlags { get; }
-    public bool DeclaredOnly => (BindingFlags & 2) > 0;
-    public bool IsInstance => (BindingFlags & 4) > 0;
+    public bool DeclaredOnly => (BindingFlags & 4) > 0;
+    public bool IsInstance => (BindingFlags & 2) > 0;
     public bool IsStatic => (BindingFlags & 8) > 0;
     public int VMReturnType { get; }
     public List<VMLocal> VMLocals { get; }
@@ -49,18 +49,18 @@ internal record VMMethodInfo
     
     public VMMethodInfo(BinaryReader reader)
     {
+        VMReturnType = reader.ReadInt32();
+        BindingFlags = reader.ReadByte();
         VMDeclaringType = reader.ReadInt32();
         Name = reader.ReadString();
-        BindingFlags = reader.ReadByte();
-        VMReturnType = reader.ReadInt32();
 
-        VMLocals = new List<VMLocal>(reader.ReadInt16());
-        for (var i = 0; i < VMLocals.Capacity; i++)
-            VMLocals.Add(new VMLocal(reader.ReadInt32()));
-        
         VMParameters = new List<VMParameter>(reader.ReadInt16());
         for (var i = 0; i < VMParameters.Capacity; i++)
             VMParameters.Add(new VMParameter(reader.ReadInt32(), reader.ReadBoolean()));
+        
+        VMLocals = new List<VMLocal>(reader.ReadInt16());
+        for (var i = 0; i < VMLocals.Capacity; i++)
+            VMLocals.Add(new VMLocal(reader.ReadInt32()));
     }
 
     public override string ToString() =>

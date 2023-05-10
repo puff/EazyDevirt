@@ -37,19 +37,19 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField = 
         {
             return VirtualOperandType switch
             {
-                5 => CilOperandType.InlineI,
-                6 => CilOperandType.ShortInlineI,
-                8 => CilOperandType.InlineI8,
-                12 => CilOperandType.InlineR,
-                3 => CilOperandType.ShortInlineR,
+                7 => CilOperandType.InlineI,
+                11 => CilOperandType.ShortInlineI,
+                6 => CilOperandType.InlineI8,
+                8 => CilOperandType.InlineR,
+                1 => CilOperandType.ShortInlineR,
                 2 => CilOperandType.InlineVar,              // used for both locals and arguments
-                4 => CilOperandType.ShortInlineVar,         // used for both locals and arguments
+                5 => CilOperandType.ShortInlineVar,         // used for both locals and arguments
                 0 => CilOperandType.InlineTok,
-                1 => CilOperandType.InlineSwitch,
-                10 => CilOperandType.InlineBrTarget,        // in eazfuscator, this is unsigned
-                11 => CilOperandType.InlineArgument,        // this doesn't seem to be used, might not be correct 
-                7 => CilOperandType.ShortInlineArgument,    // this doesn't seem to be used, might not be correct
-                9 => CilOperandType.InlineNone,
+                3 => CilOperandType.InlineSwitch,
+                12 => CilOperandType.InlineBrTarget,        // in eazfuscator, this is unsigned
+                9 => CilOperandType.InlineArgument,        // this doesn't seem to be used, might not be correct 
+                4 => CilOperandType.ShortInlineArgument,    // this doesn't seem to be used, might not be correct
+                10 => CilOperandType.InlineNone,
 
                 _ => throw new ArgumentOutOfRangeException(nameof(VirtualOperandType), VirtualOperandType, "Unknown operand type")
             };

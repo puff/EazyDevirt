@@ -120,7 +120,7 @@ internal record VMMethodData : VMInlineOperandData
     {
         DeclaringType = VMInlineOperand.ReadInternal(reader);
         Flags = reader.ReadByte();
-        IsStatic = (Flags & 1) > 0;
+        IsStatic = (Flags & 2) > 0;
         Name = reader.ReadString();
         ReturnType = VMInlineOperand.ReadInternal(reader);
         Parameters = VMInlineOperand.ReadArrayInternal(reader);

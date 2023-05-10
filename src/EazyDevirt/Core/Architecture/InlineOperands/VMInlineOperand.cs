@@ -27,10 +27,10 @@ internal enum ValueType
 /// </remarks>
 internal enum VMInlineOperandType
 {
-    Type = 0,
-    Field = 1,
+    Type = 3,
+    Field = 0,
     Method = 2,
-    EazCall = 3,
+    EazCall = 1,
     UserString = 4
 }
 
