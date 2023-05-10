@@ -231,7 +231,7 @@ internal class MethodDevirtualizer : StageBase
                 TryEnd = handlerStartLabel,
                 HandlerStart = handlerStartLabel,
                 HandlerEnd = handlerStart?.Operand as ICilLabel,
-                FilterStart = vmExceptionHandler.HandlerType == CilExceptionHandlerType.Filter ? vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.FilterStart])?.CreateLabel() : new CilOffsetLabel(0),
+                FilterStart = vmExceptionHandler.HandlerType == CilExceptionHandlerType.Filter ? vmExceptionHandler.FilterStart == 0 ? vmMethod.Instructions[0].CreateLabel() : vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.FilterStart])?.CreateLabel() : new CilOffsetLabel(0),
             };
             
             vmMethod.Parent.CilMethodBody?.ExceptionHandlers.Add(exceptionHandler);
