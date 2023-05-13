@@ -74,6 +74,50 @@ internal record Endfinally : IOpCodePattern
 }
 #endregion Endfinally
 
+#region Endfilter
+
+internal record EndfilterInnerPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 7	0018	ldarg.0
+        CilOpCodes.Ldfld,       // 8	0019	ldfld	uint32 VM::instructionsBytesIndex
+        CilOpCodes.Ldarg_0,     // 9	001E	ldarg.0
+        CilOpCodes.Ldfld,       // 10	001F	ldfld	object VM::CurrentException
+        CilOpCodes.Newobj,      // 11	0024	newobj	instance void VM/Struct13::.ctor(uint32, object)
+        CilOpCodes.Callvirt,    // 12	0029	callvirt	instance void class [System]System.Collections.Generic.Stack`1<valuetype VM/Struct13>::Push(!0)
+        CilOpCodes.Ldarg_0,     // 13	002E	ldarg.0
+        CilOpCodes.Ldc_I4_0,    // 14	002F	ldc.i4.0
+        CilOpCodes.Stfld,       // 15	0030	stfld	bool VM::hasException
+        CilOpCodes.Ldarg_0,     // 16	0035	ldarg.0
+        CilOpCodes.Call,        // 17	0036	call	instance void VM::LeaveProtected()
+    };
+
+    public bool MatchEntireBody => false;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        instructions[index + 10].Operand is SerializedMethodDefinition leaveProtected &&
+        PatternMatcher.MatchesPattern(new LeaveProtectedPattern(), leaveProtected);
+}
+
+internal record Endfilter : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Ldarg_1,     // 1	0001	ldarg.1
+        CilOpCodes.Callvirt,    // 2	0002	callvirt	instance void VM::EndfilterInner(class VMOperandType)
+        CilOpCodes.Ret          // 3	0007	ret
+    };
+    
+    public CilOpCode? CilOpCode => CilOpCodes.Endfilter;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        PatternMatcher.MatchesPattern(new EndfilterInnerPattern(),
+            instructions[2].Operand as SerializedMethodDefinition);
+}
+#endregion Endfilter
+
 #region Throw
 
 internal record ThrowExceptionPattern : IPattern
