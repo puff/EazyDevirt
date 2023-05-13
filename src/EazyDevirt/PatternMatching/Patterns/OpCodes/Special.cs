@@ -1,10 +1,11 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.PE.DotNet.Cil;
-using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Abstractions.Interfaces;
 using EazyDevirt.Core.Architecture;
 
 namespace EazyDevirt.PatternMatching.Patterns.OpCodes;
+
+#region EazCall
 
 internal record EazCall : IOpCodePattern
 {
@@ -32,6 +33,7 @@ internal record EazCall : IOpCodePattern
     public bool Verify(VMOpCode vmOpCode, int index) =>
         vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[index + 5].Operand as int? == -0x80000000;
 }
+#endregion EazCall
 
 #region Homomorphic Encryption
 
@@ -48,6 +50,7 @@ internal record StartHomomorphic : IOpCodePattern
         CilOpCodes.Stloc_S,     // 6	0012	stloc.s	V_4 (4)
     };
 
+    public CilOpCode? CilOpCode => null;
     public SpecialOpCodes? SpecialOpCode => SpecialOpCodes.StartHomomorphic;
     
     public bool IsSpecial => true;
@@ -73,6 +76,7 @@ internal record EndHomomorphic : IOpCodePattern
         CilOpCodes.Callvirt,    // 21	0038	callvirt	instance !0 class [System]System.Collections.Generic.Stack`1<class VM/Class85>::Pop()
     };
 
+    public CilOpCode? CilOpCode => null;
     public SpecialOpCodes? SpecialOpCode => SpecialOpCodes.EndHomomorphic;
     
     public bool IsSpecial => true;
@@ -88,3 +92,21 @@ internal record EndHomomorphic : IOpCodePattern
 
 #endregion
 
+#region NoBody
+
+internal record NoBody : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    { 
+        CilOpCodes.Ret           // 0	0000	ret
+    };
+
+    public CilOpCode? CilOpCode => null;
+    public SpecialOpCodes? SpecialOpCode => SpecialOpCodes.NoBody;
+    
+    public bool IsSpecial => true;
+    public bool AllowMultiple => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index) => vmOpCode.CilOperandType == CilOperandType.InlineNone;
+}
+#endregion NoBody

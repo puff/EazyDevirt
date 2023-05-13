@@ -1,5 +1,4 @@
 ﻿using AsmResolver.DotNet.Code.Cil;
-using AsmResolver.DotNet.Collections;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
@@ -134,6 +133,13 @@ internal class MethodDevirtualizer : StageBase
                 vmMethod.SuccessfullyDevirtualized = false;
             }
 
+            if (vmOpCode is { IsSpecial: true, CilOpCode: null })
+            {
+                vmOpCode.CilOpCode = ResolveSpecialCilOpCode(vmOpCode, vmMethod);
+                if (vmOpCode.CilOpCode != null && Ctx.Options.VeryVerbose)
+                    Ctx.Console.InfoStr($"Resolved special opcode {vmOpCode.SpecialOpCode.ToString()!} to CIL opcode {vmOpCode.CilOpCode.ToString()}", vmOpCode.SerializedDelegateMethod.MetadataToken);
+            }
+
             var operand = vmOpCode.IsSpecial ? ReadSpecialOperand(vmOpCode, vmMethod) : ReadOperand(vmOpCode, vmMethod);
             if (vmOpCode.CilOpCode != null)
             {
@@ -143,7 +149,7 @@ internal class MethodDevirtualizer : StageBase
                     Ctx.Console.Warning($"Placing stind instruction at #{vmMethod.Instructions.Count}");
 
                 var instruction =
-                    new CilInstruction(vmOpCode.CilOpCode.Value, operand); // TODO: remember to switch the alternate to null
+                    new CilInstruction(vmOpCode.CilOpCode.Value, operand);
                 vmMethod.Instructions.Add(instruction);
             }
         }
@@ -266,9 +272,31 @@ internal class MethodDevirtualizer : StageBase
         };
 
     /// <summary>
+    /// Resolves special opcodes with no CIL opcode.
+    /// </summary>
+    /// <param name="vmOpCode"></param>
+    /// <param name="vmMethod"></param>
+    /// <returns>
+    /// A CIL opcode that matches the special opcode.
+    /// </returns>
+    private static CilOpCode? ResolveSpecialCilOpCode(VMOpCode vmOpCode, VMMethod vmMethod)
+    {
+        switch (vmOpCode.SpecialOpCode)
+        {
+            // case SpecialOpCodes.Stind:
+            // case SpecialOpCodes.StartHomomorphic:
+            case SpecialOpCodes.NoBody:
+                // TODO: Analyze vm method instructions / stack to determine CIL opcode (2 opcode handlers have this pattern)
+                return CilOpCodes.Nop;
+        }
+
+        return CilOpCodes.Nop;
+    }
+
+    /// <summary>
     /// Processes homomorphic encryption data into CIL instructions 
     /// </summary>
-    /// <param name="method"></param>
+    /// <param name="vmMethod"></param>
     /// <returns>
     /// branch offset
     /// </returns>
@@ -295,17 +323,6 @@ internal class MethodDevirtualizer : StageBase
             branchDests[i] = VMStreamReader.ReadInt32Special();
         return branchDests;
     }
-
-    // private static void ResolveSpecialCilOpCode(VMOpCode vmOpCode) =>
-    //     vmOpCode.CilOpCode = vmOpCode.SpecialOpCode switch
-    //     {
-    //         SpecialOpCodes.EazCall => CilOpCodes.Call,
-    //         _ => vmOpCode.CilOpCode
-    //     };
-    
-    private static CilLocalVariable GetLocal(VMMethod vmMethod, int index) => (index < vmMethod.Locals.Count ? vmMethod.Locals[index] : null)!;
-
-    private static bool IsInlineArgument(CilOpCode? opCode) => opCode?.OperandType is CilOperandType.InlineArgument or CilOperandType.ShortInlineArgument;
 
 #pragma warning disable CS8618
     public MethodDevirtualizer(DevirtualizationContext ctx) : base(ctx)
