@@ -1,6 +1,5 @@
 ﻿using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
-using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Abstractions.Interfaces;
 using EazyDevirt.Core.Architecture;
 
@@ -44,25 +43,6 @@ internal record Br : IOpCodePattern
 
 #region Bgt
 
-internal record BgtInnerPattern : IPattern
-{
-    public IList<CilOpCode> Pattern => new List<CilOpCode>
-    {
-        CilOpCodes.Ldarg_0,     // 97	0102	ldarg.0
-        CilOpCodes.Castclass,   // 98	0103	castclass	VMIntOperand
-        CilOpCodes.Callvirt,    // 99	0108	callvirt	instance int32 VMIntOperand::method_3()
-        CilOpCodes.Ldarg_1,     // 100	010D	ldarg.1
-        CilOpCodes.Castclass,   // 101	010E	castclass	VMIntOperand
-        CilOpCodes.Callvirt,    // 102	0113	callvirt	instance int32 VMIntOperand::method_3()
-        CilOpCodes.Cgt,         // 103	0118	cgt
-        CilOpCodes.Stloc_0,     // 104	011A	stloc.0
-    };
-
-    public bool MatchEntireBody => false;
-    
-    public bool InterchangeStlocOpCodes => true;
-}
-
 internal record Bgt : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -73,7 +53,7 @@ internal record Bgt : IOpCodePattern
         CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
         CilOpCodes.Callvirt,    // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
         CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
-        CilOpCodes.Call,        // 6	000E	call	bool VM::BgtInner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Call,        // 6	000E	call	bool VM::CgtInner(class VMOperandType, class VMOperandType)
         CilOpCodes.Brfalse_S,   // 7	0013	brfalse.s	15 (0028) ret 
     };
 
@@ -84,10 +64,38 @@ internal record Bgt : IOpCodePattern
     public bool InterchangeLdlocOpCodes => true;
     public bool InterchangeStlocOpCodes => true;
 
-    public bool Verify(VMOpCode vmOpCode, int index) => PatternMatcher.MatchesPattern(new BgtInnerPattern(),
+    public bool Verify(VMOpCode vmOpCode, int index) => PatternMatcher.MatchesPattern(new CgtInnerPattern(),
             (vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[6].Operand as SerializedMethodDefinition)!);
 }
 #endregion Bgt
+
+#region Bgt_Un
+
+internal record Bgt_Un : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Callvirt,    // 4	0008	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
+        CilOpCodes.Call,        // 6	000E	call	bool VM::Cgt_UnInner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Brfalse_S,   // 7	0013	brfalse.s	15 (0028) ret 
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Bgt_Un;
+
+    public bool MatchEntireBody => false;
+    
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(VMOpCode vmOpCode, int index) => PatternMatcher.MatchesPattern(new Cgt_UnInnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody?.Instructions[6].Operand as SerializedMethodDefinition)!);
+}
+#endregion Bgt_Un
 
 #region Blt
 internal record Blt : IOpCodePattern
