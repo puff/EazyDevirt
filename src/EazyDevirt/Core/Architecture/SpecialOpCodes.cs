@@ -19,4 +19,9 @@ internal enum SpecialOpCodes : uint
     /// Marks the end of eazfuscator's homomorphic encryption feature.
     /// </summary>
     EndHomomorphic, // 0x06000414
+    
+    /// <summary>
+    /// These only contain a return instruction in their body so they require analysis to determine the CIL opcode.
+    /// </summary>
+    NoBody, // 0x060002CD, 0x060003F4
 }
