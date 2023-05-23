@@ -68,16 +68,16 @@ internal record InitobjInnerPattern : IPattern
         CilOpCodes.Callvirt,    // 16	0022	callvirt	instance class [mscorlib]System.Reflection.FieldInfo Class43::method_5()
         CilOpCodes.Stloc_2,     // 17	0027	stloc.2
         CilOpCodes.Ldarg_2,     // 18	0028	ldarg.2
-        CilOpCodes.Callvirt,    // 19	0029	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 19	0029	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Ldloc_2,     // 20	002E	ldloc.2
         CilOpCodes.Callvirt,    // 21	002F	callvirt	instance class [mscorlib]System.Type [mscorlib]System.Reflection.FieldInfo::get_FieldType()
-        CilOpCodes.Call,        // 22	0034	call	class VMOperandType VMOperandType::smethod_0(object, class [mscorlib]System.Type)
+        CilOpCodes.Call,        // 22	0034	call	class VMOperandType VMOperandType::ConvertToVMOperand(object, class [mscorlib]System.Type)
         CilOpCodes.Stloc_S,     // 23	0039	stloc.s	V_5 (5)
         CilOpCodes.Ldloc_2,     // 24	003B	ldloc.2
         CilOpCodes.Ldloc_1,     // 25	003C	ldloc.1
         CilOpCodes.Callvirt,    // 26	003D	callvirt	instance object Class43::method_3()
         CilOpCodes.Ldloc_S,     // 27	0042	ldloc.s	V_5 (5)
-        CilOpCodes.Callvirt,    // 28	0044	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 28	0044	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Callvirt,    // 29	0049	callvirt	instance void [mscorlib]System.Reflection.FieldInfo::SetValue(object, object)
     };
     

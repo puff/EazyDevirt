@@ -334,7 +334,7 @@ internal record Brtrue : IOpCodePattern
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     {
         CilOpCodes.Ldloc_0,     // 52	0097	ldloc.0
-        CilOpCodes.Callvirt,    // 53	0098	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 53	0098	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Ldnull,      // 54	009D	ldnull
         CilOpCodes.Cgt_Un,      // 55	009E	cgt.un
         CilOpCodes.Stloc_1,     // 56	00A0	stloc.1
@@ -353,7 +353,7 @@ internal record Brfalse : IOpCodePattern
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     {
         CilOpCodes.Ldloc_0,     // 54	009A	ldloc.0
-        CilOpCodes.Callvirt,    // 55	009B	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 55	009B	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Ldnull,      // 56	00A0	ldnull
         CilOpCodes.Ceq,         // 57	00A1	ceq
         CilOpCodes.Stloc_1,     // 58	00A3	stloc.1

@@ -17,7 +17,7 @@ internal record Ldfld : IOpCodePattern
         CilOpCodes.Callvirt,    // 30	0042	callvirt	instance object [mscorlib]System.Reflection.FieldInfo::GetValue(object)
         CilOpCodes.Ldloc_1,     // 31	0047	ldloc.1
         CilOpCodes.Callvirt,    // 32	0048	callvirt	instance class [mscorlib]System.Type [mscorlib]System.Reflection.FieldInfo::get_FieldType()
-        CilOpCodes.Call,        // 33	004D	call	class VMOperandType VMOperandType::smethod_0(object, class [mscorlib]System.Type)
+        CilOpCodes.Call,        // 33	004D	call	class VMOperandType VMOperandType::ConvertToVMOperand(object, class [mscorlib]System.Type)
         CilOpCodes.Callvirt,    // 34	0052	callvirt	instance void VM::PushStack(class VMOperandType)
         CilOpCodes.Ret          // 35	0057	ret
     };
@@ -80,7 +80,7 @@ internal record Ldsfld : IOpCodePattern
         CilOpCodes.Callvirt,    // 11	0017	callvirt	instance object [mscorlib]System.Reflection.FieldInfo::GetValue(object)
         CilOpCodes.Ldloc_1,     // 12	001C	ldloc.1
         CilOpCodes.Callvirt,    // 13	001D	callvirt	instance class [mscorlib]System.Type [mscorlib]System.Reflection.FieldInfo::get_FieldType()
-        CilOpCodes.Call,        // 14	0022	call	class VMOperandType VMOperandType::smethod_0(object, class [mscorlib]System.Type)
+        CilOpCodes.Call,        // 14	0022	call	class VMOperandType VMOperandType::ConvertToVMOperand(object, class [mscorlib]System.Type)
         CilOpCodes.Callvirt,    // 15	0027	callvirt	instance void VM::PushStack(class VMOperandType)
         CilOpCodes.Ret          // 16	002C	ret
     };
@@ -129,7 +129,7 @@ internal record Stfld : IOpCodePattern
         CilOpCodes.Ldloc_2,     // 36	005E	ldloc.2
         CilOpCodes.Ldloc_0,     // 37	005F	ldloc.0
         CilOpCodes.Ldloc_S,     // 38	0060	ldloc.s	V_5 (5)
-        CilOpCodes.Callvirt,    // 39	0062	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 39	0062	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Callvirt,    // 40	0067	callvirt	instance void [mscorlib]System.Reflection.FieldInfo::SetValue(object, object)
         CilOpCodes.Ldloc_1,     // 41	006C	ldloc.1
     };
@@ -153,7 +153,7 @@ internal record Stsfld : IOpCodePattern
         CilOpCodes.Ldloc_1,     // 15	002B	ldloc.1
         CilOpCodes.Ldnull,      // 16	002C	ldnull
         CilOpCodes.Ldloc_2,     // 17	002D	ldloc.2
-        CilOpCodes.Callvirt,    // 18	002E	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 18	002E	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Callvirt,    // 19	0033	callvirt	instance void [mscorlib]System.Reflection.FieldInfo::SetValue(object, object)
         CilOpCodes.Ret          // 20	0038	ret
     };

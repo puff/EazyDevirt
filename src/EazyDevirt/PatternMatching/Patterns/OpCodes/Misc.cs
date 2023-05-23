@@ -107,7 +107,7 @@ internal record Dup : IOpCodePattern
         CilOpCodes.Stloc_0,     // 2	0006	stloc.0
         CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
         CilOpCodes.Ldloc_0,     // 4	0008	ldloc.0
-        CilOpCodes.Callvirt,    // 5	0009	callvirt	instance class VMOperandType VMOperandType::vmethod_3()
+        CilOpCodes.Callvirt,    // 5	0009	callvirt	instance class VMOperandType VMOperandType::Clone()
         CilOpCodes.Callvirt,    // 6	000E	callvirt	instance void VM::PushStack(class VMOperandType)
         CilOpCodes.Ret          // 7	0013	ret
     };
@@ -195,13 +195,13 @@ internal record Box : IOpCodePattern
         CilOpCodes.Stloc_1,     // 8	0014	stloc.1
         CilOpCodes.Ldarg_0,     // 9	0015	ldarg.0
         CilOpCodes.Callvirt,    // 10	0016	callvirt	instance class VMOperandType VM::PopStack()
-        CilOpCodes.Callvirt,    // 11	001B	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 11	001B	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Ldloc_1,     // 12	0020	ldloc.1
-        CilOpCodes.Call,        // 13	0021	call	class VMOperandType VMOperandType::smethod_0(object, class [mscorlib]System.Type)
+        CilOpCodes.Call,        // 13	0021	call	class VMOperandType VMOperandType::ConvertToVMOperand(object, class [mscorlib]System.Type)
         CilOpCodes.Stloc_2,     // 14	0026	stloc.2
         CilOpCodes.Ldloc_2,     // 15	0027	ldloc.2
         CilOpCodes.Ldloc_1,     // 16	0028	ldloc.1
-        CilOpCodes.Callvirt,    // 17	0029	callvirt	instance void VMOperandType::method_2(class [mscorlib]System.Type)
+        CilOpCodes.Callvirt,    // 17	0029	callvirt	instance void VMOperandType::SetOperandType(class [mscorlib]System.Type)
         CilOpCodes.Ldarg_0,     // 18	002E	ldarg.0
         CilOpCodes.Ldloc_2,     // 19	002F	ldloc.2
         CilOpCodes.Callvirt,    // 20	0030	callvirt	instance void VM::PushStack(class VMOperandType)
@@ -237,9 +237,9 @@ internal record Unbox_Any : IOpCodePattern
     {
         CilOpCodes.Ldarg_0,     // 9	0015	ldarg.0
         CilOpCodes.Callvirt,    // 10	0016	callvirt	instance class VMOperandType VM::PopStack()
-        CilOpCodes.Callvirt,    // 11	001B	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 11	001B	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Ldloc_1,     // 12	0020	ldloc.1
-        CilOpCodes.Call,        // 13	0021	call	class VMOperandType VMOperandType::smethod_0(object, class [mscorlib]System.Type)
+        CilOpCodes.Call,        // 13	0021	call	class VMOperandType VMOperandType::ConvertToVMOperand(object, class [mscorlib]System.Type)
         CilOpCodes.Stloc_2,     // 14	0026	stloc.2
         CilOpCodes.Ldarg_0,     // 15	0027	ldarg.0
         CilOpCodes.Ldloc_2,     // 16	0028	ldloc.2

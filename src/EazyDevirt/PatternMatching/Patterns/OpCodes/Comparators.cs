@@ -181,9 +181,9 @@ internal record CeqInnerPattern : IPattern
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     {
         CilOpCodes.Ldarg_0,     // 283	03CC	ldarg.0
-        CilOpCodes.Callvirt,    // 284	03CD	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 284	03CD	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Ldarg_1,     // 285	03D2	ldarg.1
-        CilOpCodes.Callvirt,    // 286	03D3	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 286	03D3	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Ceq,         // 287	03D8	ceq
         CilOpCodes.Stloc_0,     // 288	03DA	stloc.0
     };

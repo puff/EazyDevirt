@@ -22,10 +22,7 @@ internal class MethodDevirtualizer : StageBase
         
         Resolver = new Resolver(Ctx);
         foreach (var vmMethod in Ctx.VMMethods)
-        { 
-            // if (vmMethod.EncodedMethodKey != @"5<]fEBf\76") continue;
-            // if (vmMethod.EncodedMethodKey != @"5<_4mf/boO") continue;
-            
+        {
             vmMethod.MethodKey = VMCipherStream.DecodeMethodKey(vmMethod.EncodedMethodKey, Ctx.PositionCryptoKey);
             
             VMStream.Seek(vmMethod.MethodKey, SeekOrigin.Begin);

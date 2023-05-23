@@ -19,7 +19,7 @@ internal record PushLocalToStackPattern : IPattern
         CilOpCodes.Ldfld,           // 2	0002	ldfld	class VMOperandType[] VM::Locals
         CilOpCodes.Ldarg_1,         // 3	0007	ldarg.1
         CilOpCodes.Ldelem,          // 4	0008	ldelem	VMOperandType
-        CilOpCodes.Callvirt,        // 5	000D	callvirt	instance class VMOperandType VMOperandType::vmethod_3()
+        CilOpCodes.Callvirt,        // 5	000D	callvirt	instance class VMOperandType VMOperandType::Clone()
         CilOpCodes.Call,            // 6	0012	call	instance void VM::PushStack(class VMOperandType)
         CilOpCodes.Ret              // 7	0017	ret
     };
@@ -244,7 +244,7 @@ internal record StoreLocalPattern : IPattern
         CilOpCodes.Ldarg_1,     // 14	0023	ldarg.1
         CilOpCodes.Ldelem,      // 15	0024	ldelem	VMOperandType
         CilOpCodes.Ldloc_0,     // 16	0029	ldloc.0
-        CilOpCodes.Callvirt,    // 17	002A	callvirt	instance class VMOperandType VMOperandType::vmethod_2(class VMOperandType)
+        CilOpCodes.Callvirt,    // 17	002A	callvirt	instance class VMOperandType VMOperandType::ConvertAndSetOperandValue(class VMOperandType)
         CilOpCodes.Pop,         // 18	002F	pop
         CilOpCodes.Ret          // 19	0030	ret
     };

@@ -152,7 +152,7 @@ internal record Throw : IOpCodePattern
         CilOpCodes.Stloc_0,     // 2	0006	stloc.0
         CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
         CilOpCodes.Ldloc_0,     // 4	0008	ldloc.0
-        CilOpCodes.Callvirt,    // 5	0009	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 5	0009	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Callvirt,    // 6	000E	callvirt	instance void VM::ThrowException(object)
         CilOpCodes.Ret          // 7	0013	ret
     };

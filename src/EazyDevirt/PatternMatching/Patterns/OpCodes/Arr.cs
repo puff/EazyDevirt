@@ -46,7 +46,7 @@ internal record Ldlen : IOpCodePattern
     {
         CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
         CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
-        CilOpCodes.Callvirt,    // 2	0006	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 2	0006	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Castclass,   // 3	000B	castclass	[mscorlib]System.Array
         CilOpCodes.Stloc_0,     // 4	0010	stloc.0
         CilOpCodes.Ldarg_0,     // 5	0011	ldarg.0
@@ -366,7 +366,7 @@ internal record Ldelema : IOpCodePattern
     {
         CilOpCodes.Ldarg_0,     // 12	001C	ldarg.0
         CilOpCodes.Callvirt,    // 13	001D	callvirt	instance class VMOperandType VM::PopStack()
-        CilOpCodes.Callvirt,    // 14	0022	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 14	0022	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Castclass,   // 15	0027	castclass	[mscorlib]System.Array
         CilOpCodes.Stloc_3,     // 16	002C	stloc.3
         CilOpCodes.Ldarg_0,     // 17	002D	ldarg.0
@@ -398,11 +398,11 @@ internal record StelemInnerPattern : IPattern
     {
         CilOpCodes.Ldarg_2,     // 0	0000	ldarg.2
         CilOpCodes.Ldarg_1,     // 1	0001	ldarg.1
-        CilOpCodes.Call,        // 2	0002	call	class VMOperandType VMOperandType::smethod_0(object, class [mscorlib]System.Type)
+        CilOpCodes.Call,        // 2	0002	call	class VMOperandType VMOperandType::ConvertToVMOperand(object, class [mscorlib]System.Type)
         CilOpCodes.Stloc_0,     // 3	0007	stloc.0
         CilOpCodes.Ldarg_S,     // 4	0008	ldarg.s	array_0 (4)
         CilOpCodes.Ldloc_0,     // 5	000A	ldloc.0
-        CilOpCodes.Callvirt,    // 6	000B	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 6	000B	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Ldarg_3,     // 7	0010	ldarg.3
         CilOpCodes.Callvirt,    // 8	0011	callvirt	instance void [mscorlib]System.Array::SetValue(object, int64)
         CilOpCodes.Ret          // 9	0016	ret

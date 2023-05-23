@@ -24,9 +24,9 @@
       <EmbeddedResource Include="Resources\encrypted and compressed.png" />
     </ItemGroup>
 
-    <!-- Add all output files to a group so we can copy them -->
-    <ItemGroup>
-        <_CopyItems Include="$(OutDir)*.*" />
+    <!-- Add all output files to a group so we can copy them in Debug mode -->
+    <ItemGroup Condition="'$(ConfigurationName)' == 'Debug'">
+        <_CopyItems Include="$(OutDir)*.*" Visible="false" />
     </ItemGroup>
     
     <!-- Don't overwrite sample in Debug mode. Eazfuscator.NET only obfuscates in Release mode. -->

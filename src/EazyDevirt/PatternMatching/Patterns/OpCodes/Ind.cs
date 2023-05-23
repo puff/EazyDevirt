@@ -24,9 +24,9 @@ internal record LdindInnerPattern : IPattern
         CilOpCodes.Ldarg_0,     // 5	000D	ldarg.0
         CilOpCodes.Ldloc_0,     // 6	000E	ldloc.0
         CilOpCodes.Call,        // 7	000F	call	instance class VMOperandType VM::method_85(class Class38)
-        CilOpCodes.Callvirt,    // 8	0014	callvirt	instance object VMOperandType::vmethod_0()
+        CilOpCodes.Callvirt,    // 8	0014	callvirt	instance object VMOperandType::GetOperandValue()
         CilOpCodes.Ldarg_1,     // 9	0019	ldarg.1
-        CilOpCodes.Call,        // 10	001A	call	class VMOperandType VMOperandType::smethod_0(object, class [mscorlib]System.Type)
+        CilOpCodes.Call,        // 10	001A	call	class VMOperandType VMOperandType::ConvertToVMOperand(object, class [mscorlib]System.Type)
         CilOpCodes.Call,        // 11	001F	call	instance void VM::PushStack(class VMOperandType)
         CilOpCodes.Ret          // 12	0024	ret
     };
