@@ -411,12 +411,46 @@ internal record Conv_R_Un : IOpCodePattern
     public bool InterchangeStlocOpCodes => true;
  
     public bool Verify(CilInstructionCollection instructions, int index = 0) =>
-        instructions[3 + index].Operand is SerializedMemberReference
+        instructions[index + 3].Operand is SerializedMemberReference
         {
             FullName: "System.UInt64 System.Convert::ToUInt64(System.Object)"
         };
 }
+
 #endregion Conv_R_Un
+
+#region Conv_R4
+
+internal record Conv_R4 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloc_0,     // 22	002B	ldloc.0
+        CilOpCodes.Castclass,   // 23	002C	castclass	VMEnumOperand
+        CilOpCodes.Callvirt,    // 24	0031	callvirt	instance class [System.Runtime]System.Enum VMEnumOperand::method_3()
+        CilOpCodes.Call,        // 25	0036	call	uint64 [mscorlib]System.Convert::ToUInt64(object)
+        CilOpCodes.Conv_R_Un,   // 26	003B	conv.r.un
+        CilOpCodes.Conv_R4,     // 27	003C	conv.r4
+        CilOpCodes.Stloc_2,     // 28	003D	stloc.2
+        CilOpCodes.Br_S,        // 29	003E	br.s	48 (006B) ldarg.0
+        CilOpCodes.Ldloc_1,     // 30	0040	ldloc.1
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_R4;
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        instructions[index + 3].Operand is SerializedMemberReference
+        {
+            FullName: "System.UInt64 System.Convert::ToUInt64(System.Object)"
+        };
+}
+
+#endregion Conv_R4
 
 #region Conv_R8
 
@@ -443,11 +477,12 @@ internal record Conv_R8 : IOpCodePattern
     public bool InterchangeStlocOpCodes => true;
 
     public bool Verify(CilInstructionCollection instructions, int index = 0) =>
-        instructions[3 + index].Operand is SerializedMemberReference
+        instructions[index + 3].Operand is SerializedMemberReference
         {
             FullName: "System.UInt64 System.Convert::ToUInt64(System.Object)"
         };
 }
+
 #endregion Conv_R8
 
 #endregion Conv_RC
