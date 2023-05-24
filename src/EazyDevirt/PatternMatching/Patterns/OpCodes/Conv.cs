@@ -452,7 +452,85 @@ internal record Conv_R8 : IOpCodePattern
 
 #endregion Conv_RC
 
+#region Conv_UC
+
 #region Conv_U
+
+internal record Conv_UInnerPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloca_S,        // 28	003F	ldloca.s	V_6 (6)
+        CilOpCodes.Ldloc_3,         // 29	0041	ldloc.3
+        CilOpCodes.Conv_Ovf_U8,     // 30	0042	conv.ovf.u8
+        CilOpCodes.Conv_Ovf_I4_Un,  // 31	0043	conv.ovf.i4.un
+        CilOpCodes.Call,            // 32	0044	call	instance void [mscorlib]System.IntPtr::.ctor(int32)
+    };
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        (instructions[index + 4].Operand as SerializedMemberReference)?.FullName ==
+        "System.Void System.IntPtr::.ctor(System.Int32)";
+}
+
+internal record Conv_U : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0 0000 ldarg.0
+        CilOpCodes.Ldc_I4_0,    // 1 0001 ldc.i4.0
+        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_UInner(bool)
+        CilOpCodes.Ret          // 3 0007 ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_U;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_UInnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
+}
+
+internal record Conv_Ovf_U : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0 0000 ldarg.0
+        CilOpCodes.Ldc_I4_1,    // 1 0001 ldc.i4.1
+        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_UInner(bool)
+        CilOpCodes.Ret          // 3 0007 ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_Ovf_U;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_UInnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
+}
+
+internal record Conv_Ovf_U_Un : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloca_S,    // 16	001C	ldloca.s	V_2 (2)
+        CilOpCodes.Ldloc_0,     // 17	001E	ldloc.0
+        CilOpCodes.Castclass,   // 18	001F	castclass	VMLongOperand
+        CilOpCodes.Callvirt,    // 19	0024	callvirt	instance int64 VMLongOperand::method_3()
+        CilOpCodes.Call,        // 20	0029	call	instance void [mscorlib]System.UIntPtr::.ctor(uint64)
+    };
+    
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_Ovf_U_Un;
+    
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        (instructions[index + 4].Operand as SerializedMemberReference)?.FullName ==
+        "System.Void System.UIntPtr::.ctor(System.UInt64)";
+}
+
+#endregion Conv_U
 
 #region Conv_U1
 
@@ -688,4 +766,4 @@ internal record Conv_Ovf_U8_Un : Conv_U8InnerPattern, IOpCodePattern
 
 #endregion Conv_U8
 
-#endregion Conv_U
+#endregion Conv_UC
