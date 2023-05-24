@@ -31,7 +31,6 @@ internal record Conv_IInnerPattern : IPattern
         "System.Void System.IntPtr::.ctor(System.Int64)";
 }
 
-
 internal record Conv_I : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -88,7 +87,6 @@ internal record Conv_I1InnerPattern : IPattern
         "System.Int64 System.IntPtr::op_Explicit(System.IntPtr)";
 }
 
-
 internal record Conv_I1 : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -122,6 +120,62 @@ internal record Conv_Ovf_I1 : IOpCodePattern
 }
 #endregion Conv_I1
 
+#region Conv_I2
+internal record Conv_I2InnerPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloc_0,     // 23	0047	ldloc.0
+        CilOpCodes.Castclass,   // 24	0048	castclass	VMIntPtrOperand
+        CilOpCodes.Callvirt,    // 25	004D	callvirt	instance native int VMIntPtrOperand::method_3()
+        CilOpCodes.Call,        // 26	0052	call	int32 [mscorlib]System.IntPtr::op_Explicit(native int)
+        CilOpCodes.Conv_Ovf_I2, // 27	0057	conv.ovf.i2
+        CilOpCodes.Stloc_2,     // 28	0058	stloc.2
+    };
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        (instructions[index + 3].Operand as SerializedMemberReference)?.FullName ==
+        "System.Int64 System.IntPtr::op_Explicit(System.IntPtr)";
+}
+
+internal record Conv_I2 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0 0000 ldarg.0
+        CilOpCodes.Ldc_I4_0,    // 1 0001 ldc.i4.0
+        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_I2Inner(bool)
+        CilOpCodes.Ret          // 3 0007 ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_I2;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_I2InnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
+}
+
+internal record Conv_Ovf_I2 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0 0000 ldarg.0
+        CilOpCodes.Ldc_I4_1,    // 1 0001 ldc.i4.1
+        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_I2Inner(bool)
+        CilOpCodes.Ret          // 3 0007 ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_Ovf_I2;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_I2InnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
+}
+#endregion Conv_I2
+
 #region Conv_I4
 
 internal record Conv_I4InnerPattern : IPattern
@@ -145,7 +199,6 @@ internal record Conv_I4InnerPattern : IPattern
         (instructions[index + 3].Operand as SerializedMemberReference)?.FullName ==
         "System.UInt64 System.Convert::ToUInt64(System.Object)";
 }
-
 
 internal record Conv_I4 : IOpCodePattern
 {
@@ -203,7 +256,6 @@ internal record Conv_I8InnerPattern : IPattern
         (instructions[index + 3].Operand as SerializedMemberReference)?.FullName ==
         "System.UInt64 System.Convert::ToUInt64(System.Object)";
 }
-
 
 internal record Conv_I8 : IOpCodePattern
 {
@@ -331,7 +383,6 @@ internal record Conv_U1InnerPattern : IPattern
     public bool InterchangeStlocOpCodes => true;
 }
 
-
 internal record Conv_U1 : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -384,7 +435,6 @@ internal record Conv_U8InnerPattern : IPattern
     public bool InterchangeStlocOpCodes => true;
 }
 
-
 internal record Conv_U8 : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -417,4 +467,5 @@ internal record Conv_Ovf_U8 : IOpCodePattern
         (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
 }
 #endregion Conv_U8
+
 #endregion Conv_U
