@@ -512,6 +512,65 @@ internal record Conv_Ovf_U1_Un : Conv_U1InnerPattern, IOpCodePattern
 
 #endregion Conv_U1
 
+#region Conv_U2
+
+internal record Conv_U2InnerPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloc_0,         // 87	00F6	ldloc.0
+        CilOpCodes.Castclass,       // 88	00F7	castclass	VMLongOperand
+        CilOpCodes.Callvirt,        // 89	00FC	callvirt	instance int64 VMLongOperand::method_3()
+        CilOpCodes.Conv_Ovf_U8,     // 90	0101	conv.ovf.u8
+        CilOpCodes.Conv_Ovf_U2_Un,  // 91	0102	conv.ovf.u2.un
+        CilOpCodes.Stloc_2,         // 92	0103	stloc.2
+    };
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+    public bool InterchangeStlocOpCodes => true;
+}
+
+internal record Conv_U2 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0 0000 ldarg.0
+        CilOpCodes.Ldc_I4_0,    // 1 0001 ldc.i4.0
+        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_U2Inner(bool)
+        CilOpCodes.Ret          // 3 0007 ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_U2;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_U2InnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
+}
+
+internal record Conv_Ovf_U2 : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0 0000 ldarg.0
+        CilOpCodes.Ldc_I4_1,    // 1 0001 ldc.i4.1
+        CilOpCodes.Callvirt,    // 2 0002 callvirt instance void VM::Conv_U2Inner(bool)
+        CilOpCodes.Ret          // 3 0007 ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_Ovf_U2;
+
+    public bool Verify(VMOpCode vmOpCode, int index = 0) => PatternMatcher.MatchesPattern(new Conv_U2InnerPattern(),
+        (vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[2].Operand as SerializedMethodDefinition)!);
+}
+
+internal record Conv_Ovf_U2_Un : Conv_U2InnerPattern, IOpCodePattern
+{
+    public CilOpCode? CilOpCode => CilOpCodes.Conv_Ovf_U2_Un;
+}
+
+#endregion Conv_U2
+
 #region Conv_U8
 
 internal record Conv_U8InnerPattern : IPattern
