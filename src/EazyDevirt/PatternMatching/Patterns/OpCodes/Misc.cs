@@ -394,3 +394,31 @@ internal record Ldvirtftn : IOpCodePattern
 }
 
 #endregion
+
+#region Sizeof
+
+internal record Sizeof : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    { 
+        CilOpCodes.Call,        // 11	0017	call	int32 [mscorlib]System.Runtime.InteropServices.Marshal::SizeOf(class [mscorlib]System.Type)
+        CilOpCodes.Newobj,      // 12	001C	newobj	instance void VMIntOperand::.ctor(int32)
+        CilOpCodes.Callvirt,    // 13	0021	callvirt	instance void VM::PushStack(class VMOperandType)
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Sizeof;
+
+    public bool MatchEntireBody => false;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0)
+    {
+        var sizeOfCall = instructions[index].Operand as IMethodDescriptor;
+        if (sizeOfCall?.FullName != "System.Int32 System.Runtime.InteropServices.Marshal::SizeOf(System.Type)")
+            return false;
+
+        var pushStackCall = instructions[index + 2].Operand as MethodDefinition;
+        return PatternMatcher.MatchesPattern(new PushStackPattern(), pushStackCall);
+    }
+}
+
+#endregion Sizeof
