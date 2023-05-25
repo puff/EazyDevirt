@@ -325,6 +325,57 @@ internal record Castclass : IOpCodePattern
 }
 #endregion Castclass
 
+#region Ldobj
+
+internal record IsVMOperandAssignableFromTypePattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldloc_1,         // 15	001D	ldloc.1
+        CilOpCodes.Ldarg_2,         // 16	001E	ldarg.2
+        CilOpCodes.Beq_S,           // 17	001F	beq.s	61 (007F) ldc.i4.1 
+        CilOpCodes.Ldarg_2,         // 18	0021	ldarg.2
+        CilOpCodes.Ldloc_1,         // 19	0022	ldloc.1
+        CilOpCodes.Callvirt,        // 20	0023	callvirt	instance bool [mscorlib]System.Type::IsAssignableFrom(class [mscorlib]System.Type)
+    };
+
+    public bool MatchEntireBody => false;
+
+    public bool InterchangeLdlocOpCodes => true;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        (instructions[index + 5].Operand as IMethodDescriptor)?.FullName ==
+        "System.Boolean System.Type::IsAssignableFrom(System.Type)";
+}
+
+internal record Ldobj : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    { 
+        CilOpCodes.Callvirt,        // 15	001F	callvirt	instance bool VM::IsVMOperandAssignableFromType(class VMOperandType, class [mscorlib]System.Type)
+        CilOpCodes.Brfalse_S,       // 16	0024	brfalse.s	21 (002E) ldarg.0 
+        CilOpCodes.Ldarg_0,         // 17	0026	ldarg.0
+        CilOpCodes.Ldloc_2,         // 18	0027	ldloc.2
+        CilOpCodes.Callvirt,        // 19	0028	callvirt	instance void VM::PushStack(class VMOperandType)
+        CilOpCodes.Ret,             // 20	002D	ret
+        CilOpCodes.Ldarg_0,         // 21	002E	ldarg.0
+        CilOpCodes.Newobj,          // 22	002F	newobj	instance void VMObjectOperand::.ctor()
+        CilOpCodes.Callvirt,        // 23	0034	callvirt	instance void VM::PushStack(class VMOperandType)
+        CilOpCodes.Ret              // 24	0039	ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Ldobj;
+
+    public bool MatchEntireBody => false;
+    
+    public bool InterchangeLdlocOpCodes => true;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        PatternMatcher.MatchesPattern(new IsVMOperandAssignableFromTypePattern(),
+            instructions[index].Operand as SerializedMethodDefinition);
+}
+#endregion Ldobj
+
 #region Ldftn
 
 internal record Ldftn : IOpCodePattern
