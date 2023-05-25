@@ -537,3 +537,43 @@ internal record Mul_Ovf_Un : IOpCodePattern
     }
 }
 #endregion Mul
+
+#region Neg
+
+internal record NegInnerPattern : IPattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_1,     // 4	000A	ldarg.1
+        CilOpCodes.Castclass,   // 5	000B	castclass	VMIntOperand
+        CilOpCodes.Callvirt,    // 6	0010	callvirt	instance int32 VMIntOperand::method_3()
+        CilOpCodes.Neg,         // 7	0015	neg
+        CilOpCodes.Newobj,      // 8	0016	newobj	instance void VMIntOperand::.ctor(int32)
+        CilOpCodes.Ret          // 9	001B	ret
+    };
+
+    public bool MatchEntireBody => false;
+}
+
+internal record Neg : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Stloc_0,     // 2	0006	stloc.0
+        CilOpCodes.Ldarg_0,     // 3	0007	ldarg.0
+        CilOpCodes.Ldarg_0,     // 4	0008	ldarg.0
+        CilOpCodes.Ldloc_0,     // 5	0009	ldloc.0
+        CilOpCodes.Callvirt,    // 6	000A	callvirt	instance class VMOperandType VM::NegInner(class VMOperandType)
+        CilOpCodes.Callvirt,    // 7	000F	callvirt	instance void VM::PushStack(class VMOperandType)
+        CilOpCodes.Ret          // 8	0014	ret
+    };
+    
+    public CilOpCode? CilOpCode => CilOpCodes.Neg;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        PatternMatcher.MatchesPattern(new NegInnerPattern(), instructions[6].Operand as SerializedMethodDefinition);
+}
+
+#endregion Neg
