@@ -106,7 +106,6 @@ internal record NoBody : IOpCodePattern
     
     public bool IsSpecial => true;
     public bool AllowMultiple => true;
-
-    public bool Verify(VMOpCode vmOpCode, int index) => vmOpCode.CilOperandType == CilOperandType.InlineNone;
 }
+
 #endregion NoBody

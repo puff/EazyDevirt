@@ -140,10 +140,11 @@ internal class MethodDevirtualizer : StageBase
             var operand = vmOpCode.IsSpecial ? ReadSpecialOperand(vmOpCode, vmMethod) : ReadOperand(vmOpCode, vmMethod);
             if (vmOpCode.CilOpCode != null)
             {
-                // TODO: Remember to remove the log for stinds
                 // Log these for now since they're special cases. 
                 if (vmOpCode.CilOpCode.Value.Mnemonic.StartsWith("stind"))
                     Ctx.Console.Warning($"Placing stind instruction at #{vmMethod.Instructions.Count}");
+                else if (vmOpCode.SpecialOpCode == SpecialOpCodes.NoBody)
+                    Ctx.Console.Warning($"Placing NoBody instruction at #{vmMethod.Instructions.Count}");
 
                 var instruction =
                     new CilInstruction(vmOpCode.CilOpCode.Value, operand);

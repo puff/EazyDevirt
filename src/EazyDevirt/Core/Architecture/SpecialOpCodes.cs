@@ -23,5 +23,5 @@ internal enum SpecialOpCodes : uint
     /// <summary>
     /// These only contain a return instruction in their body so they require analysis to determine the CIL opcode.
     /// </summary>
-    NoBody, // 0x060002CD, 0x060003F4
+    NoBody, //  0x0600038A, 0x060002CD, 0x060003F4
 }
