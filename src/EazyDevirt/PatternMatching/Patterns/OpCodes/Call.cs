@@ -36,9 +36,33 @@ internal record Call : IOpCodePattern
         .Signature!.ReturnType.FullName == "System.Reflection.MethodBase";
 }
 
+// this one uses VMMethodBaseOperand instead, probably to call methods emitted by ldftn and ldvirtftn vm opcode handlers.
+internal record Call_Direct : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ldarg_0,     // 0	0000	ldarg.0
+        CilOpCodes.Callvirt,    // 1	0001	callvirt	instance class VMOperandType VM::PopStack()
+        CilOpCodes.Castclass,   // 2	0006	castclass	VMMethodBaseOperand
+        CilOpCodes.Callvirt,    // 3	000B	callvirt	instance class [mscorlib]System.Reflection.MethodBase VMMethodBaseOperand::method_3()
+        CilOpCodes.Stloc_0,     // 4	0010	stloc.0
+        CilOpCodes.Ldarg_0,     // 5	0011	ldarg.0
+        CilOpCodes.Ldloc_0,     // 6	0012	ldloc.0
+        CilOpCodes.Ldc_I4_0,    // 7	0013	ldc.i4.0
+        CilOpCodes.Callvirt,    // 8	0014	callvirt	instance void VM::CallMethod(class [mscorlib]System.Reflection.MethodBase, bool)
+        CilOpCodes.Ret          // 9	0019	ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Call;
+
+    public bool Verify(CilInstructionCollection instructions, int index) => 
+        (instructions[3].Operand as SerializedMethodDefinition)!
+        .Signature!.ReturnType.FullName == "System.Reflection.MethodBase";
+}
+
 #endregion Call
 
-#region Call
+#region Calli
 
 internal record Calli : IOpCodePattern
 {
