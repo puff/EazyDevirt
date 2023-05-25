@@ -6,6 +6,7 @@ using EazyDevirt.Core.Abstractions.Interfaces;
 namespace EazyDevirt.PatternMatching.Patterns.OpCodes;
 
 #region Constrained
+
 internal record Constrained : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
@@ -31,4 +32,26 @@ internal record Constrained : IOpCodePattern
         return constrainedTypeField?.Signature?.FieldType.FullName == "System.Type";
     }
 }
+
 #endregion Constrained
+
+#region Volatile
+
+internal record Volatile : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Call,        // 0	0000	call	void [mscorlib]System.Threading.Thread::MemoryBarrier()
+        CilOpCodes.Ret          // 1	0005	ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Volatile;
+
+    public bool AllowMultiple => true;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        (instructions[index].Operand as IMethodDescriptor)?.FullName ==
+        "System.Void System.Threading.Thread::MemoryBarrier()";
+}
+
+#endregion Volatile
