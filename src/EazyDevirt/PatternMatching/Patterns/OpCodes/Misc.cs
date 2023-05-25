@@ -422,3 +422,22 @@ internal record Sizeof : IOpCodePattern
 }
 
 #endregion Sizeof
+
+#region Break
+
+internal record Break : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    { 
+        CilOpCodes.Call,        // 0	0000	call	void [mscorlib]System.Diagnostics.Debugger::Break()
+        CilOpCodes.Ret          // 1	0005	ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Break;
+
+    public bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        (instructions[index].Operand as IMethodDescriptor)?.FullName ==
+        "System.Void System.Diagnostics.Debugger::Break()";
+}
+
+#endregion Break
