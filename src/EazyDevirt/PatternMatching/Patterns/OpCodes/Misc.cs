@@ -229,6 +229,22 @@ internal record Box : IOpCodePattern
 }
 #endregion Box
 
+#region Unbox
+
+internal record Unbox : IOpCodePattern
+{
+    public IList<CilOpCode> Pattern => new List<CilOpCode>
+    {
+        CilOpCodes.Ret          // 0	0000	ret
+    };
+
+    public CilOpCode? CilOpCode => CilOpCodes.Unbox;
+    
+    public bool Verify(VMOpCode vmOpCode, int index = 0) => vmOpCode.CilOperandType == CilOperandType.InlineTok;
+}
+
+#endregion Unbox
+
 #region Unbox_Any
 
 internal record Unbox_Any : IOpCodePattern
