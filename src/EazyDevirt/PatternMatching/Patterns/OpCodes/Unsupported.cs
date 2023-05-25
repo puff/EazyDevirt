@@ -15,7 +15,17 @@ internal record UnsupportedPattern : IPattern
         CilOpCodes.Throw        // 3	000B	throw
     };
 
-    protected static bool CheckUnsupportedString(string? opCode, string? operandString) => operandString?.ToLower() == $"{opCode} is not supported.";
+    protected static bool CheckUnsupportedString(string opCode, string? operandString)
+    {
+        var lowerCaseString = operandString?.ToLower();
+        if (string.IsNullOrWhiteSpace(lowerCaseString))
+            return false;
+
+        // Message may not contain the word "is"
+        // EX: Mkrefany is not supported.
+        // EX: Cpblk not supported.
+        return lowerCaseString.StartsWith(opCode) && lowerCaseString.EndsWith("not supported.");
+    }
 
     public bool Verify(CilInstructionCollection instructions, int index = 0) =>
         (instructions[2].Operand as SerializedMemberReference)!.FullName ==
@@ -81,3 +91,39 @@ internal record Arglist : UnsupportedPattern, IOpCodePattern
 }
 
 #endregion Arglist
+
+#region Initblk
+
+internal record Initblk : UnsupportedPattern, IOpCodePattern
+{
+    public CilOpCode? CilOpCode => CilOpCodes.Initblk;
+
+    public new bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        CheckUnsupportedString(CilOpCode?.Mnemonic!, instructions[1].Operand as string) && base.Verify(instructions);
+}
+
+#endregion Initblk
+
+#region Localloc
+
+internal record Localloc : UnsupportedPattern, IOpCodePattern
+{
+    public CilOpCode? CilOpCode => CilOpCodes.Localloc;
+
+    public new bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        CheckUnsupportedString(CilOpCode?.Mnemonic!, instructions[1].Operand as string) && base.Verify(instructions);
+}
+
+#endregion Localloc
+
+#region Cpblk
+
+internal record Cpblk : UnsupportedPattern, IOpCodePattern
+{
+    public CilOpCode? CilOpCode => CilOpCodes.Cpblk;
+
+    public new bool Verify(CilInstructionCollection instructions, int index = 0) =>
+        CheckUnsupportedString(CilOpCode?.Mnemonic!, instructions[1].Operand as string) && base.Verify(instructions);
+}
+
+#endregion Cpblk
