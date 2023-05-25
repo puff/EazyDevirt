@@ -325,7 +325,7 @@ internal record Castclass : IOpCodePattern
 }
 #endregion Castclass
 
-#region Ldobj
+#region Isinst
 
 internal record IsVMOperandAssignableFromTypePattern : IPattern
 {
@@ -348,7 +348,7 @@ internal record IsVMOperandAssignableFromTypePattern : IPattern
         "System.Boolean System.Type::IsAssignableFrom(System.Type)";
 }
 
-internal record Ldobj : IOpCodePattern
+internal record Isinst : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     { 
@@ -364,7 +364,7 @@ internal record Ldobj : IOpCodePattern
         CilOpCodes.Ret              // 24	0039	ret
     };
 
-    public CilOpCode? CilOpCode => CilOpCodes.Ldobj;
+    public CilOpCode? CilOpCode => CilOpCodes.Isinst;
 
     public bool MatchEntireBody => false;
     
@@ -374,7 +374,7 @@ internal record Ldobj : IOpCodePattern
         PatternMatcher.MatchesPattern(new IsVMOperandAssignableFromTypePattern(),
             instructions[index].Operand as SerializedMethodDefinition);
 }
-#endregion Ldobj
+#endregion Isinst
 
 #region Ldftn
 
