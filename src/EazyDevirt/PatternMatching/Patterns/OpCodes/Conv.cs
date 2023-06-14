@@ -399,8 +399,6 @@ internal record Conv_R_Un : IOpCodePattern
         CilOpCodes.Stloc_2,     // 37	0053	stloc.2
         // this is from the original executable because de4dot optimizes this
         CilOpCodes.Br_S,        // 36	004E	br.s	39 (0056) ldarg.0 
-        CilOpCodes.Newobj,      // 37	0050	newobj	instance void [mscorlib]System.InvalidOperationException::.ctor()
-        CilOpCodes.Throw,       // 38	0055	throw
     };
 
     public CilOpCode? CilOpCode => CilOpCodes.Conv_R_Un;
@@ -409,12 +407,12 @@ internal record Conv_R_Un : IOpCodePattern
 
     public bool InterchangeLdlocOpCodes => true;
     public bool InterchangeStlocOpCodes => true;
- 
+
     public bool Verify(CilInstructionCollection instructions, int index = 0) =>
         instructions[index + 3].Operand is SerializedMemberReference
         {
             FullName: "System.UInt64 System.Convert::ToUInt64(System.Object)"
-        };
+        } && instructions.Count(x => x.OpCode == CilOpCodes.Conv_R_Un) == 3;
 }
 
 #endregion Conv_R_Un
@@ -480,7 +478,7 @@ internal record Conv_R8 : IOpCodePattern
         instructions[index + 3].Operand is SerializedMemberReference
         {
             FullName: "System.UInt64 System.Convert::ToUInt64(System.Object)"
-        };
+        } && instructions.Count(x => x.OpCode == CilOpCodes.Conv_R_Un) == 1;
 }
 
 #endregion Conv_R8
