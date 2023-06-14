@@ -156,24 +156,27 @@ internal class MethodDevirtualizer : StageBase
             vmMethod.SuccessfullyDevirtualized = false;
     }
 
-    private Dictionary<int, int> GetVirtualOffsets(VMMethod vmMethod)
+    private Dictionary<uint, int> GetVirtualOffsets(VMMethod vmMethod)
     {
-        var virtualOffsets = new Dictionary<int, int>(vmMethod.Instructions.Count);
+        var virtualOffsets = new Dictionary<uint, int>(vmMethod.Instructions.Count)
+        {
+            { 0, 0 }
+        };
         var lastCilOffset = 0;
-        var lastOffset = 0;
+        var lastOffset = 0u;
         foreach (var ins in vmMethod.Instructions)
         {
             if (ins.OpCode == CilOpCodes.Switch)
             {
                 var offsetsLength = (ins.Operand as Array)!.Length;
-                lastOffset += 4 * offsetsLength + 8;
+                lastOffset += (uint)(4 * offsetsLength + 8);
                 lastCilOffset += ins.OpCode.Size + 4 + 4 * offsetsLength;
             }
             else
             {
-                lastOffset += ins.OpCode.OperandType == CilOperandType.ShortInlineBrTarget
+                lastOffset += (uint)(ins.OpCode.OperandType == CilOperandType.ShortInlineBrTarget
                     ? 8
-                    : ins.Size - ins.OpCode.Size + 4;
+                    : ins.Size - ins.OpCode.Size + 4);
                 lastCilOffset += ins.Size;
             }
 
@@ -196,7 +199,7 @@ internal class MethodDevirtualizer : StageBase
                 case CilOperandType.InlineBrTarget:
                 case CilOperandType.ShortInlineBrTarget:
                     ins.Operand = vmMethod.SuccessfullyDevirtualized
-                        ? new CilOffsetLabel(virtualOffsets[(int)(uint)ins.Operand!])
+                        ? new CilOffsetLabel(virtualOffsets[(uint)ins.Operand!])
                         : new CilOffsetLabel(0);
                     break;
                 case CilOperandType.InlineSwitch:
@@ -204,7 +207,7 @@ internal class MethodDevirtualizer : StageBase
                     var labels = new ICilLabel[offsets!.Length];
                     for (var x = 0; x < offsets.Length; x++)
                         labels[x] = vmMethod.SuccessfullyDevirtualized
-                            ? new CilOffsetLabel(virtualOffsets[(int)offsets[x]])
+                            ? new CilOffsetLabel(virtualOffsets[offsets[x]])
                             : new CilOffsetLabel(0);
                     ins.Operand = labels;
                     break;
@@ -217,26 +220,61 @@ internal class MethodDevirtualizer : StageBase
         vmMethod.ExceptionHandlers = new List<CilExceptionHandler>();
         
         var virtualOffsets = GetVirtualOffsets(vmMethod);
-        var virtualOffsetsValues = virtualOffsets.Values.ToList();
         foreach (var vmExceptionHandler in vmMethod.VMExceptionHandlers)
         {
-            var tryStart = vmExceptionHandler.TryStart == 0 ? vmMethod.Instructions[0] : vmMethod.Instructions[virtualOffsetsValues.IndexOf(virtualOffsets[(int)vmExceptionHandler.TryStart])];
-            // var tryStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.TryStart]);
-            var tryStartLabel = vmMethod.Instructions.SkipWhile(x => x.Offset <= tryStart?.Offset).First().CreateLabel();
-
-            var handlerStart = vmExceptionHandler.HandlerStart == 0 ? vmMethod.Instructions[0] : vmMethod.Instructions[virtualOffsetsValues.IndexOf(virtualOffsets[(int)vmExceptionHandler.HandlerStart])];
-            // var handlerStart = vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.HandlerStart]);
-            var handlerStartLabel = vmMethod.Instructions.SkipWhile(x => x.Offset <= handlerStart?.Offset).First().CreateLabel();
             var exceptionHandler = new CilExceptionHandler
             {
-                ExceptionType = vmExceptionHandler.HandlerType == CilExceptionHandlerType.Exception ? Resolver.ResolveType(vmExceptionHandler.CatchType) : null,
                 HandlerType = vmExceptionHandler.HandlerType,
-                TryStart = tryStartLabel,
-                TryEnd = handlerStartLabel,
-                HandlerStart = handlerStartLabel,
-                HandlerEnd = handlerStart?.Operand as ICilLabel,
-                FilterStart = vmExceptionHandler.HandlerType == CilExceptionHandlerType.Filter ? vmExceptionHandler.FilterStart == 0 ? vmMethod.Instructions[0].CreateLabel() : vmMethod.Instructions.GetByOffset(virtualOffsets[(int)vmExceptionHandler.FilterStart])?.CreateLabel() : new CilOffsetLabel(0),
+                ExceptionType = vmExceptionHandler.HandlerType == CilExceptionHandlerType.Exception ? Resolver.ResolveType(vmExceptionHandler.CatchType) : null
             };
+
+            var handlerStart = vmMethod.Instructions.GetByOffset(virtualOffsets[vmExceptionHandler.HandlerStart]);
+            exceptionHandler.HandlerStart = handlerStart?.CreateLabel();
+
+            var handlerEndIndex = vmMethod.Instructions.GetIndexByOffset(virtualOffsets[vmExceptionHandler.HandlerStart]);
+            var foundHandlerEnd = false;
+            while (!foundHandlerEnd && vmMethod.Instructions.Count - 1 > handlerEndIndex)
+            {
+                var possibleHandlerEnd = vmMethod.Instructions[handlerEndIndex];
+                switch (possibleHandlerEnd.OpCode.Code)
+                {
+                    case CilCode.Endfinally:
+                        if (vmExceptionHandler.HandlerType == CilExceptionHandlerType.Finally)
+                            foundHandlerEnd = true;
+                        break;
+                    case CilCode.Leave:
+                    case CilCode.Leave_S:
+                        if (possibleHandlerEnd.Operand is ICilLabel target &&
+                            target.Offset >= exceptionHandler.HandlerStart?.Offset &&
+                            handlerEndIndex > 0 && !vmMethod.Instructions[handlerEndIndex - 1].IsConditionalBranch())
+                            foundHandlerEnd = true;
+                        break;
+                    case CilCode.Ret:
+                        if (handlerEndIndex != vmMethod.Instructions.Count - 1)
+                            handlerEndIndex++;
+                        foundHandlerEnd = true;
+                        break;
+                    case CilCode.Rethrow:
+                    case CilCode.Throw:
+                        foundHandlerEnd = true;
+                        break;
+                }
+
+                handlerEndIndex++;
+            }
+
+            exceptionHandler.HandlerEnd = vmMethod.Instructions[handlerEndIndex].CreateLabel();
+
+            exceptionHandler.TryStart = vmMethod.Instructions.GetByOffset(virtualOffsets[vmExceptionHandler.TryStart])?.CreateLabel();
+
+            var tryEndIndex = vmMethod
+                .Instructions.GetIndexByOffset(
+                    virtualOffsets[vmExceptionHandler.TryStart + vmExceptionHandler.TryLength]);
+            exceptionHandler.TryEnd = vmMethod
+                .Instructions[tryEndIndex + (vmMethod.Instructions.Count - 2 >= tryEndIndex ? 1 : 0)].CreateLabel();
+
+            if (vmExceptionHandler.HandlerType == CilExceptionHandlerType.Filter)
+                exceptionHandler.FilterStart = vmMethod.Instructions.GetByOffset(virtualOffsets[vmExceptionHandler.FilterStart])?.CreateLabel();
             
             vmMethod.Parent.CilMethodBody?.ExceptionHandlers.Add(exceptionHandler);
         }
