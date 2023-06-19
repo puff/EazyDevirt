@@ -10,13 +10,6 @@
         <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     </PropertyGroup>
 
-    <PropertyGroup>
-        <!-- Eazfuscator.NET is integrated with this project at MSBuild level: https://www.gapotchenko.com/eazfuscator.net/kb/100036 -->
-        <EazfuscatorIntegration>MSBuild</EazfuscatorIntegration>
-        <EazfuscatorActiveConfiguration>Release</EazfuscatorActiveConfiguration>
-        <EazfuscatorCompatibilityVersion>2022.2</EazfuscatorCompatibilityVersion>
-    </PropertyGroup>
-
     <ItemGroup>
       <!-- <None Remove="Resources\PXL_20211023_102536344.jpg" /> -->
       <EmbeddedResource Include="Resources\encrypted.jpg" />
@@ -28,11 +21,5 @@
     <ItemGroup Condition="'$(ConfigurationName)' == 'Debug'">
         <_CopyItems Include="$(OutDir)*.*" Visible="false" />
     </ItemGroup>
-    
-    <!-- Don't overwrite sample in Debug mode. Eazfuscator.NET only obfuscates in Release mode. -->
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(ConfigurationName)' == 'Release'">
-       <!-- <Exec Command="xcopy $(OutDir) ..\samples\EazSample /Y /I" /> -->
-        <Copy SourceFiles="@(_CopyItems)" DestinationFolder="../samples/EazSample-new" />
-    </Target>
 
 </Project>
