@@ -55,17 +55,17 @@ internal  class ConsoleLogger : ILogger
         Console.ForegroundColor = ConsoleColor.White;
         Console.WriteLine("void-stack for the many contributions."); 
         
-        // 55 = ("saneki for the well-documented eazdevirt project.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
+        // 39 = ("saneki for the eazdevirt project.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
         Console.WriteLine(string.Format("{0," + (Console.WindowWidth / 2
-                                                 + 55 + "}"), "saneki for the well-documented eazdevirt project."));
+                                                 + 39 + "}"), "saneki for the eazdevirt project."));
         
-        // 47 = ("TobitoFatitoRE for the amazing HexDevirt project.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
+        // 47 = ("TobitoFatitoRE for the HexDevirt project.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
         Console.WriteLine(string.Format("{0," + (Console.WindowWidth / 2 
                                                  + 47 + "}"), "TobitoFatitoRE for the HexDevirt project."));
         
-        // 54 = ("Washi1337 for the wonderful AsmResolver library.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
+        // 65 = ("Washi1337 for the wonderful AsmResolver and Echo libraries.".length + "Thanks to - ".length) - ("Thanks to - ".length / 2)
         Console.WriteLine(string.Format("{0," + (Console.WindowWidth / 2
-                                                 + 54 + "}"), "Washi1337 for the wonderful AsmResolver library."));
+                                                 + 65 + "}"), "Washi1337 for the wonderful AsmResolver and Echo libraries."));
         Console.ResetColor();
     }
 

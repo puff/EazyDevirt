@@ -88,7 +88,7 @@ internal static class Program
         var onlySaveDevirtedOption = new Option<bool>(new[] { "--only-save-devirted"}, "Only saves successfully devirtualized methods (This option only matters if you use the save anyway option)");
         onlySaveDevirtedOption.SetDefaultValue(false);
 
-        var rootCommand = new RootCommand("EazyDevirt is a tool to automatically restore the original IL code " +
+        var rootCommand = new RootCommand("is an open-source tool that automatically restores the original IL code " +
                                           "from an assembly virtualized with Eazfuscator.NET")
         {
             inputArgument,
