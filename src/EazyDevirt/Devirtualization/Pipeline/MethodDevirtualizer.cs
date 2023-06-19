@@ -254,8 +254,9 @@ internal class MethodDevirtualizer : StageBase
                             foundHandlerEnd = true;
                         break;
                     case CilCode.Ret:
-                        if (handlerEndIndex != vmMethod.Instructions.Count - 1)
-                            handlerEndIndex++;
+                        // this shouldn't happen, but this makes the handler end set on the ret instruction instead of one after it
+                        if (handlerEndIndex == vmMethod.Instructions.Count - 1)
+                            handlerEndIndex--;
                         foundHandlerEnd = true;
                         break;
                     case CilCode.Rethrow:
