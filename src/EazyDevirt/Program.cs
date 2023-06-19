@@ -75,6 +75,9 @@ internal static class Program
         var preserveAllOption = new Option<bool>(new[] { "--preserve-all"}, "Preserves all metadata tokens");
         preserveAllOption.SetDefaultValue(false);
 
+        var noVerifyOption = new Option<bool>(new[] { "--no-verify"}, "Don't verify labels or compute max stack for devirtualized methods");
+        noVerifyOption.SetDefaultValue(false);
+        
         // TODO: Implement this in code or remove this option
         var keepTypesOption = new Option<bool>(new[] { "--keep-types", "-kt"}, "Keeps obfuscator types");
         keepTypesOption.SetDefaultValue(false);
@@ -92,6 +95,7 @@ internal static class Program
             outputArgument,
             verbosityOption,
             preserveAllOption,
+            noVerifyOption,
             keepTypesOption,
             saveAnywayOption,
             onlySaveDevirtedOption
@@ -99,7 +103,7 @@ internal static class Program
         
         rootCommand.SetHandler(Run, 
             new DevirtualizationOptionsBinder(inputArgument, outputArgument, verbosityOption,
-                preserveAllOption, keepTypesOption, saveAnywayOption, onlySaveDevirtedOption));
+                preserveAllOption, noVerifyOption, keepTypesOption, saveAnywayOption, onlySaveDevirtedOption));
         
         return new CommandLineBuilder(rootCommand)
             .UseDefaults()

@@ -163,7 +163,7 @@ internal class OpCodeMapping : StageBase
             }
         }
 
-        var identified = 0f;
+        var identified = 0;
         foreach (var vmOpCode in vmOpCodes)
         {
             if (!vmOpCode.HasVirtualCode)

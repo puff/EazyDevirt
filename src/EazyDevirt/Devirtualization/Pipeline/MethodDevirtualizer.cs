@@ -62,15 +62,19 @@ internal class MethodDevirtualizer : StageBase
         vmMethod.Parent.CilMethodBody!.LocalVariables.Clear();
         vmMethod.Locals.ForEach(x => vmMethod.Parent.CilMethodBody.LocalVariables.Add(x));
 
-        // vmMethod.Parent.CilMethodBody!.ExceptionHandlers.Clear();
-        // vmMethod.ExceptionHandlers.ForEach(x => vmMethod.Parent.CilMethodBody.ExceptionHandlers.Add(x));
-
-        // TODO: Remove this when all opcodes are properly handled
-        vmMethod.Parent.CilMethodBody!.VerifyLabelsOnBuild = false;
-        vmMethod.Parent.CilMethodBody!.ComputeMaxStackOnBuild = false;
+        vmMethod.Parent.CilMethodBody!.ExceptionHandlers.Clear();
+        vmMethod.ExceptionHandlers.ForEach(x => vmMethod.Parent.CilMethodBody.ExceptionHandlers.Add(x));
 
         vmMethod.Parent.CilMethodBody.Instructions.Clear();
         vmMethod.Instructions.ForEach(x => vmMethod.Parent.CilMethodBody.Instructions.Add(x));
+        
+        vmMethod.Parent.CilMethodBody!.VerifyLabelsOnBuild = false;
+        vmMethod.Parent.CilMethodBody!.ComputeMaxStackOnBuild = false;
+        if (!Ctx.Options.NoVerify)
+        {
+            vmMethod.Parent.CilMethodBody!.ComputeMaxStack(false);
+            vmMethod.Parent.CilMethodBody!.VerifyLabels(false);
+        }
     }
     
     private void ReadExceptionHandlers(VMMethod vmMethod)
@@ -276,7 +280,7 @@ internal class MethodDevirtualizer : StageBase
             if (vmExceptionHandler.HandlerType == CilExceptionHandlerType.Filter)
                 exceptionHandler.FilterStart = vmMethod.Instructions.GetByOffset(virtualOffsets[vmExceptionHandler.FilterStart])?.CreateLabel();
             
-            vmMethod.Parent.CilMethodBody?.ExceptionHandlers.Add(exceptionHandler);
+            vmMethod.ExceptionHandlers.Add(exceptionHandler);
         }
     }
 

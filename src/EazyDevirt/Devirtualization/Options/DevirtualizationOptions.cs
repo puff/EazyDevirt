@@ -40,6 +40,11 @@ internal record DevirtualizationOptions
  public bool PreserveAll { get; init; }
  
  /// <summary>
+ /// Don't verify labels or compute max stack for devirtualized methods
+ /// </summary>
+ public bool NoVerify { get; init; }
+ 
+ /// <summary>
  /// Keeps all obfuscator types
  /// </summary>
  public bool KeepTypes { get; init; }
