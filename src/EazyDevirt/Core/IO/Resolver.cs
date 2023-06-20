@@ -89,7 +89,12 @@ internal class Resolver
             return null!;
         }
 
-        var typeRef = assemblyRef.CreateTypeReference(data.TypeName.Namespace, data.TypeName.NameWithoutNamespace);
+        var parentTypeRef = !data.TypeName.IsNested
+            ? assemblyRef.CreateTypeReference(data.TypeName.Namespace, data.TypeName.NameWithoutNamespace)
+            : assemblyRef.CreateTypeReference(data.TypeName.Namespace, data.TypeName.ParentNameWithoutNamespace);
+        var typeRef = !data.TypeName.IsNested
+            ? parentTypeRef
+            : parentTypeRef.CreateTypeReference(data.TypeName.NestedName);
         var typeBaseSig = typeRef.ToTypeSignature();
         if (data.HasGenericTypes)
             typeBaseSig = typeRef
@@ -149,7 +154,6 @@ internal class Resolver
             method.Parameters.ThisParameter.ParameterType.FullName ==
             ResolveType(data.Parameters[0].Position)?.FullName)
             skip++;
-
 
         return (method.Parameters.Count == data.Parameters.Length || method.Parameters.Count == data.Parameters.Length - skip) && method.Parameters
             .Zip(data.Parameters.Skip(skip)).All(x =>

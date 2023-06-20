@@ -148,6 +148,9 @@ internal class MethodDevirtualizer : StageBase
                 else if (vmOpCode.SpecialOpCode == SpecialOpCodes.NoBody)
                     Ctx.Console.Warning($"Placing NoBody instruction at #{vmMethod.Instructions.Count}");
 
+                if (vmOpCode.CilOpCode.Value.OperandType != CilOperandType.InlineNone && operand == null)
+                    Ctx.Console.Warning($"[{vmMethod.Parent.MetadataToken}] Failed to resolve operand for opcode {vmOpCode.CilOpCode} at instruction #{vmMethod.Instructions.Count}");
+
                 var instruction =
                     new CilInstruction(vmOpCode.CilOpCode.Value, operand);
                 vmMethod.Instructions.Add(instruction);

@@ -19,10 +19,7 @@ public class TypeName
 
 	public TypeName(string fullName)
 	{
-		// Eazfuscator.NET uses '+' to indicate a nested type name follows, while
-		// dnlib uses '+'
-		// FullName = fullName.Replace('+', '+');
-		FullName = fullName;
+        FullName = fullName;
 	}
 
     /// <summary>
@@ -86,8 +83,15 @@ public class TypeName
 			Name.Split('+').Reverse().Skip(1).Reverse().ToArray())
 		: string.Empty;
 
+    /// <summary>
+    /// Nested parent name without namespace, or empty if not nested.
+    /// </summary>
+    public string ParentNameWithoutNamespace => IsNested
+        ? ParentName.Contains('.') ? ParentName.Split('.').Last() : ParentName
+        : string.Empty;
+
 	/// <summary>
-	/// The nested child type name if nested. If not nested, null.
+	/// The nested child type name if nested. If not nested, an empty string.
 	/// </summary>
 	public string NestedName => IsNested ? Name.Split('+').Last() : string.Empty;
 
