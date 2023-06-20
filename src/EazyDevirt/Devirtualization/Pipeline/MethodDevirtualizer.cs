@@ -234,11 +234,20 @@ internal class MethodDevirtualizer : StageBase
             var handlerStart = vmMethod.Instructions.GetByOffset(virtualOffsets[vmExceptionHandler.HandlerStart]);
             exceptionHandler.HandlerStart = handlerStart?.CreateLabel();
 
+            // HandlerEnd is not explicity defined, and we don't have a length, so we need to find it ourselves
             var handlerEndIndex = vmMethod.Instructions.GetIndexByOffset(virtualOffsets[vmExceptionHandler.HandlerStart]);
             var foundHandlerEnd = false;
             while (!foundHandlerEnd && vmMethod.Instructions.Count - 1 > handlerEndIndex)
             {
                 var possibleHandlerEnd = vmMethod.Instructions[handlerEndIndex];
+                
+                // if there is a branch, skip past it to ensure the correct HandlerEnd is found
+                if (possibleHandlerEnd.IsBranch() && possibleHandlerEnd.OpCode.Code is not (CilCode.Leave or CilCode.Leave_S))
+                {
+                    handlerEndIndex = vmMethod.Instructions.GetIndexByOffset(((ICilLabel)possibleHandlerEnd.Operand!).Offset);
+                    continue;
+                }
+                
                 switch (possibleHandlerEnd.OpCode.Code)
                 {
                     case CilCode.Endfinally:
@@ -248,8 +257,7 @@ internal class MethodDevirtualizer : StageBase
                     case CilCode.Leave:
                     case CilCode.Leave_S:
                         if (possibleHandlerEnd.Operand is ICilLabel target &&
-                            target.Offset >= exceptionHandler.HandlerStart?.Offset &&
-                            handlerEndIndex > 0 && !vmMethod.Instructions[handlerEndIndex - 1].IsConditionalBranch())
+                            target.Offset >= exceptionHandler.HandlerStart?.Offset)
                             foundHandlerEnd = true;
                         break;
                     case CilCode.Ret:
@@ -271,6 +279,7 @@ internal class MethodDevirtualizer : StageBase
 
             exceptionHandler.TryStart = vmMethod.Instructions.GetByOffset(virtualOffsets[vmExceptionHandler.TryStart])?.CreateLabel();
 
+            // TryEnd is equal to TryStart + TryLength + 1
             var tryEndIndex = vmMethod
                 .Instructions.GetIndexByOffset(
                     virtualOffsets[vmExceptionHandler.TryStart + vmExceptionHandler.TryLength]);
