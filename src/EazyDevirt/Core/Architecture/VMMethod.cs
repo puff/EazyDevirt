@@ -37,9 +37,9 @@ internal record VMMethodInfo
     public int VMDeclaringType { get; }
     public string Name { get; }
     public byte BindingFlags { get; }
-    public bool DeclaredOnly => (BindingFlags & 2) > 0;
+    public bool IsStatic => (BindingFlags & 2) > 0;
     public bool IsInstance => (BindingFlags & 4) > 0;
-    public bool IsStatic => (BindingFlags & 8) > 0;
+    public bool DeclaredOnly => (BindingFlags & 8) > 0;
     public int VMReturnType { get; }
     public List<VMLocal> VMLocals { get; }
     public List<VMParameter> VMParameters { get; }

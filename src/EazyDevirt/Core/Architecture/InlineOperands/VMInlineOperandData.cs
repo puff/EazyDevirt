@@ -27,7 +27,7 @@ internal abstract record VMInlineOperandData(VMInlineOperandType Type)
             VMInlineOperandType.Type => new VMTypeData(reader),
             VMInlineOperandType.Field => new VMFieldData(reader),
             VMInlineOperandType.Method => new VMMethodData(reader),
-            VMInlineOperandType.UserString => new VMStringData(reader),
+            VMInlineOperandType.UserString => new VMUserStringData(reader),
             VMInlineOperandType.EazCall => new VMEazCallData(reader),
             _ => throw new ArgumentOutOfRangeException(nameof(operandType), "Not a valid inline operand type!")
         };
@@ -68,14 +68,14 @@ internal record VMFieldData : VMInlineOperandData
 {
     public VMInlineOperand DeclaringType { get; }
     public string Name { get; }
-    public bool Flags { get; }
+    public bool IsStatic { get; }
     
     public BindingFlags BindingFlags
     {
         get
         {
             var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic;
-            bindingFlags |= Flags ? BindingFlags.Static : BindingFlags.Instance;
+            bindingFlags |= IsStatic ? BindingFlags.Static : BindingFlags.Instance;
             return bindingFlags;
         }
     }
@@ -84,7 +84,7 @@ internal record VMFieldData : VMInlineOperandData
     {
         DeclaringType = VMInlineOperand.ReadInternal(reader);
         Name = reader.ReadString();
-        Flags = reader.ReadBoolean();
+        IsStatic = reader.ReadBoolean();
     }
 }
 
@@ -96,9 +96,8 @@ internal record VMMethodData : VMInlineOperandData
     public VMInlineOperand DeclaringType { get; }
     public byte Flags { get; } 
     
-    // this is also different across samples, see issue #3
     public bool IsStatic { get; } 
-    public bool IsInstance => !IsStatic;
+    public bool IsInstance { get; }
     public string Name { get; } 
     public VMInlineOperand ReturnType { get; } 
     public VMInlineOperand[] Parameters { get; } 
@@ -120,7 +119,9 @@ internal record VMMethodData : VMInlineOperandData
     {
         DeclaringType = VMInlineOperand.ReadInternal(reader);
         Flags = reader.ReadByte();
+        // these constants are also different between versions (#3)
         IsStatic = (Flags & 1) > 0;
+        IsInstance = (Flags & 2) > 0;
         Name = reader.ReadString();
         ReturnType = VMInlineOperand.ReadInternal(reader);
         Parameters = VMInlineOperand.ReadArrayInternal(reader);
@@ -131,14 +132,14 @@ internal record VMMethodData : VMInlineOperandData
 /// <summary>
 /// String operand data.
 /// </summary>
-internal record VMStringData : VMInlineOperandData
+internal record VMUserStringData : VMInlineOperandData
 {
     /// <summary>
     /// String value.
     /// </summary>
     public string Value { get; }
 
-    public VMStringData(BinaryReader reader) : base(VMInlineOperandType.UserString)
+    public VMUserStringData(BinaryReader reader) : base(VMInlineOperandType.UserString)
     {
         Value = reader.ReadString();
     }
@@ -150,7 +151,7 @@ internal record VMStringData : VMInlineOperandData
 internal record VMEazCallData : VMInlineOperandData
 {
     /// <summary>
-    /// Contains the flags and position of the vm method contained.
+    /// Contains the flags of the vm method contained.
     /// </summary>
     public int EazCallValue { get; }
     
