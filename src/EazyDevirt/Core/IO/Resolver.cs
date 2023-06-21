@@ -256,20 +256,46 @@ internal class Resolver
             return methodDef?.ImportWith(Ctx.Importer);
         }
 
-        // stuff below should never execute
-        // this doesn't support generics in return types
+        // stuff below should only execute on types that aren't able to be resolved (so hopefully never)
 
         var declaringTypeSig = declaringTypeDefOrRef.ToTypeSignature();
         var parameters = data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray();
+        var genericArgs = data.GenericArguments.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray();
         var newParams = new List<TypeSignature>();
+        // convert generic parameters to their indexes (!!0, !0)
         foreach (var parameter in parameters)
         {
+            // TODO: Search through all methods instead of just converting like this
+            // these might not resolve or convert correctly if there are other parameters that use the type specified in the generic arg
+            // a much better way would be to search for the method through declaringType.Methods and check the generics count and other stuff to ensure it's the correct method
+            for (var gi = 0; gi < genericArgs.Length; gi++)
+            {
+                var genericArg = genericArgs[gi];
+                
+                // convert generic parameters into their index form (!!0)
+                if (SignatureComparer.Default.Equals(genericArg, parameter))
+                    newParams.Add(new GenericParameterSignature(GenericParameterType.Method, gi));
+
+                // convert return type to its index form (!!0) if it matches
+                if (SignatureComparer.Default.Equals(genericArg, returnType.ToTypeSignature()))
+                    returnType = new GenericParameterSignature(GenericParameterType.Method, gi).ToTypeDefOrRef();
+            }
+
             if (declaringTypeSig is GenericInstanceTypeSignature declaringTypeGenericSig)
             {
+                // convert generic type arguments in method parameters to their index form (!0)
                 var f = declaringTypeGenericSig.TypeArguments.FirstOrDefault(x => x.FullName == parameter.FullName);
                 if (f != null)
                     newParams.Add(new GenericParameterSignature(GenericParameterType.Type,
                         declaringTypeGenericSig.TypeArguments.IndexOf(f)));
+                else
+                {
+                    // convert generic return type to its index form (!0)
+                    f = declaringTypeGenericSig.TypeArguments.FirstOrDefault(x => x.FullName == returnType.FullName);
+                    if (f != null)
+                        returnType = new GenericParameterSignature(GenericParameterType.Type,
+                            declaringTypeGenericSig.TypeArguments.IndexOf(f)).ToTypeDefOrRef();
+                }
             }
             else
                 newParams.Add(parameter);
@@ -285,10 +311,7 @@ internal class Resolver
                     newParams));
 
         if (data.HasGenericArguments)
-            return memberRef
-                .MakeGenericInstanceMethod(data.GenericArguments
-                    .Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
-                .ImportWith(Ctx.Importer);
+            return memberRef.MakeGenericInstanceMethod(genericArgs).ImportWith(Ctx.Importer);
         return memberRef.ImportWith(Ctx.Importer);
     }
 
@@ -370,7 +393,7 @@ internal class Resolver
         if (inlineOperand.IsToken)
             return Ctx.Module.LookupString(inlineOperand.Token);
         
-        if (!inlineOperand.HasData || inlineOperand.Data is not VMStringData data) 
+        if (!inlineOperand.HasData || inlineOperand.Data is not VMUserStringData data) 
             throw new Exception("VM inline operand expected to have string data!");
         
         return data.Value;
