@@ -39,7 +39,7 @@ internal class MethodDevirtualizer : StageBase
     
     private void ReadVMMethod(VMMethod vmMethod)
     {
-        vmMethod.MethodInfo = new VMMethodInfo(VMStreamReader);
+        vmMethod.MethodInfo = new VMMethodInfo(VMStreamReader, this.Ctx.VMMethodReadOrder);
 
         ReadExceptionHandlers(vmMethod);
         

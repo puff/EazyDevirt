@@ -46,21 +46,42 @@ internal record VMMethodInfo
 
     public ITypeDefOrRef DeclaringType { get; set; }
     public ITypeDefOrRef ReturnType { get; set; }
-    
-    public VMMethodInfo(BinaryReader reader)
-    {
-        VMDeclaringType = reader.ReadInt32();
-        Name = reader.ReadString();
-        BindingFlags = reader.ReadByte();
-        VMReturnType = reader.ReadInt32();
 
-        VMLocals = new List<VMLocal>(reader.ReadInt16());
-        for (var i = 0; i < VMLocals.Capacity; i++)
-            VMLocals.Add(new VMLocal(reader.ReadInt32()));
-        
-        VMParameters = new List<VMParameter>(reader.ReadInt16());
-        for (var i = 0; i < VMParameters.Capacity; i++)
-            VMParameters.Add(new VMParameter(reader.ReadInt32(), reader.ReadBoolean()));
+    public VMMethodInfo(BinaryReader reader, List<VMMethodField> ReadOrder)
+    {
+        foreach (VMMethodField field in ReadOrder)
+        {
+            switch (field)
+            {
+                case VMMethodField.VMDeclaringType:
+                    VMDeclaringType = reader.ReadInt32();
+                    break;
+
+                case VMMethodField.Name:
+                    Name = reader.ReadString();
+                    break;
+
+                case VMMethodField.BindingFlags:
+                    BindingFlags = reader.ReadByte();
+                    break;
+
+                case VMMethodField.ReturnType:
+                    VMReturnType = reader.ReadInt32();
+                    break;
+
+                case VMMethodField.Locals:
+                    VMLocals = new List<VMLocal>(reader.ReadInt16());
+                    for (var i = 0; i < VMLocals.Capacity; i++)
+                        VMLocals.Add(new VMLocal(reader.ReadInt32()));
+                    break;
+
+                case VMMethodField.Parameters:
+                    VMParameters = new List<VMParameter>(reader.ReadInt16());
+                    for (var i = 0; i < VMParameters.Capacity; i++)
+                        VMParameters.Add(new VMParameter(reader.ReadInt32(), reader.ReadBoolean()));
+                    break;
+            }
+        }
     }
 
     public override string ToString() =>
@@ -68,6 +89,16 @@ internal record VMMethodInfo
         $"DeclaredOnly: {DeclaredOnly} | IsInstance: {IsInstance} | IsStatic: {IsStatic} | " +
         $"VMReturnType: 0x{VMReturnType:X} | VMLocals: [{string.Join(", ", VMLocals)}] | VMParameters: [{string.Join(", ", VMParameters)}] | " +
         $"DeclaringType: {DeclaringType.FullName} | ReturnType: {ReturnType.FullName}";
+}
+
+internal enum VMMethodField
+{
+    VMDeclaringType,
+    Name,
+    BindingFlags,
+    ReturnType,
+    Locals,
+    Parameters
 }
 
 internal record VMLocal(int VMType)

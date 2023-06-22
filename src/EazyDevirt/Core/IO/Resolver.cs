@@ -1,6 +1,7 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Signatures;
 using AsmResolver.DotNet.Signatures.Types;
+using AsmResolver.DotNet.Signatures.Types.Parsing;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.Architecture.InlineOperands;
 using EazyDevirt.Devirtualization;
@@ -40,10 +41,16 @@ internal class Resolver
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
 
-        var inlineOperand = new VMInlineOperand(VMStreamReader);
+        var inlineOperand = VMInlineOperand.ReadInternal(this.Ctx, VMStreamReader);
         if (inlineOperand.IsToken)
             return Ctx.Module.LookupMember<ITypeDefOrRef>(inlineOperand.Token);
-        
+
+        if (inlineOperand.Data is VMUserStringData strData)
+        {
+            //attempt to resolve type from string (mabye not present in eaz 2020 and above)
+            return TypeNameParser.Parse(this.Ctx.Module, strData.Value).ToTypeDefOrRef();
+        }
+
         if (!inlineOperand.HasData || inlineOperand.Data is not VMTypeData data)
             throw new Exception("VM inline operand expected to have type data!");
 
@@ -108,7 +115,7 @@ internal class Resolver
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
         
-        var inlineOperand = new VMInlineOperand(VMStreamReader);
+        var inlineOperand = VMInlineOperand.ReadInternal(this.Ctx, VMStreamReader);
         if (inlineOperand.IsToken)
             return Ctx.Module.LookupMember<IFieldDescriptor>(inlineOperand.Token);
         
@@ -191,7 +198,7 @@ internal class Resolver
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
 
-        var inlineOperand = new VMInlineOperand(VMStreamReader);
+        var inlineOperand = VMInlineOperand.ReadInternal(this.Ctx, VMStreamReader);
         if (inlineOperand.IsToken)
             return Ctx.Module.LookupMember<IMethodDescriptor>(inlineOperand.Token);
         
@@ -319,7 +326,7 @@ internal class Resolver
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
         
-        var inlineOperand = new VMInlineOperand(VMStreamReader);
+        var inlineOperand = VMInlineOperand.ReadInternal(this.Ctx, VMStreamReader);
         if (inlineOperand.IsToken)
         {
             var member = Ctx.Module.LookupMember(inlineOperand.Token);
@@ -362,7 +369,7 @@ internal class Resolver
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
 
-        var methodInfo = new VMMethodInfo(VMStreamReader);
+        var methodInfo = new VMMethodInfo(VMStreamReader, this.Ctx.VMMethodReadOrder);
 
         var declaringType = ResolveType(methodInfo.VMDeclaringType);
         if (declaringType is null)
@@ -389,7 +396,7 @@ internal class Resolver
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
         
-        var inlineOperand = new VMInlineOperand(VMStreamReader);
+        var inlineOperand = VMInlineOperand.ReadInternal(this.Ctx, VMStreamReader);
         if (inlineOperand.IsToken)
             return Ctx.Module.LookupString(inlineOperand.Token);
         
