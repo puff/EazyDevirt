@@ -126,8 +126,8 @@ namespace EazyDevirt.Devirtualization
                         }
                         else
                         {
-                            order.Add(ValueType.Position);
                             order.Add(ValueType.Token);
+                            order.Add(ValueType.Position);
                             return order;
                         }
                     }
