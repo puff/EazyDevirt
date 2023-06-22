@@ -19,11 +19,9 @@
 </div>
 
 ## Usage
-```
-EazyDevirt <assembly> [<output>] [options]
-```
 
 ```console
+$ EazyDevirt <assembly> [<output>] [options]
 Arguments:
   <assembly>  Path to target assembly
   <output>    Path to output directory [default: ./eazydevirt-output]
@@ -81,9 +79,10 @@ See the [open issues](https://github.com/puff/EazyDevirt/issues) for a list of p
 
 ## Support
 [EazyDevirt] is targeted at version 2022.2 of [Eazfuscator.NET]. 
-If the version you're trying this tool on is not supported, you will need to add support for it yourself. You can take a look at the differences between the branches to see what you need to change.
+If the version you're trying this tool on is not supported, you will need to add support for it yourself. You can take a look at the differences between the branches to see what you need to change. \
+The [old-2022](https://github.com/puff/EazyDevirt/tree/old-2022.2) branch supports a different version of 2022.2 than the [main](https://github.com/puff/EazyDevirt/tree/main) branch. The [old-2021](https://github.com/puff/EazyDevirt/tree/old-2021) branch supports an unknown version from 2021.
 
-I won't help you use this program. But, if you find a bug, feel free to submit an issue. 
+I won't help you update this program for another version. But, if you find a bug, feel free to submit an issue. 
 
 ### Credits
 - [void-stack] for the many contributions.
