@@ -165,7 +165,9 @@ internal class VMBinaryReader : VMBinaryReaderBase
         var instanceAddress = _vm.Heap.AllocateObject(_instanceType, true); 
         var instanceObjectSpan = _vm.Heap.GetObjectSpan(instanceAddress);
         var isMemoryStreamField = instanceObjectSpan.SliceObjectField(_vm.ValueFactory, _isMemoryStreamFieldDef);
-        isMemoryStreamField.U8 = 0; // this should never have to be set to 1 unless ReadInt32Special changes endianness.
+        // This is a boolean that determines whether to use ReadInt32Special in the ReadInt32 method.
+        // It should never have to be set to 1 unless ReadInt32Special changes endianness, in which case, we will need to find the ReadInt32Special method and add a handler for it as well.
+        isMemoryStreamField.U8 = 0;
         InstanceObj = _vm.ValueFactory.CreateNativeInteger(instanceAddress);
     }
     

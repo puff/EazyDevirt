@@ -4,11 +4,11 @@ using AsmResolver.PE.DotNet.Cil;
 
 namespace EazyDevirt.Core.Architecture;
 
-internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey)
+internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey, long MethodKey)
 {
     public MethodDefinition Parent { get; } = Parent;
     public string EncodedMethodKey { get; } = EncodedMethodKey;
-    public long MethodKey { get; set; }
+    public long MethodKey { get; } = MethodKey;
     public VMMethodInfo MethodInfo { get; set; }
     public List<VMExceptionHandler> VMExceptionHandlers { get; set; }
     

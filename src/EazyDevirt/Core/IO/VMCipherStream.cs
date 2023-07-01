@@ -1,5 +1,4 @@
-﻿using EazyDevirt.Util;
-using Org.BouncyCastle.Crypto.Encodings;
+﻿using Org.BouncyCastle.Crypto.Encodings;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Math;
@@ -10,7 +9,7 @@ namespace EazyDevirt.Core.IO;
 /// Cipher stream used for reading VM resource data.
 /// </summary>
 /// <remarks>
-/// This is the inner stream when you decompile. It appears to be a modified CipherStream from BouncyCastle.
+/// This is the inner stream when you decompile.
 /// The outer stream seems to just be a wrapper with a cache.
 /// Looks to be the same across Eazfuscator versions.
 /// </remarks>
@@ -28,7 +27,7 @@ internal class VMCipherStream : Stream
     private const int OutputBlockSize = 0xF5;
 
     /// <summary>
-    /// Inner resource stream
+    /// Inner resource stream.
     /// </summary>
     public MemoryStream ResourceStream { get; }
 
@@ -38,20 +37,20 @@ internal class VMCipherStream : Stream
     private Pkcs1Encoding Rsa { get; }
     
     /// <summary>
-    /// This is used to calculate the new position.
+    /// The id of the current block being read.
     /// </summary>
     /// <remarks>
     /// This is equal to (Position / OutputBlockSize)
     /// </remarks>
-    private int PositionPart1 { get; set; }
+    private int BlockId { get; set; }
 
     /// <summary>
-    /// This is used to calculate the new position.
+    /// The current offset into the block that is being read.
     /// </summary>
     /// <remarks>
     /// This is equal to (Position % OutputBlockSize)
     /// </remarks>
-    private int PositionPart2 { get; set; }
+    private int BlockOffset { get; set; }
     
     /// <summary>
     /// Whether to set the inner resource stream's position during an Rsa read.
@@ -84,25 +83,28 @@ internal class VMCipherStream : Stream
     private int _Length { get; set; }
     
     /// <summary>
-    /// This is used to calculate the position and number of bytes to read.
+    /// This is the last block to read.
     /// </summary>
     /// <remarks>
     /// This is equal to (Length / OutputBlockSize)
     /// </remarks>
-    private int LengthPart1 { get; set; }
+    private int LastBlockId { get; set; }
 
     /// <summary>
-    /// This is used to calculate the position and number of bytes to read.
+    /// This is the last offset in the last block.
     /// </summary>
     /// <remarks>
     /// This is equal to (Length % OutputBlockSize)
     /// </remarks>
-    private int LengthPart2 { get; set; }
+    private int LastBlockOffset { get; set; }
     
     private byte[] InputBlockBuffer { get; }
     private byte[] OutputBlockBuffer { get; set; }
 
-    private Dictionary<long, byte[]> BufferCache { get; }
+    /// <summary>
+    /// Cache already read blocks.
+    /// </summary>
+    private Dictionary<int, byte[]> Blocks { get; }
 
     #endregion Fields
     
@@ -111,37 +113,28 @@ internal class VMCipherStream : Stream
         ResourceStream = new MemoryStream(buffer);
         InputBlockBuffer = new byte[InputBlockSize];
         OutputBlockBuffer = new byte[OutputBlockSize];
-        BufferCache = new Dictionary<long, byte[]>();
+        Blocks = new Dictionary<int, byte[]>();
         
         var rsaEngine = new RsaEngine();
         Rsa = new Pkcs1Encoding(rsaEngine);
         Rsa.Init(false, new RsaKeyParameters(true /* The key is public, but the PKSC1 encoding requires this to work correctly. */, mod, exp));
     }
-    
-    // TODO: Move this somewhere else.
-    public static long DecodeMethodKey(string positionString, int positionKey)
-    {
-        var decoded = Ascii85.FromAscii85String(positionString);
 
-        using var reader = new VMBinaryReader(new CryptoStreamV3(new MemoryStream(decoded), positionKey));
-        return reader.ReadInt64();
-    }
-
-    private bool ReadAndProcessRsaBlock(int int8)
+    private bool ReadAndProcessRsaBlock(int blockId)
     {
-        if (BufferCache.TryGetValue(Position, out var value))
-            OutputBlockBuffer = value;
+        if (Blocks.TryGetValue(blockId, out var block))
+            OutputBlockBuffer = block;
         else
         {
-            var i = 0;
-            while (i < InputBlockSize)
+            var offset = 0;
+            while (offset < InputBlockSize)
             {
-                var num = ResourceStream.Read(InputBlockBuffer, i, InputBlockSize - i);
-                if (num != 0)
-                    i += num;
+                var bytesRead = ResourceStream.Read(InputBlockBuffer, offset, InputBlockSize - offset);
+                if (bytesRead != 0)
+                    offset += bytesRead;
                 else
                 {
-                    if (i != 0)
+                    if (offset != 0)
                         throw new InvalidOperationException();
 
                     RsaReadFailed = true;
@@ -149,12 +142,12 @@ internal class VMCipherStream : Stream
                 }
             }
             OutputBlockBuffer = Rsa.ProcessBlock(InputBlockBuffer, 0, InputBlockSize);
-            BufferCache[Position] = OutputBlockBuffer;
+            Blocks[blockId] = OutputBlockBuffer;
         }
         
         RsaBytesRead = OutputBlockBuffer.Length;
-        if (int8 == LengthPart1)
-            RsaBytesRead = LengthPart2;
+        if (blockId == LastBlockId)
+            RsaBytesRead = LastBlockOffset;
         
         return true;   
     }
@@ -166,23 +159,22 @@ internal class VMCipherStream : Stream
         
         AlreadyReadRsa = true;
         RsaReadFailed = false;
-        var num = PositionPart1;
         if (SetResourcePosition)
         {
-            ResourceStream.Position = 4 + num * InputBlockSize;
+            ResourceStream.Position = 4 + BlockId * InputBlockSize;
             SetResourcePosition = false;
         }
 
-        ReadAndProcessRsaBlock(num);
+        ReadAndProcessRsaBlock(BlockId);
     }
 
-    private void ReadRsaBlockAndMore()
+    private void ReadNextRsaBlock()
     {
-        var num = PositionPart1 + 1;
-        if (ReadAndProcessRsaBlock(num))
+        var nextBlockId = BlockId + 1;
+        if (ReadAndProcessRsaBlock(nextBlockId))
         {
-            PositionPart1 = num;
-            PositionPart2 = 0;
+            BlockId = nextBlockId;
+            BlockOffset = 0;
         }
 
         AlreadyReadRsa = true;
@@ -199,56 +191,56 @@ internal class VMCipherStream : Stream
         if (count == 0)
             return 0;
         
-
-        var i = count;
-        var num = offset;
-        if (PositionPart2 < OutputBlockSize)
+        var bytesLeftToRead = count;
+        var newOffset = offset;
+        if (BlockOffset < OutputBlockSize)
         {
             ReadRsaBlock();
-            var num2 = RsaBytesRead - PositionPart2;
-            if (num2 > count)
+
+            // if the amount of bytes to read (count) is within the current block, complete the read
+            var bytesUntilNextBlock = RsaBytesRead - BlockOffset;
+            if (bytesUntilNextBlock > count)
             {
-                Buffer.BlockCopy(OutputBlockBuffer, PositionPart2, buffer, offset, count);
-                PositionPart2 += count;
+                Buffer.BlockCopy(OutputBlockBuffer, BlockOffset, buffer, offset, count);
+                BlockOffset += count;
                 return count;
             }
 
-            // most of the below part is a result of the wrapper stream's caching system.
-            // this took me too long to figure out. made a nice christmas gift to myself though, to finally get this shit working.
-            Buffer.BlockCopy(OutputBlockBuffer, PositionPart2, buffer, offset, num2);
-            i -= num2;
-            num += num2;
+            // otherwise, read the rest of current block
+            Buffer.BlockCopy(OutputBlockBuffer, BlockOffset, buffer, offset, bytesUntilNextBlock);
+            bytesLeftToRead -= bytesUntilNextBlock;
+            newOffset += bytesUntilNextBlock;
             
-            Position += num2; // we hate Seek();
+            // then go into the next block, and read the remaining bytes needed to complete the read operation
+            Position += bytesUntilNextBlock;
             ReadRsaBlock();
-            
-            Buffer.BlockCopy(OutputBlockBuffer, offset, buffer, num, i);
+            Buffer.BlockCopy(OutputBlockBuffer, offset, buffer, newOffset, bytesLeftToRead);
 
-            Position += count - num2; // subtract num2 because it's added to position earlier
-
+            Position += count - bytesUntilNextBlock;
             return count;
         }
 
         if (RsaReadFailed)
-            return count - i;
+            return count - bytesLeftToRead;
 
-        while (i > 0)
+        // cycle through blocks and read bytes
+        while (bytesLeftToRead > 0)
         {
-            ReadRsaBlockAndMore();
+            ReadNextRsaBlock();
             if (RsaReadFailed)
-                return count - i;
+                return count - bytesLeftToRead;
 
-            var num3 = RsaBytesRead;
-            if (i < num3)
+            var bytesRead = RsaBytesRead;
+            if (bytesLeftToRead < bytesRead)
             {
-                Buffer.BlockCopy(OutputBlockBuffer, 0, buffer, num, i);
-                PositionPart2 = i;
+                Buffer.BlockCopy(OutputBlockBuffer, 0, buffer, newOffset, bytesLeftToRead);
+                BlockOffset = bytesLeftToRead;
                 return count;
             }
-            Buffer.BlockCopy(OutputBlockBuffer, 0, buffer, num, num3);
-            num += num3;
-            i -= num3;
-            PositionPart2 = num3;
+            Buffer.BlockCopy(OutputBlockBuffer, 0, buffer, newOffset, bytesRead);
+            newOffset += bytesRead;
+            bytesLeftToRead -= bytesRead;
+            BlockOffset = bytesRead;
         }
 
         return count;
@@ -299,8 +291,8 @@ internal class VMCipherStream : Stream
         using var lengthBinaryReader = new VMBinaryReader(cryptoStream);
 
         _Length = lengthBinaryReader.ReadInt32();
-        LengthPart1 = _Length / OutputBlockSize;
-        LengthPart2 = _Length % OutputBlockSize;
+        LastBlockId = _Length / OutputBlockSize;
+        LastBlockOffset = _Length % OutputBlockSize;
         LengthInitialized = true;
     }
 
@@ -319,14 +311,14 @@ internal class VMCipherStream : Stream
 
     public override long Position
     {
-        get => PositionPart1 * OutputBlockSize + PositionPart2;
+        get => BlockId * OutputBlockSize + BlockOffset;
         set
         {
-            var num = (int)value / OutputBlockSize;
-            PositionPart2 = (int)value % OutputBlockSize;
-            if (PositionPart1 == num) return;
+            var blockId = (int)value / OutputBlockSize;
+            BlockOffset = (int)value % OutputBlockSize;
+            if (BlockId == blockId) return;
             
-            PositionPart1 = num;
+            BlockId = blockId;
             SetResourcePosition = true;
             AlreadyReadRsa = false;
         }

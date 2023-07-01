@@ -37,6 +37,5 @@ internal record VMExceptionHandler
     }
 
     public override string ToString() =>
-        $"VMHandlerType: {VMHandlerType} | HandlerType: {HandlerType} | CatchType: {CatchType} " +
-        $"| TryStart: {TryStart} | HandlerStart: {HandlerStart} | TryLength: {TryLength} | FilterStart: {FilterStart}";
+        $"HandlerType: {HandlerType} | TryStart: {TryStart} | TryEnd: {TryStart + TryLength}";
 }

@@ -23,8 +23,6 @@ internal class MethodDevirtualizer : StageBase
         Resolver = new Resolver(Ctx);
         foreach (var vmMethod in Ctx.VMMethods)
         {
-            vmMethod.MethodKey = VMCipherStream.DecodeMethodKey(vmMethod.EncodedMethodKey, Ctx.PositionCryptoKey);
-            
             VMStream.Seek(vmMethod.MethodKey, SeekOrigin.Begin);
 
             ReadVMMethod(vmMethod);
@@ -57,6 +55,7 @@ internal class MethodDevirtualizer : StageBase
         ResolveBranchTargets(vmMethod);
         ResolveExceptionHandlers(vmMethod);
 
+        // recompile method
         vmMethod.Parent.CilMethodBody!.LocalVariables.Clear();
         vmMethod.Locals.ForEach(x => vmMethod.Parent.CilMethodBody.LocalVariables.Add(x));
 
@@ -93,11 +92,10 @@ internal class MethodDevirtualizer : StageBase
         foreach (var local in vmMethod.MethodInfo.VMLocals)
         {
             var type = Resolver.ResolveType(local.VMType)!;
-            var res = type.Resolve();
-            vmMethod.Locals.Add(new CilLocalVariable(type.ToTypeSignature((res?.IsValueType).GetValueOrDefault())));
+            vmMethod.Locals.Add(new CilLocalVariable(type.ToTypeSignature()));
 
             // if (Ctx.Options.VeryVeryVerbose)
-            //     Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {local.Type.Name}");
+            //     Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {type.Name}");
         }
         
         // the parameters should already be the correct types and in the correct order so we don't need to resolve those
