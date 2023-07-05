@@ -45,7 +45,7 @@ internal record DevirtualizationContext
     public VMCipherStream VMResolverStream { get; set; }
     public Dictionary<int, VMInlineOperandType> VMOperandTypeOrder { get; set; }
     public List<VMMethodField> VMMethodReadOrder { get; set; }
-    public List<EazyDevirt.Core.Architecture.InlineOperands.ValueType> OperandReadOrder { get; set; }
+    public Dictionary<int, EazyDevirt.Core.Architecture.InlineOperands.ValueType> OperandReadOrder { get; set; }
     public int PositionCryptoKey { get; set; }
     public int MethodCryptoKey { get; set; }
 

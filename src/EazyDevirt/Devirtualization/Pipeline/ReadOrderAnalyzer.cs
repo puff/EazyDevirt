@@ -67,21 +67,21 @@ namespace EazyDevirt.Devirtualization
                 return false;
             }
 
-            var readOrder = AnalyzeVMDataReadOrder(vmFuncReader);
+            var vmDataReadOrder = AnalyzeVMDataReadOrder(vmFuncReader);
 
-            if (readOrder.Count != FieldOrder.Length)
+            if (vmDataReadOrder.Count != FieldOrder.Length)
             {
                 Ctx.Console.Error($"Failed to analyze VMMethod Read Order {vmFuncReader?.MetadataToken}");
                 return false;
             }
 
-            string orderStrFormat = ": " + string.Join(", ", readOrder.Select((d, i) => string.Format("[{0}] {1}", i + 1, d)));
+            string orderStrFormat = ": " + string.Join(", ", vmDataReadOrder.Select((d, i) => string.Format("[{0}] {1}", i + 1, d)));
 
             if (Ctx.Options.VeryVerbose)
                 Ctx.Console.InfoStr(orderStrFormat, "Correct VMMethod Read Order");
             Ctx.Console.Success("Found Correct Method Read Order!");
 
-            this.Ctx.VMMethodReadOrder = readOrder;
+            this.Ctx.VMMethodReadOrder = vmDataReadOrder;
             return true;
         }
 
@@ -193,9 +193,9 @@ namespace EazyDevirt.Devirtualization
             return readOrder;
         }
 
-        private List<ValueType> AnalyzeTypeResolverOrder(DevirtualizationContext ctx)
+        private Dictionary<int, ValueType> AnalyzeTypeResolverOrder(DevirtualizationContext ctx)
         {
-            List<ValueType> order = new();
+            Dictionary<int, ValueType> order = new();
             foreach (var t in ctx.Module.GetAllTypes())
             {
                 foreach (var method in t.Methods)
@@ -214,22 +214,22 @@ namespace EazyDevirt.Devirtualization
                         {
                             if (currInstr.GetLdcI4Constant() == 1)
                             {
-                                order.Add(ValueType.Position);
-                                order.Add(ValueType.Token);
+                                order[0] = ValueType.Position;
+                                order[1] = ValueType.Token;
                                 return order;
                             }
                             else
                             {
                                 //from older sample
-                                order.Add(ValueType.Position);
-                                order.Add(ValueType.Token);
+                                order[0] = ValueType.Position;
+                                order[1] = ValueType.Token;
                                 return order;
                             }
                         }
                         else
                         {
-                            order.Add(ValueType.Token);
-                            order.Add(ValueType.Position);
+                            order[0] = ValueType.Token;
+                            order[1] = ValueType.Position;
                             return order;
                         }
                     }

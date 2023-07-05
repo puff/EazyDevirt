@@ -1,6 +1,7 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.PE.DotNet.Cil;
+using EazyDevirt.Devirtualization;
 
 namespace EazyDevirt.Core.Architecture;
 
@@ -47,9 +48,9 @@ internal record VMMethodInfo
     public ITypeDefOrRef DeclaringType { get; set; }
     public ITypeDefOrRef ReturnType { get; set; }
 
-    public VMMethodInfo(BinaryReader reader, List<VMMethodField> ReadOrder)
+    public VMMethodInfo(DevirtualizationContext ctx, BinaryReader reader)
     {
-        foreach (VMMethodField field in ReadOrder)
+        foreach (VMMethodField field in ctx.VMMethodReadOrder)
         {
             switch (field)
             {

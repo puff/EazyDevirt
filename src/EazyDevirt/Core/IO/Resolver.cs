@@ -369,7 +369,7 @@ internal class Resolver
     {
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
 
-        var methodInfo = new VMMethodInfo(VMStreamReader, this.Ctx.VMMethodReadOrder);
+        var methodInfo = new VMMethodInfo(this.Ctx, VMStreamReader);
 
         var declaringType = ResolveType(methodInfo.VMDeclaringType);
         if (declaringType is null)
