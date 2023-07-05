@@ -29,7 +29,8 @@ namespace EazyDevirt.Devirtualization
 
         public override bool Run()
         {
-            this.Ctx.OperandReadOrder = FindOperandResolver(this.Ctx);
+            //find type resolver order
+            this.Ctx.OperandReadOrder = AnalyzeTypeResolverOrder(this.Ctx);
             if (this.Ctx.OperandReadOrder.Count == 0)
             {
                 Ctx.Console.Error($"Failed to find Correct Reading order for Operand Reader!");
@@ -38,6 +39,7 @@ namespace EazyDevirt.Devirtualization
 
             Ctx.Console.Success("Found Correct Operand Read Order!");
 
+            //Analyze VM Data Read Order
             MethodDefinition? vmFuncReader = FindMethodReadOrderFunction(this.Ctx);
             if (vmFuncReader == null)
             {
@@ -45,7 +47,7 @@ namespace EazyDevirt.Devirtualization
                 return false;
             }
 
-            var readOrder = AnalyzeReadOrder(vmFuncReader);
+            var readOrder = AnalyzeVMDataReadOrder(vmFuncReader);
 
             if (readOrder.Count != FieldOrder.Length)
             {
@@ -63,7 +65,7 @@ namespace EazyDevirt.Devirtualization
             return true;
         }
 
-        private List<VMMethodField> AnalyzeReadOrder(MethodDefinition readFunc)
+        private List<VMMethodField> AnalyzeVMDataReadOrder(MethodDefinition readFunc)
         {
             List<VMMethodField> readOrder = new();
             var funcRetType = readFunc?.Signature?.ReturnType.Resolve();
@@ -91,7 +93,7 @@ namespace EazyDevirt.Devirtualization
             return readOrder;
         }
 
-        private List<ValueType> FindOperandResolver(DevirtualizationContext ctx)
+        private List<ValueType> AnalyzeTypeResolverOrder(DevirtualizationContext ctx)
         {
             List<ValueType> order = new();
             foreach (var t in ctx.Module.GetAllTypes())
