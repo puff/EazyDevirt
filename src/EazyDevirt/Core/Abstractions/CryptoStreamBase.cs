@@ -37,23 +37,23 @@ public abstract class CryptoStreamBase : Stream
     #region Basic Stream Overrides
     public override int Read(byte[] buffer, int offset, int count)
     {
-        var num = (uint)_stream.Position;
-        var num2 = _stream.Read(buffer, offset, count);
-        var num3 = offset + num2;
-        for (var i = offset; i < num3; i++)
-            buffer[i] = Crypt(buffer[i], num++);
-        return num2;
+        var position = (uint)_stream.Position;
+        var bytesRead = _stream.Read(buffer, offset, count);
+        var endOffset = offset + bytesRead;
+        for (var i = offset; i < endOffset; i++)
+            buffer[i] = Crypt(buffer[i], position++);
+        return bytesRead;
     }
 
     public override void Write(byte[] buffer, int offset, int count)
     {
-        var num = (uint)_stream.Position;
+        var position = (uint)_stream.Position;
         var array = new byte[count];
-        var num2 = 0U;
-        while (num2 < (ulong)count)
+        var i = 0u;
+        while (i < count)
         {
-            array[num2] = Crypt(buffer[(int)(IntPtr)unchecked(num2 + (ulong)offset)], num + num2);
-            num2++;
+            array[i] = Crypt(buffer[i + offset], position + i);
+            i++;
         }
 
         _stream.Write(array, 0, count);
@@ -83,25 +83,13 @@ public abstract class CryptoStreamBase : Stream
         base.Close();
     }
 
-    public override bool CanRead
-    {
-        get => _stream.CanRead;
-    }
+    public override bool CanRead => _stream.CanRead;
 
-    public override bool CanSeek
-    {
-        get => _stream.CanSeek;
-    }
+    public override bool CanSeek => _stream.CanSeek;
 
-    public override bool CanWrite
-    {
-        get => _stream.CanWrite;
-    }
+    public override bool CanWrite => _stream.CanWrite;
 
-    public override long Length
-    {
-        get => _stream.Length;
-    }
+    public override long Length => _stream.Length;
 
     public override long Position
     {

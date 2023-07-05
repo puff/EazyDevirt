@@ -3,6 +3,8 @@ using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
+using EazyDevirt.Core.IO;
+using EazyDevirt.Util;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
@@ -164,14 +166,22 @@ internal sealed class MethodDiscovery : StageBase
             if (Ctx.Options.VeryVerbose)
                 Ctx.Console.InfoStr("Virtualized method found", method.MetadataToken);
 
-            
-            Ctx.VMMethods.Add(new VMMethod(method, encodedMethodKey));
+            var methodKey =  DecodeMethodKey(encodedMethodKey, Ctx.PositionCryptoKey);
+            Ctx.VMMethods.Add(new VMMethod(method, encodedMethodKey, methodKey));
         }
 
         if (Ctx.Options.Verbose)
             Ctx.Console.Success($"Discovered {Ctx.VMMethods.Count} virtualized methods!");
 
         return true;
+    }
+
+    private static long DecodeMethodKey(string positionString, int positionKey)
+    {
+        var decoded = Ascii85.FromAscii85String(positionString);
+
+        using var reader = new VMBinaryReader(new CryptoStreamV3(new MemoryStream(decoded), positionKey));
+        return reader.ReadInt64();
     }
 
     private static bool IsDecryptPositionMethod(MethodDefinition method)
