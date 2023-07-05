@@ -7,6 +7,8 @@ using EazyDevirt.Core.Architecture;
 using AsmResolver.PE.DotNet.Cil;
 
 using ValueType = EazyDevirt.Core.Architecture.InlineOperands.ValueType;
+using EazyDevirt.Util;
+using EazyDevirt.Core.Architecture.InlineOperands;
 
 namespace EazyDevirt.Devirtualization
 {
@@ -33,11 +35,29 @@ namespace EazyDevirt.Devirtualization
             this.Ctx.OperandReadOrder = AnalyzeTypeResolverOrder(this.Ctx);
             if (this.Ctx.OperandReadOrder.Count == 0)
             {
-                Ctx.Console.Error($"Failed to find Correct Reading order for Operand Reader!");
+                Ctx.Console.Error($"Failed to find Correct Reading order for Type Resolver Reader!");
                 return false;
             }
 
-            Ctx.Console.Success("Found Correct Operand Read Order!");
+            Ctx.Console.Success("Found Correct Type Resolver Read Order!");
+
+            var opDataBaseTdef = FindOperandDataBase(this.Ctx);
+            if (opDataBaseTdef == null)
+            {
+                Ctx.Console.Error($"Failed to find VM Operand Base");
+                return false;
+            }
+
+            //get all types that inherits the OperandDataBase
+            var inheritedTypes = opDataBaseTdef.GetAllInheriting(opDataBaseTdef);
+            if (inheritedTypes.Count == 0)
+            {
+                Ctx.Console.Error($"Failed to get inherited types of {opDataBaseTdef.FullName}");
+                return false;
+            }
+
+            Ctx.VMOperandTypeOrder = AnalyzeOperandTypes(inheritedTypes);
+            Ctx.Console.Success("Found Correct Operand Type Order!");
 
             //Analyze VM Data Read Order
             MethodDefinition? vmFuncReader = FindMethodReadOrderFunction(this.Ctx);
@@ -63,6 +83,86 @@ namespace EazyDevirt.Devirtualization
 
             this.Ctx.VMMethodReadOrder = readOrder;
             return true;
+        }
+
+        private Dictionary<int, VMInlineOperandType> AnalyzeOperandTypes(List<TypeDefinition> opTypes)
+        {
+            Dictionary<int, VMInlineOperandType> opTypesOrder = new();
+
+            //constants
+            string Int32Type = "System.Int32";
+            string BooleanType = "System.Boolean";
+            string ByteType = "System.Byte";
+            string StringType = "System.String";
+
+            foreach(var opType in opTypes)
+            {
+                int? typeConstant = GetVMOperandTypeCode(opType);
+                if (typeConstant == null)
+                    throw new Exception("Operand Type Code should not be null!");
+
+                if (opType.Fields.Count == 1 && Utils.GetFieldCountFromRetType(opType, StringType) == 1)
+                    opTypesOrder[typeConstant.Value] = VMInlineOperandType.UserString;
+                else if (opType.Fields.Count == 2 && Utils.GetFieldCountFromRetType(opType, Int32Type) == 2)
+                    opTypesOrder[typeConstant.Value] = VMInlineOperandType.EazCall;
+                else if (opType.Fields.Count == 3 && Utils.GetFieldCountFromRetType(opType, StringType) == 1 && Utils.GetFieldCountFromRetType(opType, BooleanType) == 1)
+                    opTypesOrder[typeConstant.Value] = VMInlineOperandType.Field;
+                else if (opType.Fields.Count == 6)
+                {
+                    if (Utils.GetFieldCountFromRetType(opType, StringType) == 1 && Utils.GetFieldCountFromRetType(opType, ByteType) == 1)
+                        opTypesOrder[typeConstant.Value] = VMInlineOperandType.Method;
+                    else if (Utils.GetFieldCountFromRetType(opType, StringType) == 1 && Utils.GetFieldCountFromRetType(opType, BooleanType) == 2 && Utils.GetFieldCountFromRetType(opType, Int32Type) == 3)
+                        opTypesOrder[typeConstant.Value] = VMInlineOperandType.Type;
+                }
+            }
+
+            return opTypesOrder;
+        }
+
+        private int? GetVMOperandTypeCode(TypeDefinition t)
+        {
+            foreach(var m in t.Methods)
+            {
+                if (!m.IsPublic || !m.IsVirtual || !m.IsSpecialName)
+                    continue;
+
+                if (!(m.Signature != null && m.CilMethodBody != null && m.Signature.ReturnsValue && m.Signature.ReturnType.ToString() == "System.Byte"))
+                    continue;
+
+                return m.CilMethodBody.Instructions[0].GetLdcI4Constant();
+            }
+
+            return null;
+        }
+
+        private TypeDefinition? FindOperandDataBase(DevirtualizationContext ctx)
+        {
+            foreach (var t in ctx.Module.GetAllTypes())
+            {
+                /* internal abstract class OperandBase
+                    {
+	                    protected OperandBase()
+	                    {
+	                    }
+
+                        //Operand Code value corresponds to the switch value
+	                    public abstract byte GetOperandCode();
+                    }
+                */
+                if (!t.IsAbstract || !t.IsNotPublic || t.Methods.Count != 2)
+                    continue;
+
+                //there's only one method in the type that's not a constructor (GetOperandCode)
+                MethodDefinition getOperandCodeFunc = t.Methods.First(g => !g.IsConstructor);
+
+                //Need to confirm if the type is actually OperandDataBase
+                if (getOperandCodeFunc.IsAbstract &&
+                    getOperandCodeFunc.Signature is not null && getOperandCodeFunc.Signature.ReturnsValue &&
+                    getOperandCodeFunc.Signature.ReturnType.ToString() == "System.Byte")
+                    return t;
+            }
+
+            return null;
         }
 
         private List<VMMethodField> AnalyzeVMDataReadOrder(MethodDefinition readFunc)

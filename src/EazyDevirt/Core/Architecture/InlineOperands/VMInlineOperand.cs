@@ -100,7 +100,7 @@ internal record VMInlineOperand
         if (ValueType == ValueType.Token)
             return new VMInlineOperand(ValueType, reader.ReadInt32());
         else
-            return new VMInlineOperand(ValueType, VMInlineOperandData.Read(reader));
+            return new VMInlineOperand(ValueType, VMInlineOperandData.Read(ctx, reader));
     }
 
     public static VMInlineOperand ReadInternal(BinaryReader reader) => new(ValueType.Position, reader.ReadInt32());

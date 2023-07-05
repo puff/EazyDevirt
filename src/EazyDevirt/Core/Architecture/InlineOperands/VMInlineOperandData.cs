@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using EazyDevirt.Devirtualization;
+using System.Reflection;
 
 namespace EazyDevirt.Core.Architecture.InlineOperands;
 
@@ -19,10 +20,10 @@ internal abstract record VMInlineOperandData(VMInlineOperandType Type)
     /// </summary>
     /// <param name="reader">BinaryReader</param>
     /// <returns>InlineOperandData</returns>
-    public static VMInlineOperandData Read(BinaryReader reader)
+    public static VMInlineOperandData Read(DevirtualizationContext ctx, BinaryReader reader)
     {
         var operandType = reader.ReadByte();
-        return (VMInlineOperandType)operandType switch
+        return ctx.VMOperandTypeOrder[operandType] switch
         {
             VMInlineOperandType.Type => new VMTypeData(reader),
             VMInlineOperandType.Field => new VMFieldData(reader),
