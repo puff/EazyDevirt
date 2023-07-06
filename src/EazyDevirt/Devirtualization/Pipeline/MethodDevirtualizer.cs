@@ -251,6 +251,10 @@ internal class MethodDevirtualizer : StageBase
                 
                 switch (possibleHandlerEnd.OpCode.Code)
                 {
+                    case CilCode.Endfilter:
+                        if (vmExceptionHandler.HandlerType == CilExceptionHandlerType.Filter)
+                            foundHandlerEnd = true;
+                        break;
                     case CilCode.Endfinally:
                         if (vmExceptionHandler.HandlerType == CilExceptionHandlerType.Finally)
                             foundHandlerEnd = true;
