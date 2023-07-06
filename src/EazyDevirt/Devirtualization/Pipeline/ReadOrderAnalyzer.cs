@@ -24,8 +24,8 @@ namespace EazyDevirt.Devirtualization
             VMMethodField.Locals,
             VMMethodField.Parameters,
             VMMethodField.Name,
-            VMMethodField.ReturnType,
             VMMethodField.VMDeclaringType,
+            VMMethodField.ReturnType,
             VMMethodField.BindingFlags
         };
 
@@ -111,7 +111,7 @@ namespace EazyDevirt.Devirtualization
                 {
                     if (Utils.GetFieldCountFromRetType(opType, StringType) == 1 && Utils.GetFieldCountFromRetType(opType, ByteType) == 1)
                         opTypesOrder[typeConstant.Value] = VMInlineOperandType.Method;
-                    else if (Utils.GetFieldCountFromRetType(opType, StringType) == 1 && Utils.GetFieldCountFromRetType(opType, BooleanType) == 2 && Utils.GetFieldCountFromRetType(opType, Int32Type) == 3)
+                    else if (Utils.GetFieldCountFromRetType(opType, StringType) == 1 && Utils.GetFieldCountFromRetType(opType, BooleanType) == 2 && Utils.GetFieldCountFromRetType(opType, Int32Type) == 2)
                         opTypesOrder[typeConstant.Value] = VMInlineOperandType.Type;
                 }
             }
