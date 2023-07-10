@@ -19,8 +19,8 @@ internal record VMExceptionHandler
             {
                 0 => CilExceptionHandlerType.Exception,
                 1 => CilExceptionHandlerType.Finally,
-                // 2 =>  CilExceptionHandlerType.Fault,
-                4 => CilExceptionHandlerType.Filter,
+                // 4 =>  CilExceptionHandlerType.Fault,
+                2 => CilExceptionHandlerType.Filter,
                 _ => throw new NotSupportedException()
             };
         }

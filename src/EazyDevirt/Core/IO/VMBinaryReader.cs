@@ -14,7 +14,7 @@ namespace EazyDevirt.Core.IO;
 internal class VMBinaryReader : VMBinaryReaderBase
 {
     private static readonly DevirtualizationContext Ctx = DevirtualizationContext.Instance;
-    
+
     private static TypeDefinition _instanceType = null!;
     private static FieldDefinition _isMemoryStreamFieldDef = null!;
     private static FieldDefinition _bufferFieldDef = null!;
@@ -28,26 +28,34 @@ internal class VMBinaryReader : VMBinaryReaderBase
     private static MethodDefinition _readSingleMethodDef = null!;
     private static MethodDefinition _readDoubleMethodDef = null!;
     private static MethodDefinition _readDecimalMethodDef = null!;
-    
-    private readonly CilVirtualMachine _vm;
-    private BitVector InstanceObj;
-    
+
+    private static CilVirtualMachine _vm = null!;
+    private static BitVector _instanceObj = null!;
+
+    private static bool _initialized;
+
     public VMBinaryReader(Stream input, bool leaveOpen = false) : base(input, Encoding.UTF8, leaveOpen)
     {
-        _vm = new CilVirtualMachine(Ctx.Module, false); // 32 bit always breaks something, even on 32 bit only assemblies.
-        _vm.Dispatcher.BeforeInstructionDispatch += DispatcherOnBeforeInstructionDispatch;
-        
-        FindInstanceDefs();
-        if (_instanceType is null)
-            throw new ArgumentNullException(nameof(_instanceType), "Failed finding VMBinaryReader instance type!");
-        if (_isMemoryStreamFieldDef is null)
-            throw new ArgumentNullException(nameof(_isMemoryStreamFieldDef), "Failed finding VMBinaryReader _isMemoryStream field!");
-        if (_bufferFieldDef is null)
-            throw new ArgumentNullException(nameof(_bufferFieldDef), "Failed finding VMBinaryReader _buffer field!");
-        
-        SetupInstanceObj();
+        if (!_initialized)
+        {
+            _vm = new CilVirtualMachine(Ctx.Module, false); // 32 bit always breaks something, even on 32 bit only assemblies.
+            _vm.Dispatcher.BeforeInstructionDispatch += DispatcherOnBeforeInstructionDispatch;
+
+            FindInstanceDefs();
+            if (_instanceType is null)
+                throw new ArgumentNullException(nameof(_instanceType), "Failed finding VMBinaryReader instance type!");
+            if (_isMemoryStreamFieldDef is null)
+                throw new ArgumentNullException(nameof(_isMemoryStreamFieldDef),
+                    "Failed finding VMBinaryReader _isMemoryStream field!");
+            if (_bufferFieldDef is null)
+                throw new ArgumentNullException(nameof(_bufferFieldDef),
+                    "Failed finding VMBinaryReader _buffer field!");
+
+            SetupInstanceObj();
+            _initialized = true;
+        }
     }
-    
+
     #region Setup
 
     // overly complicated method to find VMBinaryReader stuff
@@ -168,7 +176,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
         // This is a boolean that determines whether to use ReadInt32Special in the ReadInt32 method.
         // It should never have to be set to 1 unless ReadInt32Special changes endianness, in which case, we will need to find the ReadInt32Special method and add a handler for it as well.
         isMemoryStreamField.U8 = 0;
-        InstanceObj = _vm.ValueFactory.CreateNativeInteger(instanceAddress);
+        _instanceObj = _vm.ValueFactory.CreateNativeInteger(instanceAddress);
     }
     
     #endregion Setup
@@ -183,13 +191,6 @@ internal class VMBinaryReader : VMBinaryReaderBase
         var factory = vm.ValueFactory;
         switch (ins.OpCode.Code)
         {
-            case CilCode.Ldarg_0:
-                var instanceTypeSig = _instanceType.ToTypeSignature();
-                var arg = factory.RentValue(instanceTypeSig, false);
-                frame.ReadArgument(0, arg.AsSpan());
-                frame.EvaluationStack.Push(arg, instanceTypeSig);
-                break;
-            
             case CilCode.Callvirt:
             case CilCode.Call:
                 var method = (ins.Operand as IMethodDescriptor)!;
@@ -241,22 +242,23 @@ internal class VMBinaryReader : VMBinaryReaderBase
 
     private T ReadEmulated<T>(byte[] bytes)
     {
-        var instanceObjectSpan = _vm.Heap.GetObjectSpan(InstanceObj);
-        
-        var bufferField = instanceObjectSpan.SliceObjectField(_vm.ValueFactory, _bufferFieldDef);
-        bufferField.Write(_vm.ObjectMarshaller.ToBitVector(bytes));
+        var instanceObjectHandle = _instanceObj.AsObjectHandle(_vm);
+        instanceObjectHandle.WriteField(_bufferFieldDef, _vm.ObjectMarshaller.ToBitVector(bytes));
 
-        _vm.CallStack.Peek().WriteArgument(0, InstanceObj);
+        _vm.CallStack.Peek().WriteArgument(0, _instanceObj);
         _vm.Run();
-        
+
         var typeSig = Ctx.Importer.ImportTypeSignature(typeof(T));
-        return _vm.ObjectMarshaller.ToObject<T>(_vm.CallStack.Peek().EvaluationStack.Pop(typeSig))!;
+        var result = _vm.ObjectMarshaller.ToObject<T>(_vm.CallStack.Peek().EvaluationStack.Pop(typeSig))!;
+
+        _vm.ObjectMapMemory.Clear();
+        return result;
     }
-    
+
     #endregion Emulation
 
     #region Overrides
-    
+
     public override sbyte ReadSByte()
     {
         var bytes = ReadBytes(1);
@@ -271,11 +273,11 @@ internal class VMBinaryReader : VMBinaryReaderBase
         return ReadEmulated<int>(bytes);
     }
 
-    // this always has the same endianness as ReadInt32 in the samples i've seen
+    // this always has the same endianness as ReadInt32
     public override int ReadInt32Special()
     {
         var bytes = ReadBytes(4);
-        
+
         _vm.CallStack.Push(_readInt32MethodDef);
         return ReadEmulated<int>(bytes);
     }
@@ -283,7 +285,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     public override uint ReadUInt32()
     {
         var bytes = ReadBytes(4);
-        
+
         _vm.CallStack.Push(_readUInt32MethodDef);
         return ReadEmulated<uint>(bytes);
     }
@@ -291,7 +293,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     public override long ReadInt64()
     {
         var bytes = ReadBytes(8);
-                
+
         _vm.CallStack.Push(_readInt64MethodDef);
         return ReadEmulated<long>(bytes);
     }
@@ -299,7 +301,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     public override ulong ReadUInt64()
     {
         var bytes = ReadBytes(8);
-                
+
         _vm.CallStack.Push(_readUInt64MethodDef);
         return ReadEmulated<ulong>(bytes);
     }
@@ -307,7 +309,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     public override short ReadInt16()
     {
         var bytes = ReadBytes(2);
-                
+     
         _vm.CallStack.Push(_readInt16MethodDef);
         return ReadEmulated<short>(bytes);
     }
@@ -315,7 +317,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     public override ushort ReadUInt16()
     {
         var bytes = ReadBytes(2);
-                
+  
         _vm.CallStack.Push(_readUInt16MethodDef);
         return ReadEmulated<ushort>(bytes);
     }
@@ -323,7 +325,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     public override float ReadSingle()
     {
         var bytes = ReadBytes(4);
-        
+
         _vm.CallStack.Push(_readSingleMethodDef);
         return ReadEmulated<float>(bytes);
     }
@@ -331,7 +333,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     public override double ReadDouble()
     {
         var bytes = ReadBytes(8);
-        
+
         _vm.CallStack.Push(_readDoubleMethodDef);
         return ReadEmulated<double>(bytes);
     }
@@ -346,7 +348,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     }
     
     #endregion Overrides
-    
+
     private static BinaryReader ToBinaryReader(byte[] input)
     {
         var memoryStream = new MemoryStream(8);
