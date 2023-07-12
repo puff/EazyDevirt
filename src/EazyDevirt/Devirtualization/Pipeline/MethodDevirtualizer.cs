@@ -24,7 +24,6 @@ internal class MethodDevirtualizer : StageBase
         foreach (var vmMethod in Ctx.VMMethods)
         {
             VMStream.Seek(vmMethod.MethodKey, SeekOrigin.Begin);
-
             ReadVMMethod(vmMethod);
             
             if (Ctx.Options.VeryVerbose)
@@ -37,7 +36,7 @@ internal class MethodDevirtualizer : StageBase
     
     private void ReadVMMethod(VMMethod vmMethod)
     {
-        vmMethod.MethodInfo = new VMMethodInfo(VMStreamReader);
+        vmMethod.MethodInfo = new VMMethodInfo(this.Ctx, VMStreamReader);
 
         ReadExceptionHandlers(vmMethod);
         

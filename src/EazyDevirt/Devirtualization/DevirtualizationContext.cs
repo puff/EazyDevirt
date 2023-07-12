@@ -1,6 +1,7 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.PE.DotNet.Metadata.Tables;
 using EazyDevirt.Core.Architecture;
+using EazyDevirt.Core.Architecture.InlineOperands;
 using EazyDevirt.Core.IO;
 using EazyDevirt.Devirtualization.Options;
 using EazyDevirt.Logging;
@@ -42,6 +43,9 @@ internal record DevirtualizationContext
     public TypeDefinition VMDeclaringType { get; set; }
     public VMCipherStream VMStream { get; set; }
     public VMCipherStream VMResolverStream { get; set; }
+    public Dictionary<int, VMInlineOperandType> VMOperandTypeOrder { get; set; }
+    public List<VMMethodField> VMMethodReadOrder { get; set; }
+    public Dictionary<int, EazyDevirt.Core.Architecture.InlineOperands.ValueType> OperandReadOrder { get; set; }
     public int PositionCryptoKey { get; set; }
     public int MethodCryptoKey { get; set; }
 

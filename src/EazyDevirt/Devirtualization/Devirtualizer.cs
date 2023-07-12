@@ -13,6 +13,7 @@ internal class Devirtualizer
             new ResourceParsing(ctx),
             new OpCodeMapping(ctx),
             new MethodDiscovery(ctx),
+            new ReadOrderAnalyzer(ctx),
             new MethodDevirtualizer(ctx),
         };
     }

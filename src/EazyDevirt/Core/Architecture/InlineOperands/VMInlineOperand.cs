@@ -1,4 +1,6 @@
-﻿namespace EazyDevirt.Core.Architecture.InlineOperands;
+﻿using EazyDevirt.Devirtualization;
+
+namespace EazyDevirt.Core.Architecture.InlineOperands;
 
 // thank you to saneki
 
@@ -85,15 +87,20 @@ internal record VMInlineOperand
         ValueType = valueType;
         Value = value;
     }
-    
-    public VMInlineOperand(BinaryReader reader)
-    {
-        ValueType = (ValueType)reader.ReadByte();
 
+    public VMInlineOperand(ValueType valueType, VMInlineOperandData data)
+    {
+        ValueType = valueType;
+        Data = data;
+    }
+
+    public static VMInlineOperand ReadInternal(DevirtualizationContext ctx, BinaryReader reader)
+    {
+        var ValueType = ctx.OperandReadOrder[reader.ReadByte()];
         if (ValueType == ValueType.Token)
-            Value = reader.ReadInt32();
+            return new VMInlineOperand(ValueType, reader.ReadInt32());
         else
-            Data = VMInlineOperandData.Read(reader);
+            return new VMInlineOperand(ValueType, VMInlineOperandData.Read(ctx, reader));
     }
 
     public static VMInlineOperand ReadInternal(BinaryReader reader) => new(ValueType.Position, reader.ReadInt32());
