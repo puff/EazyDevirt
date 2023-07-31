@@ -43,7 +43,7 @@ internal record VMTypeData : VMInlineOperandData
     public bool HasGenericTypes { get; }
     public bool IsGenericParameterType { get; }
     public int GenericArgumentIndex { get; } 
-    public int DeclaringTypeGenericArgumentIndex { get; }
+    public int TypeGenericArgumentIndex { get; }
     public VMInlineOperand[] GenericTypes { get; }
 
     public TypeName TypeName { get; }
@@ -54,7 +54,7 @@ internal record VMTypeData : VMInlineOperandData
         HasGenericTypes = reader.ReadBoolean();
         IsGenericParameterType = reader.ReadBoolean();
         GenericArgumentIndex = reader.ReadInt32();
-        DeclaringTypeGenericArgumentIndex = reader.ReadInt32();
+        TypeGenericArgumentIndex = reader.ReadInt32();
         GenericTypes = VMInlineOperand.ReadArrayInternal(reader);
 
         TypeName = new TypeName(Name);
@@ -97,13 +97,11 @@ internal record VMMethodData : VMInlineOperandData
     public byte Flags { get; } 
     
     public bool IsStatic { get; } 
-    public bool IsInstance { get; }
+    public bool HasGenericArguments { get; }
     public string Name { get; } 
     public VMInlineOperand ReturnType { get; } 
     public VMInlineOperand[] Parameters { get; } 
     public VMInlineOperand[] GenericArguments { get; } 
-
-    public bool HasGenericArguments => GenericArguments.Length > 0;
     
     public BindingFlags BindingFlags
     {
@@ -121,7 +119,7 @@ internal record VMMethodData : VMInlineOperandData
         Flags = reader.ReadByte();
         // these constants are also different between versions (#3)
         IsStatic = (Flags & 1) > 0;
-        IsInstance = (Flags & 2) > 0;
+        HasGenericArguments = (Flags & 2) > 0;
         Name = reader.ReadString();
         ReturnType = VMInlineOperand.ReadInternal(reader);
         Parameters = VMInlineOperand.ReadArrayInternal(reader);

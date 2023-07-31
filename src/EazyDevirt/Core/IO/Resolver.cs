@@ -13,11 +13,14 @@ internal class Resolver
     {
         Ctx = ctx;
         VMStreamReader = new VMBinaryReader(new CryptoStreamV3(Ctx.VMResolverStream, Ctx.MethodCryptoKey, true));
+        Cache = new Dictionary<int, object?>();
     }
     
     private DevirtualizationContext Ctx { get; }
     
     private VMBinaryReader VMStreamReader { get; }
+    
+    private Dictionary<int, object?> Cache { get; }
 
     private TypeSignature ApplySigModifiers(TypeSignature baseTypeSig, Stack<string> mods)
     {
@@ -38,12 +41,19 @@ internal class Resolver
     
     public ITypeDefOrRef? ResolveType(int position)
     {
+        if (Cache.TryGetValue(position, out var result))
+            return (ITypeDefOrRef?)result;
+        
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
 
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
-            return Ctx.Module.LookupMember<ITypeDefOrRef>(inlineOperand.Token);
-        
+        {
+            var lookup = Ctx.Module.LookupMember<ITypeDefOrRef>(inlineOperand.Token);
+            Cache.Add(position, lookup);
+            return lookup;
+        }
+
         if (!inlineOperand.HasData || inlineOperand.Data is not VMTypeData data)
             throw new Exception("VM inline operand expected to have type data!");
 
@@ -52,13 +62,19 @@ internal class Resolver
             if (data.GenericArgumentIndex != -1)
             {
                 var typeGenericParameterSignature = new GenericParameterSignature(Ctx.Module, GenericParameterType.Method, data.GenericArgumentIndex);
-                return typeGenericParameterSignature.ToTypeDefOrRef();
+                var typeGenericTypeDefOrRef = typeGenericParameterSignature.ToTypeDefOrRef();
+                
+                Cache.Add(position, typeGenericTypeDefOrRef);
+                return typeGenericTypeDefOrRef;
             }
             
-            if (data.DeclaringTypeGenericArgumentIndex != -1)
+            if (data.TypeGenericArgumentIndex != -1)
             {
                 var typeGenericParameterSignature = new GenericParameterSignature(Ctx.Module, GenericParameterType.Type, data.GenericArgumentIndex);
-                return typeGenericParameterSignature.ToTypeDefOrRef();
+                var typeGenericTypeDefOrRef = typeGenericParameterSignature.ToTypeDefOrRef();
+                
+                Cache.Add(position, typeGenericTypeDefOrRef);
+                return typeGenericTypeDefOrRef;
             }
         }
         
@@ -75,7 +91,9 @@ internal class Resolver
                     .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature())
                         .ToArray());
             
-            return ApplySigModifiers(typeSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
+            var typeSigWithModifiers = ApplySigModifiers(typeSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
+            Cache.Add(position, typeSigWithModifiers);
+            return typeSigWithModifiers;
         }
 
         var assemblyRef =
@@ -101,16 +119,25 @@ internal class Resolver
                 .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature())
                     .ToArray());
 
-        return ApplySigModifiers(typeBaseSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
+        var typeBaseSigWithModifiers = ApplySigModifiers(typeBaseSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
+        Cache.Add(position, typeBaseSigWithModifiers);
+        return typeBaseSigWithModifiers;
     }
     
     public IFieldDescriptor? ResolveField(int position)
     {
+        if (Cache.TryGetValue(position, out var result))
+            return (IFieldDescriptor?)result;
+        
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
         
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
-            return Ctx.Module.LookupMember<IFieldDescriptor>(inlineOperand.Token);
+        {
+            var lookup = Ctx.Module.LookupMember<IFieldDescriptor>(inlineOperand.Token);
+            Cache.Add(position, lookup);
+            return lookup;
+        }
         
         if (!inlineOperand.HasData || inlineOperand.Data is not VMFieldData data)
             throw new Exception("VM inline operand expected to have field data!");
@@ -118,7 +145,11 @@ internal class Resolver
         var declaringTypeSig = ResolveType(data.DeclaringType.Position);
         var declaringType = declaringTypeSig?.Resolve();
         if (declaringType != null)
-            return declaringType.Fields.FirstOrDefault(f => f.Name == data.Name)?.ImportWith(Ctx.Importer);
+        {
+            var field = declaringType.Fields.FirstOrDefault(f => f.Name == data.Name)?.ImportWith(Ctx.Importer);
+            Cache.Add(position, field);
+            return field;
+        }
         
         Ctx.Console.Error($"Unable to resolve vm field {data.Name} declaring type {declaringTypeSig?.Name} to a TypeDef!");
         return null;
@@ -189,17 +220,28 @@ internal class Resolver
     
     public IMethodDescriptor? ResolveMethod(int position)
     {
+        if (Cache.TryGetValue(position, out var result))
+            return (IMethodDescriptor?)result;
+        
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
 
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
-            return Ctx.Module.LookupMember<IMethodDescriptor>(inlineOperand.Token);
+        {
+            var lookup = Ctx.Module.LookupMember<IMethodDescriptor>(inlineOperand.Token);
+            Cache.Add(position, lookup);
+            return lookup;
+        }
         
         if (!inlineOperand.HasData)
             throw new Exception("VM inline operand expected to have data!");
 
         if (inlineOperand.Data is VMEazCallData eazCallData)
-            return ResolveEazCall(eazCallData);
+        {
+            var resolvedEazCall = ResolveEazCall(eazCallData);
+            Cache.Add(position, resolvedEazCall);
+            return resolvedEazCall;
+        }
 
         if (inlineOperand.Data is not VMMethodData data)
             throw new Exception("VM inline operand expected to have method data!");
@@ -211,8 +253,6 @@ internal class Resolver
             return null;
         }
 
-        var declaringTypeDefOrRefUnadorned = declaringTypeDefOrRef.Resolve();
-        
         var returnType = ResolveType(data.ReturnType.Position);
         if (returnType == null)
         {
@@ -220,6 +260,7 @@ internal class Resolver
             return null;
         }
 
+        var declaringTypeDefOrRefUnadorned = declaringTypeDefOrRef.Resolve();
         if (declaringTypeDefOrRef.Scope?.GetAssembly()?.Name != Ctx.Module.Assembly?.Name)
         {
             var importedMemberRef = Ctx.Module.GetImportedMemberReferences().FirstOrDefault(x =>
@@ -236,11 +277,19 @@ internal class Resolver
             if (importedMemberRef != null)
             {
                 if (data.HasGenericArguments)
-                    return importedMemberRef
+                {
+                    var importedMemberRefGenerics = importedMemberRef
                         .MakeGenericInstanceMethod(
                             data.GenericArguments.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
                         .ImportWith(Ctx.Importer);
-                return importedMemberRef.ImportWith(Ctx.Importer);
+
+                    Cache.Add(position, importedMemberRefGenerics);
+                    return importedMemberRefGenerics;
+                }
+
+                var importedMemberRefImported = importedMemberRef.ImportWith(Ctx.Importer);
+                Cache.Add(position, importedMemberRefImported);
+                return importedMemberRefImported;
             }
         }
 
@@ -249,11 +298,19 @@ internal class Resolver
         {
             var methodDef = ResolveMethod(declaringType, data);
             if (data.HasGenericArguments)
-                return methodDef?
+            {
+                var methodDefGenerics =  methodDef?
                     .MakeGenericInstanceMethod(data.GenericArguments
                         .Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
                     .ImportWith(Ctx.Importer);
-            return methodDef?.ImportWith(Ctx.Importer);
+
+                Cache.Add(position, methodDefGenerics);
+                return methodDefGenerics;
+            }
+
+            var methodDefImported = methodDef?.ImportWith(Ctx.Importer);
+            Cache.Add(position, methodDefImported);
+            return methodDefImported;
         }
 
         // stuff below should only execute on types that aren't able to be resolved (so hopefully never)
@@ -311,18 +368,30 @@ internal class Resolver
                     newParams));
 
         if (data.HasGenericArguments)
-            return memberRef.MakeGenericInstanceMethod(genericArgs).ImportWith(Ctx.Importer);
-        return memberRef.ImportWith(Ctx.Importer);
+        {
+            var memberRefGenerics = memberRef.MakeGenericInstanceMethod(genericArgs).ImportWith(Ctx.Importer);
+            Cache.Add(position, memberRefGenerics);
+            return memberRefGenerics;
+        }
+
+        var memberRefImported = memberRef.ImportWith(Ctx.Importer);
+        Cache.Add(position, memberRefImported);
+        return memberRefImported;
     }
 
     public IMemberDescriptor? ResolveToken(int position)
     {
+        if (Cache.TryGetValue(position, out var result))
+            return (IMemberDescriptor?)result;
+        
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
         
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
         {
             var member = Ctx.Module.LookupMember(inlineOperand.Token);
+
+            Cache.Add(position, member);
             return member switch
             {
                 ITypeDescriptor typeDesc => typeDesc.ToTypeSignature(),
@@ -360,6 +429,9 @@ internal class Resolver
 
     private IMethodDescriptor? ResolveEazCall_Helper(int position, ITypeDefOrRef[]? genericTypes, ITypeDefOrRef[]? declaringGenericTypes)
     {
+        if (Cache.TryGetValue(position, out var result))
+            return (IMethodDescriptor?)result;
+        
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
 
         var methodInfo = new VMMethodInfo(VMStreamReader);
@@ -382,20 +454,29 @@ internal class Resolver
             return null;
         }
 
+        Cache.Add(position, method);
         return method;
     }
 
     public string ResolveString(int position)
     {
+        if (Cache.TryGetValue(position, out var result))
+            return (string)result!;
+        
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
         
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
-            return Ctx.Module.LookupString(inlineOperand.Token);
-        
+        {
+            var lookup = Ctx.Module.LookupString(inlineOperand.Token);
+            Cache.Add(position, lookup);
+            return lookup;
+        }
+
         if (!inlineOperand.HasData || inlineOperand.Data is not VMUserStringData data) 
             throw new Exception("VM inline operand expected to have string data!");
         
+        Cache.Add(position, data.Value);
         return data.Value;
     }
 }

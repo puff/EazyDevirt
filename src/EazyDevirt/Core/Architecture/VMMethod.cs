@@ -38,8 +38,8 @@ internal record VMMethodInfo
     public string Name { get; }
     public byte BindingFlags { get; }
     public bool IsStatic => (BindingFlags & 2) > 0;
-    public bool IsInstance => (BindingFlags & 4) > 0;
-    public bool DeclaredOnly => (BindingFlags & 8) > 0;
+    public bool IsSecurityCritical => (BindingFlags & 4) > 0;
+    public bool IsUnknownFlag2 => (BindingFlags & 8) > 0;
     public int VMReturnType { get; }
     public List<VMLocal> VMLocals { get; }
     public List<VMParameter> VMParameters { get; }
@@ -65,7 +65,7 @@ internal record VMMethodInfo
 
     public override string ToString() =>
         $"VMDeclaringType: 0x{VMDeclaringType:X} | Name: {Name} | BindingFlags: {BindingFlags} | " +
-        $"DeclaredOnly: {DeclaredOnly} | IsInstance: {IsInstance} | IsStatic: {IsStatic} | " +
+        $"IsStatic: {IsStatic} | IsSecurityCritical: {IsSecurityCritical} | IsUnknownFlag2: {IsUnknownFlag2} | " +
         $"VMReturnType: 0x{VMReturnType:X} | VMLocals: [{string.Join(", ", VMLocals)}] | VMParameters: [{string.Join(", ", VMParameters)}] | " +
         $"DeclaringType: {DeclaringType.FullName} | ReturnType: {ReturnType.FullName}";
 }
