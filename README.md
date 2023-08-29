@@ -12,7 +12,7 @@
 [Roadmap](#roadmap) •
 [Support](#support)
 
-[![forthebadge](https://forthebadge.com/images/badges/powered-by-black-magic.svg)](https://forthebadge.com)
+[![forthebadge](https://raw.githubusercontent.com/BraveUX/for-the-badge/672423ab03eb060aa1ac72494900569fb9842b16/src/images/badges/powered-by-black-magic.svg)](https://github.com/BraveUX/for-the-badge)
 
 [![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-orangered.svg)](https://opensource.org/licenses/)
 
@@ -44,11 +44,10 @@ $ EazyDevirt.exe test.exe -v 3 --preserve-all --save-anyway true
 ```
 
 ### Notes
-[Eazfuscator.NET] resolves members using names rather than tokens. 
-This means renaming any member may break the application. 
+Don't rename any members before devirtualization, as [Eazfuscator.NET] resolves members using names rather than tokens.
 
 [EazyDevirt] requires control flow and other protections (such as string encryption or delegate proxies) to be removed first.
-To remove string encryption, you can use [EazFixer]. 
+To remove string encryption, you can use [EazFixer].
 
 For control flow obfuscation, you can try using de4dot:
 ```console
@@ -66,12 +65,11 @@ Then you can use your favourite IDE or build from the command line:
 
 ```console
 $ dotnet restore
-$ dotnet build
+$ dotnet build -c Release
 ```
 
 ## Features
- - Automatically identify and map virtual opcodes to their CIL counterparts
- - Automatically identify devirtualize methods virtualized with [Eazfuscator.NET]
+ - Automatically identify virtual opcodes and devirtualize methods
  - Emulated binary reader using [Echo]
 
 ## Roadmap
@@ -81,8 +79,6 @@ See the [open issues](https://github.com/puff/EazyDevirt/issues) for a list of p
 [EazyDevirt] is targeted at version 2022.2 of [Eazfuscator.NET]. 
 If the version you're trying this tool on is not supported, you will need to add support for it yourself. You can take a look at the differences between the branches to see what you need to change. \
 The [old-2022](https://github.com/puff/EazyDevirt/tree/old-2022.2) branch supports a different version of 2022.2 than the [main](https://github.com/puff/EazyDevirt/tree/main) branch. The [old-2021](https://github.com/puff/EazyDevirt/tree/old-2021) branch supports an unknown version from 2021.
-
-I won't help you update this program for another version. But, if you find a bug, feel free to submit an issue. 
 
 ### Credits
 - [void-stack] for the many contributions.
