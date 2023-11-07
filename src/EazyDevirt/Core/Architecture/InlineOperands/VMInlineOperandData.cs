@@ -40,10 +40,10 @@ internal abstract record VMInlineOperandData(VMInlineOperandType Type)
 internal record VMTypeData : VMInlineOperandData
 {
     public string Name { get; }
-    public bool HasGenericTypes { get; }
+    public bool HasGenericTypeArgs { get; }
     public bool IsGenericParameterType { get; }
     public int GenericArgumentIndex { get; } 
-    public int TypeGenericArgumentIndex { get; }
+    public int GenericTypeArgumentIndex { get; }
     public VMInlineOperand[] GenericTypes { get; }
 
     public TypeName TypeName { get; }
@@ -51,10 +51,10 @@ internal record VMTypeData : VMInlineOperandData
     public VMTypeData(BinaryReader reader) : base(VMInlineOperandType.Type)
     {
         Name = reader.ReadString();
-        HasGenericTypes = reader.ReadBoolean();
+        HasGenericTypeArgs = reader.ReadBoolean();
         IsGenericParameterType = reader.ReadBoolean();
         GenericArgumentIndex = reader.ReadInt32();
-        TypeGenericArgumentIndex = reader.ReadInt32();
+        GenericTypeArgumentIndex = reader.ReadInt32();
         GenericTypes = VMInlineOperand.ReadArrayInternal(reader);
 
         TypeName = new TypeName(Name);

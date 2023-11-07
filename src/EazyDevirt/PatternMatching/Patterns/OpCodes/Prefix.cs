@@ -19,7 +19,7 @@ internal record Constrained : IOpCodePattern
         CilOpCodes.Ldarg_0,     // 5	000D	ldarg.0
         CilOpCodes.Ldloc_0,     // 6	000E	ldloc.0
         CilOpCodes.Ldc_I4_1,    // 7	000F	ldc.i4.1
-        CilOpCodes.Callvirt,    // 8	0010	callvirt	instance class [mscorlib]System.Type VM::ResolveVMTypeCodeCache(int32, bool)
+        CilOpCodes.Callvirt,    // 8	0010	callvirt	instance class [mscorlib]System.Type VM::ResolveType(int32, bool)
         CilOpCodes.Stfld,       // 9	0015	stfld	class [mscorlib]System.Type VM::ConstrainedType
         CilOpCodes.Ret,         // 10	001A	ret
     };

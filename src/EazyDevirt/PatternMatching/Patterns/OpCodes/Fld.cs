@@ -72,7 +72,7 @@ internal record Ldsfld : IOpCodePattern
         CilOpCodes.Stloc_0,     // 3	000B	stloc.0
         CilOpCodes.Ldarg_0,     // 4	000C	ldarg.0
         CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
-        CilOpCodes.Callvirt,    // 6	000E	callvirt	instance class [mscorlib]System.Reflection.FieldInfo VM::ResolveFieldCache(int32)
+        CilOpCodes.Callvirt,    // 6	000E	callvirt	instance class [mscorlib]System.Reflection.FieldInfo VM::ResolveField(int32)
         CilOpCodes.Stloc_1,     // 7	0013	stloc.1
         CilOpCodes.Ldarg_0,     // 8	0014	ldarg.0
         CilOpCodes.Ldloc_1,     // 9	0015	ldloc.1
@@ -101,7 +101,7 @@ internal record Ldsflda : IOpCodePattern
         CilOpCodes.Stloc_0,     // 3	000B	stloc.0
         CilOpCodes.Ldarg_0,     // 4	000C	ldarg.0
         CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
-        CilOpCodes.Callvirt,    // 6	000E	callvirt	instance class [mscorlib]System.Reflection.FieldInfo VM::ResolveFieldCache(int32)
+        CilOpCodes.Callvirt,    // 6	000E	callvirt	instance class [mscorlib]System.Reflection.FieldInfo VM::ResolveField(int32)
         CilOpCodes.Stloc_1,     // 7	0013	stloc.1
         CilOpCodes.Ldarg_0,     // 8	0014	ldarg.0
         CilOpCodes.Ldloc_1,     // 9	0015	ldloc.1
@@ -115,8 +115,8 @@ internal record Ldsflda : IOpCodePattern
     
     public bool Verify(VMOpCode vmOpCode, int index)
     {
-        var method = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[11].Operand as SerializedMethodDefinition;
-        return method?.Parameters.Count == 2 && method.Parameters[0].ParameterType.FullName == "System.Reflection.FieldInfo";
+        var ctor = vmOpCode.SerializedDelegateMethod.CilMethodBody!.Instructions[11].Operand as SerializedMethodDefinition;
+        return ctor?.Parameters.Count == 2 && ctor.Parameters[0].ParameterType.FullName == "System.Reflection.FieldInfo";
     }
 }
 #endregion Ldsfld

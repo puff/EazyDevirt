@@ -152,7 +152,7 @@ internal record Ldtoken : IOpCodePattern
     {
         CilOpCodes.Ldarg_0,     // 33	0064	ldarg.0
         CilOpCodes.Ldloc_0,     // 34	0065	ldloc.0
-        CilOpCodes.Callvirt,    // 35	0066	callvirt	instance class [mscorlib]System.Reflection.FieldInfo VM::ResolveFieldCache(int32)
+        CilOpCodes.Callvirt,    // 35	0066	callvirt	instance class [mscorlib]System.Reflection.FieldInfo VM::ResolveField(int32)
         CilOpCodes.Callvirt,    // 36	006B	callvirt	instance valuetype [mscorlib]System.RuntimeFieldHandle [mscorlib]System.Reflection.FieldInfo::get_FieldHandle()
         CilOpCodes.Box,         // 37	0070	box	[mscorlib]System.RuntimeFieldHandle
         CilOpCodes.Stloc_2,     // 38	0075	stloc.2
@@ -191,7 +191,7 @@ internal record Box : IOpCodePattern
         CilOpCodes.Ldarg_0,     // 4	000C	ldarg.0
         CilOpCodes.Ldloc_0,     // 5	000D	ldloc.0
         CilOpCodes.Ldc_I4_1,    // 6	000E	ldc.i4.1
-        CilOpCodes.Callvirt,    // 7	000F	callvirt	instance class [mscorlib]System.Type VM::ResolveVMTypeCodeCache(int32, bool)
+        CilOpCodes.Callvirt,    // 7	000F	callvirt	instance class [mscorlib]System.Type VM::ResolveType(int32, bool)
         CilOpCodes.Stloc_1,     // 8	0014	stloc.1
         CilOpCodes.Ldarg_0,     // 9	0015	ldarg.0
         CilOpCodes.Callvirt,    // 10	0016	callvirt	instance class VMOperandType VM::PopStack()
