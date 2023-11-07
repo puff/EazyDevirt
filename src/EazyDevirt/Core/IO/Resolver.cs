@@ -1,6 +1,7 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Signatures;
 using AsmResolver.DotNet.Signatures.Types;
+using AsmResolver.DotNet.Signatures.Types.Parsing;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.Architecture.InlineOperands;
 using EazyDevirt.Devirtualization;
@@ -22,21 +23,11 @@ internal class Resolver
     
     private Dictionary<int, object?> Cache { get; }
 
-    private TypeSignature ApplySigModifiers(TypeSignature baseTypeSig, Stack<string> mods)
+    public ITypeDefOrRef? ResolveType(VMInlineOperand inlineOperand)
     {
-        while (mods.Count > 0)
-        {
-            var mod = mods.Pop();
-            baseTypeSig = mod switch
-            {
-                "[]" => baseTypeSig.MakeSzArrayType(),
-                "*" => baseTypeSig.MakePointerType(),
-                "&" => baseTypeSig.MakeByReferenceType(),
-                _ => throw new Exception($"Unknown modifier: {mod}")
-            };
-        }
-
-        return baseTypeSig;
+        if (inlineOperand.IsToken)
+            return Ctx.Module.LookupMember<ITypeDefOrRef>(inlineOperand.Token);
+        return ResolveType(inlineOperand.Position);
     }
     
     public ITypeDefOrRef? ResolveType(int position)
@@ -57,71 +48,33 @@ internal class Resolver
         if (!inlineOperand.HasData || inlineOperand.Data is not VMTypeData data)
             throw new Exception("VM inline operand expected to have type data!");
 
-        if (data.IsGenericParameterType)
+        if (data.IsGenericParameterIndex)
         {
-            if (data.GenericArgumentIndex != -1)
+            if (data.GenericMethodParameterIndex >= 0)
             {
-                var typeGenericParameterSignature = new GenericParameterSignature(Ctx.Module, GenericParameterType.Method, data.GenericArgumentIndex);
-                var typeGenericTypeDefOrRef = typeGenericParameterSignature.ToTypeDefOrRef();
-                
-                Cache.Add(position, typeGenericTypeDefOrRef);
-                return typeGenericTypeDefOrRef;
+                var genericTypeDefOrRef = new GenericParameterSignature(Ctx.Module, GenericParameterType.Method, data.GenericMethodParameterIndex).ToTypeDefOrRef();
+                Cache.Add(position, genericTypeDefOrRef);
+                return genericTypeDefOrRef;
             }
             
-            if (data.TypeGenericArgumentIndex != -1)
+            if (data.GenericTypeParameterIndex >= 0)
             {
-                var typeGenericParameterSignature = new GenericParameterSignature(Ctx.Module, GenericParameterType.Type, data.GenericArgumentIndex);
-                var typeGenericTypeDefOrRef = typeGenericParameterSignature.ToTypeDefOrRef();
-                
-                Cache.Add(position, typeGenericTypeDefOrRef);
-                return typeGenericTypeDefOrRef;
+                var genericTypeDefOrRef = new GenericParameterSignature(Ctx.Module, GenericParameterType.Type, data.GenericTypeParameterIndex).ToTypeDefOrRef();
+                Cache.Add(position, genericTypeDefOrRef);
+                return genericTypeDefOrRef;
             }
         }
-        
-        // Try to find type definition or reference
-        var typeDefOrRef = (ITypeDefOrRef?)Ctx.Module.GetAllTypes()
-                               .FirstOrDefault(x => x.FullName == data.TypeName.Name) ??
-                           (ITypeDefOrRef?)Ctx.Module.GetImportedTypeReferences()
-                               .FirstOrDefault(x => x.FullName == data.TypeName.Name && x.Scope?.Name == data.TypeName.AssemblyName.Name);
-        if (typeDefOrRef != null)
-        {
-            var typeSig = typeDefOrRef.ToTypeSignature();
-            if (data.HasGenericTypes)
-                typeSig = typeDefOrRef
-                    .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature())
-                        .ToArray());
-            
-            var typeSigWithModifiers = ApplySigModifiers(typeSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
-            Cache.Add(position, typeSigWithModifiers);
-            return typeSigWithModifiers;
-        }
 
-        var assemblyRef =
-            Ctx.Module.AssemblyReferences.FirstOrDefault(x => x.Name == data.TypeName.AssemblyName.Name) ??
-            new AssemblyReference(data.TypeName.AssemblyName.Name, data.TypeName.AssemblyName.Version!,
-                data.TypeName.AssemblyName.GetPublicKey() != null,
-                data.TypeName.AssemblyName.GetPublicKey() ?? data.TypeName.AssemblyName.GetPublicKeyToken());
-        if (assemblyRef == null!)
-        {
-            Ctx.Console.Warning($"Failed to find vm type {data.Name} assembly reference!");
-            return null!;
-        }
+        var typeDefOrRef = TypeNameParser.Parse(Ctx.Module, data.Name).GetUnderlyingTypeDefOrRef();
+        if (typeDefOrRef is null)
+            throw new Exception($"Failed to parse vm type {data.Name}");
 
-        var parentTypeRef = !data.TypeName.IsNested
-            ? assemblyRef.CreateTypeReference(data.TypeName.Namespace, data.TypeName.NameWithoutNamespace)
-            : assemblyRef.CreateTypeReference(data.TypeName.Namespace, data.TypeName.ParentNameWithoutNamespace);
-        var typeRef = !data.TypeName.IsNested
-            ? parentTypeRef
-            : parentTypeRef.CreateTypeReference(data.TypeName.NestedName);
-        var typeBaseSig = typeRef.ToTypeSignature();
-        if (data.HasGenericTypes)
-            typeBaseSig = typeRef
-                .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature())
-                    .ToArray());
+        if (data.HasGenericTypeParameters)
+            typeDefOrRef = typeDefOrRef.MakeGenericInstanceType(data.GenericParameters.Select(x => ResolveType(x)!.ToTypeSignature()).ToArray()).ToTypeDefOrRef();
 
-        var typeBaseSigWithModifiers = ApplySigModifiers(typeBaseSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
-        Cache.Add(position, typeBaseSigWithModifiers);
-        return typeBaseSigWithModifiers;
+        var imported = typeDefOrRef.ImportWith(Ctx.Importer);
+        Cache.Add(position, imported);
+        return imported;
     }
     
     public IFieldDescriptor? ResolveField(int position)
@@ -271,16 +224,16 @@ internal class Resolver
                 // TODO: Fix resolving imported member references of methods returning a generic parameter
                 && (ms.ReturnType is GenericParameterSignature or GenericInstanceTypeSignature ||
                     ms.ReturnType.FullName == returnType.FullName)
-                && ms.GenericParameterCount == data.GenericArguments.Length
+                && ms.GenericParameterCount == data.GenericParameters.Length
                 && VerifyMethodParameters(ms, data));
 
             if (importedMemberRef != null)
             {
-                if (data.HasGenericArguments)
+                if (data.HasGenericParameters)
                 {
                     var importedMemberRefGenerics = importedMemberRef
                         .MakeGenericInstanceMethod(
-                            data.GenericArguments.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
+                            data.GenericParameters.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
                         .ImportWith(Ctx.Importer);
 
                     Cache.Add(position, importedMemberRefGenerics);
@@ -297,10 +250,10 @@ internal class Resolver
         if (declaringType != null)
         {
             var methodDef = ResolveMethod(declaringType, data);
-            if (data.HasGenericArguments)
+            if (data.HasGenericParameters)
             {
                 var methodDefGenerics =  methodDef?
-                    .MakeGenericInstanceMethod(data.GenericArguments
+                    .MakeGenericInstanceMethod(data.GenericParameters
                         .Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
                     .ImportWith(Ctx.Importer);
 
@@ -317,7 +270,7 @@ internal class Resolver
 
         var declaringTypeSig = declaringTypeDefOrRef.ToTypeSignature();
         var parameters = data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray();
-        var genericArgs = data.GenericArguments.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray();
+        var genericArgs = data.GenericParameters.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray();
         var newParams = new List<TypeSignature>();
         // convert generic parameters to their indexes (!!0, !0)
         foreach (var parameter in parameters)
@@ -361,13 +314,13 @@ internal class Resolver
         var memberRef = declaringTypeDefOrRef
             .CreateMemberReference(data.Name, data.IsStatic
                 ? MethodSignature.CreateStatic(
-                    returnType.ToTypeSignature(), data.GenericArguments.Length,
+                    returnType.ToTypeSignature(), data.GenericParameters.Length,
                     newParams)
                 : MethodSignature.CreateInstance(
-                    returnType.ToTypeSignature(), data.GenericArguments.Length,
+                    returnType.ToTypeSignature(), data.GenericParameters.Length,
                     newParams));
 
-        if (data.HasGenericArguments)
+        if (data.HasGenericParameters)
         {
             var memberRefGenerics = memberRef.MakeGenericInstanceMethod(genericArgs).ImportWith(Ctx.Importer);
             Cache.Add(position, memberRefGenerics);
