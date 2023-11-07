@@ -81,9 +81,9 @@ internal class Resolver
     {
         if (Cache.TryGetValue(position, out var result))
             return (IFieldDescriptor?)result;
-        
+
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
-        
+
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
         {
@@ -91,20 +91,28 @@ internal class Resolver
             Cache.Add(position, lookup);
             return lookup;
         }
-        
+
         if (!inlineOperand.HasData || inlineOperand.Data is not VMFieldData data)
             throw new Exception("VM inline operand expected to have field data!");
-        
-        var declaringTypeSig = ResolveType(data.DeclaringType.Position);
-        var declaringType = declaringTypeSig?.Resolve();
-        if (declaringType != null)
+
+        var declaringType = ResolveType(data.DeclaringType.Position);
+        if (declaringType is null)
         {
-            var field = declaringType.Fields.FirstOrDefault(f => f.Name == data.Name)?.ImportWith(Ctx.Importer);
-            Cache.Add(position, field);
-            return field;
+            Ctx.Console.Error($"Unable to resolve vm field {data.Name} declaring type!");
+            Cache.Add(position, null);
+            return null;
         }
-        
-        Ctx.Console.Error($"Unable to resolve vm field {data.Name} declaring type {declaringTypeSig?.Name} to a TypeDef!");
+
+        if (declaringType.Resolve() is { } declaringTypeDef)
+        {
+            var fieldDef = declaringTypeDef.Fields.FirstOrDefault(f => f.Name == data.Name && f.IsStatic == data.IsStatic)?.ImportWith(Ctx.Importer);
+            Cache.Add(position, fieldDef);
+            return fieldDef;
+        }
+
+        // we can't create our own reference since we don't know the field's type.
+        // maybe it could be inferred from where it's being used, but that would require a lot of rework.
+        Ctx.Console.Error($"Unable to resolve vm field {declaringType?.Name}.{data.Name}");
         return null;
     }
     
