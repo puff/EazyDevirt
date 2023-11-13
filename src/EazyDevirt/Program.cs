@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using AsmResolver.DotNet.Builder;
@@ -18,6 +18,8 @@ internal static class Program
         var parser = BuildParser();
 
         await parser.InvokeAsync(args).ConfigureAwait(false);
+
+        Console.ReadLine();
     }
 
     private static void Run(DevirtualizationOptions options)

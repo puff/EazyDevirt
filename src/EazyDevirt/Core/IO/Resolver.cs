@@ -1,4 +1,4 @@
-﻿using AsmResolver.DotNet;
+using AsmResolver.DotNet;
 using AsmResolver.DotNet.Signatures;
 using AsmResolver.DotNet.Signatures.Types;
 using EazyDevirt.Core.Architecture;
@@ -68,7 +68,7 @@ internal class Resolver
                 return typeGenericTypeDefOrRef;
             }
             
-            if (data.TypeGenericArgumentIndex != -1)
+            if (data.GenericTypeArgumentIndex != -1)
             {
                 var typeGenericParameterSignature = new GenericParameterSignature(Ctx.Module, GenericParameterType.Type, data.GenericArgumentIndex);
                 var typeGenericTypeDefOrRef = typeGenericParameterSignature.ToTypeDefOrRef();
@@ -86,7 +86,7 @@ internal class Resolver
         if (typeDefOrRef != null)
         {
             var typeSig = typeDefOrRef.ToTypeSignature();
-            if (data.HasGenericTypes)
+            if (data.HasGenericTypeArgs)
                 typeSig = typeDefOrRef
                     .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature())
                         .ToArray());
@@ -114,7 +114,7 @@ internal class Resolver
             ? parentTypeRef
             : parentTypeRef.CreateTypeReference(data.TypeName.NestedName);
         var typeBaseSig = typeRef.ToTypeSignature();
-        if (data.HasGenericTypes)
+        if (data.HasGenericTypeArgs)
             typeBaseSig = typeRef
                 .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature())
                     .ToArray());
