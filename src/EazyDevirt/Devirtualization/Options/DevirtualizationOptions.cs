@@ -61,4 +61,12 @@ internal record DevirtualizationOptions
  /// This only matters if you're using the Save Anyway option
  /// </remarks>
  public bool OnlySaveDevirted { get; init; }
+ 
+ /// <summary>
+ /// Require dependencies when resolving generic methods
+ /// </summary>
+ /// <remarks>
+ /// If this is disabled, methods utilizing generics (type or method args) may not have proper signatures if dependencies aren't able to be resolved
+ /// </remarks>
+ public bool RequireDepsForGenericMethods { get; init; }
 }

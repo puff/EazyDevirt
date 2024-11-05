@@ -88,6 +88,10 @@ internal static class Program
         var onlySaveDevirtedOption = new Option<bool>(new[] { "--only-save-devirted"}, "Only saves successfully devirtualized methods (This option only matters if you use the save anyway option)");
         onlySaveDevirtedOption.SetDefaultValue(false);
 
+        var requireDepsForGenerics = new Option<bool>(new[] { "--require-deps-for-generics"}, "Require dependencies when resolving generic methods for accuracy");
+        requireDepsForGenerics.SetDefaultValue(true);
+
+        
         var rootCommand = new RootCommand("is an open-source tool that automatically restores the original IL code " +
                                           "from an assembly virtualized with Eazfuscator.NET")
         {
@@ -98,12 +102,14 @@ internal static class Program
             noVerifyOption,
             keepTypesOption,
             saveAnywayOption,
-            onlySaveDevirtedOption
+            onlySaveDevirtedOption,
+            requireDepsForGenerics
         };
-        
-        rootCommand.SetHandler(Run, 
+
+        rootCommand.SetHandler(Run,
             new DevirtualizationOptionsBinder(inputArgument, outputArgument, verbosityOption,
-                preserveAllOption, noVerifyOption, keepTypesOption, saveAnywayOption, onlySaveDevirtedOption));
+                preserveAllOption, noVerifyOption, keepTypesOption, saveAnywayOption, onlySaveDevirtedOption,
+                requireDepsForGenerics));
         
         return new CommandLineBuilder(rootCommand)
             .UseDefaults()
