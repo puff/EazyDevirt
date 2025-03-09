@@ -88,16 +88,6 @@ internal record VMMethodData : VMInlineOperandData
     public VMInlineOperand ReturnType { get; } 
     public VMInlineOperand[] Parameters { get; } 
     public VMInlineOperand[] GenericParameters { get; } 
-    
-    public BindingFlags BindingFlags
-    {
-        get
-        {
-            var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic;
-            bindingFlags |= IsStatic ? BindingFlags.Static : BindingFlags.Instance;
-            return bindingFlags;
-        }
-    }
 
     public VMMethodData(BinaryReader reader) : base(VMInlineOperandType.Method)
     {
