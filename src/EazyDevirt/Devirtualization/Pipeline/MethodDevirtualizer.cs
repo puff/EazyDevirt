@@ -235,7 +235,7 @@ internal class MethodDevirtualizer : StageBase
             var handlerStart = vmMethod.Instructions.GetByOffset(virtualOffsets[vmExceptionHandler.HandlerStart]);
             exceptionHandler.HandlerStart = handlerStart?.CreateLabel();
 
-            // HandlerEnd is not explicity defined, and we don't have a length, so we need to find it ourselves
+            // HandlerEnd is not explicitly defined, and we don't have a length, so we need to find it ourselves
             var handlerEndIndex = vmMethod.Instructions.GetIndexByOffset(virtualOffsets[vmExceptionHandler.HandlerStart]);
             var foundHandlerEnd = false;
             while (!foundHandlerEnd && vmMethod.Instructions.Count - 1 > handlerEndIndex)
@@ -332,6 +332,7 @@ internal class MethodDevirtualizer : StageBase
     /// <param name="vmMethod"></param>
     /// <returns>
     /// A CIL opcode that matches the special opcode.
+    /// TODO: maybe a list of op codes?
     /// </returns>
     private static CilOpCode? ResolveSpecialCilOpCode(VMOpCode vmOpCode, VMMethod vmMethod)
     {
