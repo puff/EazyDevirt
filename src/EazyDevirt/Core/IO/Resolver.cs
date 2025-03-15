@@ -174,14 +174,7 @@ internal class Resolver
                     || method.GenericParameters.Count != (vmGenericContext.Method?.TypeArguments.Count ?? 0)) 
                     continue;
                 
-                // Skip ThisParameter when comparing method parameters
-                // data.IsStatic does not cover ThisParameter for normal method resolves
-                var skip = 0;
-                if (method.Parameters.ThisParameter != null && vmParameters.Length > 0 &&
-                    SignatureComparer.Default.Equals(method.Parameters.ThisParameter.ParameterType, vmParameters[0]))
-                    skip = 1;
-    
-                if (method.Parameters.Count != vmParameters.Length && method.Parameters.Count != vmParameters.Length - skip)
+                if (method.Parameters.Count != vmParameters.Length)
                     continue;
                     
                 // Found a potential match, now build a signature from the real method and compare it with the signature built from our vm data to ensure we have the correct method
@@ -384,10 +377,10 @@ internal class Resolver
                 ? MethodSignature.CreateStatic(returnType.ToTypeSignature(),
                     vmGenericContext.Method?.TypeArguments.Count ?? 0, vmParameters)
                 : MethodSignature.CreateInstance(returnType.ToTypeSignature(),
-                    vmGenericContext.Method?.TypeArguments.Count ?? 0, vmParameters))
+                    vmGenericContext.Method?.TypeArguments.Count ?? 0, vmParameters.Skip(1))) // instance eaz calls will contain declaring type as first parameter
             .InstantiateGenericTypes(vmGenericContext);
         
-        var method = ResolveMethod(methodInfo.Name, declaringTypeDefOrRef, vmMethodSig, vmParameters, vmGenericContext)?.ImportWith(Ctx.Importer);
+        var method = ResolveMethod(methodInfo.Name, declaringTypeDefOrRef, vmMethodSig, vmParameters, vmGenericContext);
         if (method is null)
         {        
             Ctx.Console.Error($"Failed to resolve eaz call {methodInfo.Name}!");
@@ -395,7 +388,7 @@ internal class Resolver
         }
 
         Cache.Add(position, method);
-        return (IMethodDescriptor)method;
+        return method;
     }
 
     public string ResolveString(int position)
