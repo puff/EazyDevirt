@@ -71,9 +71,20 @@ internal class Resolver
         if (data.HasGenericTypeParameters)
             typeSig = typeSig.MakeGenericInstanceType(data.GenericParameters.Select(x => ResolveType(x)!.ToTypeSignature()).ToArray());
 
-        var imported = typeSig.ToTypeDefOrRef().ImportWith(Ctx.Importer);
-        Cache.Add(position, imported);
-        return imported;
+        var typeDefOrRef = typeSig.ToTypeDefOrRef();
+        if (SignatureComparer.Default.Equals(typeDefOrRef.Scope?.GetAssembly(), Ctx.Module.Assembly))
+        {
+            var resolvedType = typeDefOrRef.Resolve();
+            if (resolvedType is not null)
+                typeDefOrRef = resolvedType;
+            else
+                Ctx.Console.Warning($"Failed to resolve same assembly vm type {data.Name}, using its reference instead.");
+        }
+        else
+            typeDefOrRef = Ctx.Importer.ImportType(typeDefOrRef);
+        
+        Cache.Add(position, typeDefOrRef);
+        return typeDefOrRef;
     }
     
     public IFieldDescriptor? ResolveField(int position)
