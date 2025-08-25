@@ -1,8 +1,17 @@
-﻿using AsmResolver.DotNet.Code.Cil;
+using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
+using EazyDevirt.Core.Crypto;
 using EazyDevirt.Core.IO;
+using System;
+using System.IO;
+using System.Linq;
+using System.Globalization;
+using System.Text;
+using System.Collections.Generic;
+using EazyDevirt.PatternMatching.Patterns.OpCodes;
+using EazyDevirt.Devirtualization.Options;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
 
@@ -10,48 +19,47 @@ internal class MethodDevirtualizer : StageBase
 {
     private CryptoStreamV3 VMStream { get; set; }
     private VMBinaryReader VMStreamReader { get; set; }
-    
+    private VMBinaryReader _currentReader;
+    private readonly Stack<VMBinaryReader> _readerStack = new();
+
     private Resolver Resolver { get; set; }
-    
+
     public override bool Run()
     {
         if (!Init()) return false;
-        
+
         VMStream = new CryptoStreamV3(Ctx.VMStream, Ctx.MethodCryptoKey, true);
         VMStreamReader = new VMBinaryReader(VMStream);
-        
+        _currentReader = VMStreamReader;
+
         Resolver = new Resolver(Ctx);
         foreach (var vmMethod in Ctx.VMMethods)
         {
             VMStream.Seek(vmMethod.MethodKey, SeekOrigin.Begin);
 
             ReadVMMethod(vmMethod);
-            
+
             if (Ctx.Options.VeryVerbose)
                 Ctx.Console.Info(vmMethod);
         }
-        
+
         VMStreamReader.Dispose();
         return true;
     }
-    
+
     private void ReadVMMethod(VMMethod vmMethod)
     {
         vmMethod.MethodInfo = new VMMethodInfo(VMStreamReader);
 
         ReadExceptionHandlers(vmMethod);
-        
+
         vmMethod.MethodInfo.DeclaringType = Resolver.ResolveType(vmMethod.MethodInfo.VMDeclaringType)!;
         vmMethod.MethodInfo.ReturnType = Resolver.ResolveType(vmMethod.MethodInfo.VMReturnType)!;
-        
+
         ResolveLocalsAndParameters(vmMethod);
 
         ReadInstructions(vmMethod);
-        // homomorphic encryption is not supported currently
-        if (!vmMethod.SuccessfullyDevirtualized && (!Ctx.Options.SaveAnyway || Ctx.Options.OnlySaveDevirted))
-            return;
 
-        // these need all instructions to be successfully devirtualized to work
         ResolveBranchTargets(vmMethod);
         ResolveExceptionHandlers(vmMethod);
 
@@ -64,7 +72,7 @@ internal class MethodDevirtualizer : StageBase
 
         vmMethod.Parent.CilMethodBody.Instructions.Clear();
         vmMethod.Instructions.ForEach(x => vmMethod.Parent.CilMethodBody.Instructions.Add(x));
-        
+
         vmMethod.Parent.CilMethodBody!.VerifyLabelsOnBuild = false;
         vmMethod.Parent.CilMethodBody!.ComputeMaxStackOnBuild = false;
         if (vmMethod.SuccessfullyDevirtualized && !Ctx.Options.NoVerify)
@@ -73,7 +81,7 @@ internal class MethodDevirtualizer : StageBase
             vmMethod.Parent.CilMethodBody!.VerifyLabels(false);
         }
     }
-    
+
     private void ReadExceptionHandlers(VMMethod vmMethod)
     {
         vmMethod.VMExceptionHandlers = new List<VMExceptionHandler>(VMStreamReader.ReadInt16());
@@ -85,7 +93,7 @@ internal class MethodDevirtualizer : StageBase
                 ? second.TryLength.CompareTo(first.TryLength)
                 : first.TryStart.CompareTo(second.TryStart));
     }
-    
+
     private void ResolveLocalsAndParameters(VMMethod vmMethod)
     {
         vmMethod.Locals = new List<CilLocalVariable>();
@@ -97,27 +105,27 @@ internal class MethodDevirtualizer : StageBase
             // if (Ctx.Options.VeryVeryVerbose)
             //     Ctx.Console.Info($"[{vmMethod.MethodInfo.Name}] Local: {type.Name}");
         }
-        
+
         // the parameters should already be the correct types and in the correct order so we don't need to resolve those
     }
 
     private void ReadInstructions(VMMethod vmMethod)
     {
         vmMethod.Instructions = new List<CilInstruction>();
-        vmMethod.CodeSize = VMStreamReader.ReadInt32();
+        vmMethod.CodeSize = _currentReader.ReadInt32();
         vmMethod.InitialCodeStreamPosition = VMStream.Position;
         vmMethod.SuccessfullyDevirtualized = true;
         var finalPosition = VMStream.Position + vmMethod.CodeSize;
         while (VMStream.Position < finalPosition)
         {
             vmMethod.CodePosition = vmMethod.CodeSize - (finalPosition - VMStream.Position);
-            var virtualOpCode = VMStreamReader.ReadInt32Special();
+            var virtualOpCode = _currentReader.ReadInt32Special();
             var vmOpCode = Ctx.PatternMatcher.GetOpCodeValue(virtualOpCode);
             if (!vmOpCode.HasVirtualCode)
             {
                 if (Ctx.Options.VeryVerbose)
                     Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Instruction {vmMethod.Instructions.Count}, VM opcode [{virtualOpCode}] not found!");
-                
+
                 vmMethod.Instructions.Add(new CilInstruction(CilOpCodes.Nop));
                 continue;
             }
@@ -134,13 +142,13 @@ internal class MethodDevirtualizer : StageBase
             {
                 vmOpCode.CilOpCode = ResolveSpecialCilOpCode(vmOpCode, vmMethod);
                 if (vmOpCode.CilOpCode != null && Ctx.Options.VeryVerbose)
-                    Ctx.Console.InfoStr($"Resolved special opcode {vmOpCode.SpecialOpCode.ToString()!} to CIL opcode {vmOpCode.CilOpCode.ToString()}", vmOpCode.SerializedDelegateMethod.MetadataToken);
+                    Ctx.Console.InfoStr($"Resolved special opcode {vmOpCode.SpecialOpCode.ToString()!} to CIL opcode {vmOpCode.CilOpCode.ToString()}", vmMethod.Parent.MetadataToken);
             }
 
             var operand = vmOpCode.IsSpecial ? ReadSpecialOperand(vmOpCode, vmMethod) : ReadOperand(vmOpCode, vmMethod);
             if (vmOpCode.CilOpCode != null)
             {
-                // Log these for now since they're special cases. 
+                // Log these for now since they're special cases.
                 if (vmOpCode.CilOpCode.Value.Mnemonic.StartsWith("stind"))
                     Ctx.Console.Warning($"Placing stind instruction at #{vmMethod.Instructions.Count}");
                 else if (vmOpCode.SpecialOpCode == SpecialOpCodes.NoBody)
@@ -154,9 +162,6 @@ internal class MethodDevirtualizer : StageBase
                 vmMethod.Instructions.Add(instruction);
             }
         }
-
-        if (vmMethod.HasHomomorphicEncryption)
-            vmMethod.SuccessfullyDevirtualized = false;
     }
 
     private Dictionary<uint, int> GetVirtualOffsets(VMMethod vmMethod)
@@ -188,7 +193,7 @@ internal class MethodDevirtualizer : StageBase
 
         return virtualOffsets;
     }
-    
+
     private void ResolveBranchTargets(VMMethod vmMethod)
     {
         var virtualOffsets = GetVirtualOffsets(vmMethod);
@@ -222,7 +227,7 @@ internal class MethodDevirtualizer : StageBase
     {
         vmMethod.ExceptionHandlers = new List<CilExceptionHandler>();
         if (!vmMethod.SuccessfullyDevirtualized) return;
-        
+
         var virtualOffsets = GetVirtualOffsets(vmMethod);
         foreach (var vmExceptionHandler in vmMethod.VMExceptionHandlers)
         {
@@ -241,14 +246,14 @@ internal class MethodDevirtualizer : StageBase
             while (!foundHandlerEnd && vmMethod.Instructions.Count - 1 > handlerEndIndex)
             {
                 var possibleHandlerEnd = vmMethod.Instructions[handlerEndIndex];
-                
+
                 // if there is a branch, skip past it to ensure the correct HandlerEnd is found
                 if (possibleHandlerEnd.IsBranch() && possibleHandlerEnd.OpCode.Code is not (CilCode.Leave or CilCode.Leave_S))
                 {
                     handlerEndIndex = vmMethod.Instructions.GetIndexByOffset(((ICilLabel)possibleHandlerEnd.Operand!).Offset);
                     continue;
                 }
-                
+
                 switch (possibleHandlerEnd.OpCode.Code)
                 {
                     case CilCode.Endfilter:
@@ -293,7 +298,7 @@ internal class MethodDevirtualizer : StageBase
 
             if (vmExceptionHandler.HandlerType == CilExceptionHandlerType.Filter)
                 exceptionHandler.FilterStart = vmMethod.Instructions.GetByOffset(virtualOffsets[vmExceptionHandler.FilterStart])?.CreateLabel();
-            
+
             vmMethod.ExceptionHandlers.Add(exceptionHandler);
         }
     }
@@ -301,18 +306,18 @@ internal class MethodDevirtualizer : StageBase
     private object? ReadOperand(VMOpCode vmOpCode, VMMethod vmMethod) =>
         vmOpCode.CilOperandType switch // maybe switch this to vmOpCode.CilOpCode.OperandType and add more handlers
         {
-            CilOperandType.InlineI => VMStreamReader.ReadInt32Special(),
-            CilOperandType.ShortInlineI => VMStreamReader.ReadSByte(),
-            CilOperandType.InlineI8 => VMStreamReader.ReadInt64(),
-            CilOperandType.InlineR => VMStreamReader.ReadDouble(),
-            CilOperandType.ShortInlineR => VMStreamReader.ReadSingle(),
-            CilOperandType.InlineVar => VMStreamReader.ReadUInt16(),    // IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, VMStreamReader.ReadUInt16()) : GetLocal(vmMethod, VMStreamReader.ReadUInt16()),
-            CilOperandType.ShortInlineVar => VMStreamReader.ReadByte(), // IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, VMStreamReader.ReadByte()) : GetLocal(vmMethod, VMStreamReader.ReadByte()),
+            CilOperandType.InlineI => _currentReader.ReadInt32Special(),
+            CilOperandType.ShortInlineI => _currentReader.ReadSByte(),
+            CilOperandType.InlineI8 => _currentReader.ReadInt64(),
+            CilOperandType.InlineR => _currentReader.ReadDouble(),
+            CilOperandType.ShortInlineR => _currentReader.ReadSingle(),
+            CilOperandType.InlineVar => _currentReader.ReadUInt16(),    // IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, _currentReader.ReadUInt16()) : GetLocal(vmMethod, _currentReader.ReadUInt16()),
+            CilOperandType.ShortInlineVar => _currentReader.ReadByte(), // IsInlineArgument(vmOpCode.CilOpCode) ? GetArgument(vmMethod, _currentReader.ReadByte()) : GetLocal(vmMethod, _currentReader.ReadByte()),
             CilOperandType.InlineTok => ReadInlineTok(vmOpCode),
             CilOperandType.InlineSwitch => ReadInlineSwitch(),
-            CilOperandType.InlineBrTarget => VMStreamReader.ReadUInt32(),
-            CilOperandType.InlineArgument => VMStreamReader.ReadUInt16(),    // GetArgument(vmMethod, VMStreamReader.ReadUInt16()),  // this doesn't seem to be used, might not be correct
-            CilOperandType.ShortInlineArgument => VMStreamReader.ReadByte(), // GetArgument(vmMethod, VMStreamReader.ReadByte()),    // this doesn't seem to be used, might not be correct
+            CilOperandType.InlineBrTarget => _currentReader.ReadUInt32(),
+            CilOperandType.InlineArgument => _currentReader.ReadUInt16(),    // GetArgument(vmMethod, _currentReader.ReadUInt16()),  // this doesn't seem to be used, might not be correct
+            CilOperandType.ShortInlineArgument => _currentReader.ReadByte(), // GetArgument(vmMethod, _currentReader.ReadByte()),    // this doesn't seem to be used, might not be correct
             CilOperandType.InlineNone => null,
             _ => null
         };
@@ -320,8 +325,9 @@ internal class MethodDevirtualizer : StageBase
     private object? ReadSpecialOperand(VMOpCode vmOpCode, VMMethod vmMethod) =>
         vmOpCode.SpecialOpCode switch
         {
-            SpecialOpCodes.EazCall => Resolver.ResolveEazCall(VMStreamReader.ReadInt32Special()),
+            SpecialOpCodes.EazCall => Resolver.ResolveEazCall(_currentReader.ReadInt32Special()),
             SpecialOpCodes.StartHomomorphic => ReadHomomorphicEncryption(vmMethod),
+            SpecialOpCodes.EndHomomorphic => EndHomomorphic(vmMethod),
             _ => null
         };
 
@@ -349,7 +355,7 @@ internal class MethodDevirtualizer : StageBase
     }
 
     /// <summary>
-    /// Processes homomorphic encryption data into CIL instructions 
+    /// Processes homomorphic encryption data into CIL instructions
     /// </summary>
     /// <param name="vmMethod"></param>
     /// <returns>
@@ -357,27 +363,318 @@ internal class MethodDevirtualizer : StageBase
     /// </returns>
     private int? ReadHomomorphicEncryption(VMMethod vmMethod)
     {
-        Ctx.Console.Info($"[{vmMethod.Parent.MetadataToken}] Detected homomorphic encryption.");
-
         vmMethod.HasHomomorphicEncryption = true;
+        try
+        {
+            // Get salt from the last ldc.i8 in the devirtualized instructions
+            var saltIns = vmMethod.Instructions.LastOrDefault();
+            if (saltIns?.OpCode.Code is not CilCode.Ldc_I8 || saltIns.Operand is not long salt)
+            {
+                Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Previous instruction (salt) is not ldc.i8 in devirtualized method body.");
+                vmMethod.SuccessfullyDevirtualized = false;
+                return null;
+            }
+
+            // Resolve password from CLI or prompt (typed).
+            if (!TryGetHomomorphicPassword(vmMethod.Parent.MetadataToken.ToUInt32(), out var pwdEntry))
+            {
+                Ctx.Console.Info($"[{vmMethod.Parent.MetadataToken}] Enter homomorphic password (typed):");
+                Console.Write("Type (sbyte, byte, short, ushort, int, uint, long, ulong, string) [empty=auto]: ");
+                var typeInput = Console.ReadLine()?.Trim() ?? string.Empty;
+                Console.Write("Value (decimal, 0xHEX, or text): ");
+                var valueInput = Console.ReadLine() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(valueInput))
+                {
+                    Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] No password value provided.");
+                    vmMethod.SuccessfullyDevirtualized = false;
+                    return null;
+                }
+
+                if (!string.IsNullOrWhiteSpace(typeInput))
+                {
+                    if (!TryMapType(typeInput, out var kind) || !TryParseTypedNumericToBigEndian(kind, valueInput, out var bytes))
+                    {
+                        Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Invalid type or value. Type must be one of sbyte, byte, short, ushort, int, uint, long, ulong, string. Value must be decimal, 0xHEX, or text for string.");
+                        vmMethod.SuccessfullyDevirtualized = false;
+                        return null;
+                    }
+                    pwdEntry = new HmPasswordEntry(kind, valueInput, bytes);
+                }
+                else
+                {
+                    if (!TryParseNumericAutoWidthToBigEndian(valueInput, out var bytes, out var inferredKind))
+                    {
+                        Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Invalid password value. Provide an integer (decimal or 0xHEX).");
+                        vmMethod.SuccessfullyDevirtualized = false;
+                        return null;
+                    }
+                    pwdEntry = new HmPasswordEntry(inferredKind, valueInput, bytes);
+                }
+
+                // Cache for subsequent use within the same run.
+                Ctx.Options.HmPasswords[vmMethod.Parent.MetadataToken.ToUInt32()] = pwdEntry;
+            }
+            else if (Ctx.Options.VeryVerbose)
+                Ctx.Console.InfoStr($"Found homomorphic password from CLI arg: {pwdEntry.Value} [{pwdEntry.Kind.ToString()}].", vmMethod.Parent.MetadataToken);
+
+            var decryptor = new HMDecryptor(pwdEntry.Bytes, salt);
+            
+            var decrypted = decryptor.DecryptInstructionBlock(VMStream);
+
+            // Swap reader to decrypted bytes and push current for nested blocks.
+            _readerStack.Push(_currentReader);
+            _currentReader = new VMBinaryReader(new MemoryStream(decrypted));
+
+            if (Ctx.Options.Verbose)
+                Ctx.Console.Success($"[{vmMethod.Parent.MetadataToken}] Switched to decrypted instruction reader (size={decrypted.Length} bytes).");
+        }
+        catch (Exception ex)
+        {
+            Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Homomorphic decryption failed. Is the password and its type correct? Error: {ex.Message}");
+            vmMethod.SuccessfullyDevirtualized = false;
+        }
+
         return null;
     }
 
-    private object? ReadInlineTok(VMOpCode vmOpCode) =>
-        vmOpCode.CilOpCode?.OperandType switch
-        {
-            CilOperandType.InlineString => Resolver.ResolveString(VMStreamReader.ReadInt32Special()),
-            _ => Resolver.ResolveToken(VMStreamReader.ReadInt32Special())
-        };
-
-    private int[] ReadInlineSwitch()
+    private int? EndHomomorphic(VMMethod vmMethod)
     {
-        var destCount = VMStreamReader.ReadInt32Special();
+        try
+        {
+            if (_readerStack.Count == 0)
+            {
+                Ctx.Console.Warning($"[{vmMethod.Parent.MetadataToken}] EndHomomorphic encountered with empty reader stack.");
+                return null;
+            }
+
+            // Dispose decrypted reader to free memory.
+            if (!ReferenceEquals(_currentReader, VMStreamReader))
+                _currentReader.Dispose();
+
+            _currentReader = _readerStack.Pop();
+
+            if (Ctx.Options.Verbose)
+                Ctx.Console.Success($"[{vmMethod.Parent.MetadataToken}] Restored previous instruction reader.");
+        }
+        catch (Exception ex)
+        {
+            Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Failed to restore reader after EndHomomorphic: {ex.Message}");
+            vmMethod.SuccessfullyDevirtualized = false;
+        }
+
+        return null;
+    }
+
+    private bool TryGetHomomorphicPassword(uint mdToken, out HmPasswordEntry pwdEntry)
+    {
+        pwdEntry = null!;
+        var map = Ctx.Options.HmPasswords;
+        if (map is null || map.Count == 0)
+            return false;
+
+        return map.TryGetValue(mdToken, out pwdEntry);
+    }
+
+    private static bool TryParseNumericToBigEndian(string s, out byte[] bytes)
+    {
+        bytes = Array.Empty<byte>();
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        s = s.Trim();
+
+        // Hex prefixed value => parse as unsigned and choose minimal width
+        if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            var hex = s[2..];
+            if (!ulong.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var u))
+                return false;
+
+            if (u <= byte.MaxValue)
+                bytes = new[] { (byte)u };
+            else if (u <= ushort.MaxValue)
+                bytes = new[] { (byte)(u >> 8), (byte)u };
+            else if (u <= uint.MaxValue)
+                bytes = new[] { (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u };
+            else
+                bytes = new[]
+                {
+                    (byte)(u >> 56), (byte)(u >> 48), (byte)(u >> 40), (byte)(u >> 32),
+                    (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u
+                };
+            return true;
+        }
+        
+        // Decimal: try signed then unsigned types to preserve width semantics
+        if (sbyte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sb))
+        { bytes = new[] { unchecked((byte)sb) }; return true; }
+        if (byte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var b))
+        { bytes = new[] { b }; return true; }
+        if (short.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sh))
+        { var u = unchecked((ushort)sh); bytes = new[] { (byte)(u >> 8), (byte)u }; return true; }
+        if (ushort.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ush))
+        { bytes = new[] { (byte)(ush >> 8), (byte)ush }; return true; }
+        if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i32))
+        { var u = unchecked((uint)i32); bytes = new[] { (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; return true; }
+        if (uint.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui32))
+        { bytes = new[] { (byte)(ui32 >> 24), (byte)(ui32 >> 16), (byte)(ui32 >> 8), (byte)ui32 }; return true; }
+        if (long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i64))
+        { var u = unchecked((ulong)i64); bytes = new[] { (byte)(u >> 56), (byte)(u >> 48), (byte)(u >> 40), (byte)(u >> 32), (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; return true; }
+        if (ulong.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui64))
+        { bytes = new[] { (byte)(ui64 >> 56), (byte)(ui64 >> 48), (byte)(ui64 >> 40), (byte)(ui64 >> 32), (byte)(ui64 >> 24), (byte)(ui64 >> 16), (byte)(ui64 >> 8), (byte)ui64 }; return true; }
+
+        return false;
+    }
+
+    private static bool TryMapType(string s, out NumericKind kind)
+    {
+        kind = default;
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        s = s.Trim().ToLowerInvariant();
+        switch (s)
+        {
+            case "sbyte":
+            case "i8": kind = NumericKind.SByte; return true;
+            case "byte":
+            case "u8": kind = NumericKind.Byte; return true;
+            case "short":
+            case "int16":
+            case "i16": kind = NumericKind.Int16; return true;
+            case "ushort":
+            case "uint16":
+            case "u16": kind = NumericKind.UInt16; return true;
+            case "int":
+            case "int32":
+            case "i32": kind = NumericKind.Int32; return true;
+            case "uint":
+            case "uint32":
+            case "u32": kind = NumericKind.UInt32; return true;
+            case "long":
+            case "int64":
+            case "i64": kind = NumericKind.Int64; return true;
+            case "ulong":
+            case "uint64":
+            case "u64": kind = NumericKind.UInt64; return true;
+            case "string":
+            case "str": kind = NumericKind.String; return true;
+            default: return false;
+        }
+    }
+
+    private static bool TryParseTypedNumericToBigEndian(NumericKind kind, string s, out byte[] bytes)
+    {
+        bytes = Array.Empty<byte>();
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        s = s.Trim();
+        if (kind == NumericKind.String)
+        {
+            bytes = Encoding.Unicode.GetBytes(s);
+            return true;
+        }
+        var isHex = s.StartsWith("0x", StringComparison.OrdinalIgnoreCase);
+        if (isHex)
+        {
+            var hex = s[2..];
+            if (!ulong.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var u))
+                return false;
+            switch (kind)
+            {
+                case NumericKind.SByte:
+                { var v = unchecked((sbyte)u); bytes = new[] { unchecked((byte)v) }; return true; }
+                case NumericKind.Byte:
+                { var v = unchecked((byte)u); bytes = new[] { v }; return true; }
+                case NumericKind.Int16:
+                { var v = unchecked((short)u); var uv = unchecked((ushort)v); bytes = new[] { (byte)(uv >> 8), (byte)uv }; return true; }
+                case NumericKind.UInt16:
+                { var v = unchecked((ushort)u); bytes = new[] { (byte)(v >> 8), (byte)v }; return true; }
+                case NumericKind.Int32:
+                { var v = unchecked((int)u); var uv = unchecked((uint)v); bytes = new[] { (byte)(uv >> 24), (byte)(uv >> 16), (byte)(uv >> 8), (byte)uv }; return true; }
+                case NumericKind.UInt32:
+                { var v = unchecked((uint)u); bytes = new[] { (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v }; return true; }
+                case NumericKind.Int64:
+                { var v = unchecked((long)u); var uv = unchecked((ulong)v); bytes = new[] { (byte)(uv >> 56), (byte)(uv >> 48), (byte)(uv >> 40), (byte)(uv >> 32), (byte)(uv >> 24), (byte)(uv >> 16), (byte)(uv >> 8), (byte)uv }; return true; }
+                case NumericKind.UInt64:
+                { var v = unchecked((ulong)u); bytes = new[] { (byte)(v >> 56), (byte)(v >> 48), (byte)(v >> 40), (byte)(v >> 32), (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v }; return true; }
+                default: return false;
+            }
+        }
+        else
+        {
+            switch (kind)
+            {
+                case NumericKind.SByte:
+                    if (!sbyte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sb)) return false; bytes = new[] { unchecked((byte)sb) }; return true;
+                case NumericKind.Byte:
+                    if (!byte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var b)) return false; bytes = new[] { b }; return true;
+                case NumericKind.Int16:
+                    if (!short.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sh)) return false; { var u = unchecked((ushort)sh); bytes = new[] { (byte)(u >> 8), (byte)u }; return true; }
+                case NumericKind.UInt16:
+                    if (!ushort.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ush)) return false; bytes = new[] { (byte)(ush >> 8), (byte)ush }; return true;
+                case NumericKind.Int32:
+                    if (!int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i32)) return false; { var u = unchecked((uint)i32); bytes = new[] { (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; return true; }
+                case NumericKind.UInt32:
+                    if (!uint.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui32)) return false; bytes = new[] { (byte)(ui32 >> 24), (byte)(ui32 >> 16), (byte)(ui32 >> 8), (byte)ui32 }; return true;
+                case NumericKind.Int64:
+                    if (!long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i64)) return false; { var u = unchecked((ulong)i64); bytes = new[] { (byte)(u >> 56), (byte)(u >> 48), (byte)(u >> 40), (byte)(u >> 32), (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; return true; }
+                case NumericKind.UInt64:
+                    if (!ulong.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui64)) return false; bytes = new[] { (byte)(ui64 >> 56), (byte)(ui64 >> 48), (byte)(ui64 >> 40), (byte)(ui64 >> 32), (byte)(ui64 >> 24), (byte)(ui64 >> 16), (byte)(ui64 >> 8), (byte)ui64 }; return true;
+                default:
+                    return false;
+            }
+        }
+    }
+
+    private static bool TryParseNumericAutoWidthToBigEndian(string s, out byte[] bytes, out NumericKind kind)
+    {
+        bytes = Array.Empty<byte>();
+        kind = default;
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        s = s.Trim();
+        if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            var hex = s[2..];
+            if (!ulong.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var u))
+                return false;
+            if (u <= byte.MaxValue)
+            { bytes = new[] { (byte)u }; kind = NumericKind.Byte; return true; }
+            if (u <= ushort.MaxValue)
+            { bytes = new[] { (byte)(u >> 8), (byte)u }; kind = NumericKind.UInt16; return true; }
+            if (u <= uint.MaxValue)
+            { bytes = new[] { (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; kind = NumericKind.UInt32; return true; }
+            bytes = new[] { (byte)(u >> 56), (byte)(u >> 48), (byte)(u >> 40), (byte)(u >> 32), (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; kind = NumericKind.UInt64; return true;
+        }
+        if (sbyte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sb2))
+        { bytes = new[] { unchecked((byte)sb2) }; kind = NumericKind.SByte; return true; }
+        if (byte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var b2))
+        { bytes = new[] { b2 }; kind = NumericKind.Byte; return true; }
+        if (short.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sh2))
+        { var u2 = unchecked((ushort)sh2); bytes = new[] { (byte)(u2 >> 8), (byte)u2 }; kind = NumericKind.Int16; return true; }
+        if (ushort.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ush2))
+        { bytes = new[] { (byte)(ush2 >> 8), (byte)ush2 }; kind = NumericKind.UInt16; return true; }
+        if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i322))
+        { var u3 = unchecked((uint)i322); bytes = new[] { (byte)(u3 >> 24), (byte)(u3 >> 16), (byte)(u3 >> 8), (byte)u3 }; kind = NumericKind.Int32; return true; }
+        if (uint.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui322))
+        { bytes = new[] { (byte)(ui322 >> 24), (byte)(ui322 >> 16), (byte)(ui322 >> 8), (byte)ui322 }; kind = NumericKind.UInt32; return true; }
+        if (long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i642))
+        { var u4 = unchecked((ulong)i642); bytes = new[] { (byte)(u4 >> 56), (byte)(u4 >> 48), (byte)(u4 >> 40), (byte)(u4 >> 32), (byte)(u4 >> 24), (byte)(u4 >> 16), (byte)(u4 >> 8), (byte)u4 }; kind = NumericKind.Int64; return true; }
+        if (ulong.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui642))
+        { bytes = new[] { (byte)(ui642 >> 56), (byte)(ui642 >> 48), (byte)(ui642 >> 40), (byte)(ui642 >> 32), (byte)(ui642 >> 24), (byte)(ui642 >> 16), (byte)(ui642 >> 8), (byte)ui642 }; kind = NumericKind.UInt64; return true; }
+        return false;
+    }
+
+    private object? ReadInlineTok(VMOpCode vmOpCode) =>
+      vmOpCode.CilOpCode?.OperandType switch
+      {
+            CilOperandType.InlineString => Resolver.ResolveString(_currentReader.ReadInt32Special()),
+            _ => Resolver.ResolveToken(_currentReader.ReadInt32Special())
+      };
+
+  private int[] ReadInlineSwitch()
+  {
+        var destCount = _currentReader.ReadInt32Special();
         var branchDests = new int[destCount];
         for (var i = 0; i < destCount; i++)
-            branchDests[i] = VMStreamReader.ReadInt32Special();
+            branchDests[i] = _currentReader.ReadInt32Special();
         return branchDests;
-    }
+  }
 
 #pragma warning disable CS8618
     public MethodDevirtualizer(DevirtualizationContext ctx) : base(ctx)

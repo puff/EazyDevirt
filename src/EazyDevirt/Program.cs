@@ -93,6 +93,10 @@ internal static class Program
         var requireDepsForGenerics = new Option<bool>(new[] { "--require-deps-for-generics"}, "Require dependencies when resolving generic methods for accuracy");
         requireDepsForGenerics.SetDefaultValue(true);
 
+        var hmPasswordsOption = new Option<string[]>(new[] {"--hm-pass"}, "Homomorphic password(s) keyed by mdtoken. Format: mdtoken:type:value or mdtoken:value (auto-width, may fail). Types: sbyte, byte, short, ushort, int, uint, long, ulong, string. String uses UTF-16. Repeatable.")
+        {
+            Arity = ArgumentArity.ZeroOrMore
+        };
         
         var rootCommand = new RootCommand("is an open-source tool that automatically restores the original IL code " +
                                           "from an assembly virtualized with Eazfuscator.NET")
@@ -105,13 +109,14 @@ internal static class Program
             keepTypesOption,
             saveAnywayOption,
             onlySaveDevirtedOption,
-            requireDepsForGenerics
+            requireDepsForGenerics,
+            hmPasswordsOption
         };
 
         rootCommand.SetHandler(Run,
             new DevirtualizationOptionsBinder(inputArgument, outputArgument, verbosityOption,
                 preserveAllOption, noVerifyOption, keepTypesOption, saveAnywayOption, onlySaveDevirtedOption,
-                requireDepsForGenerics));
+                requireDepsForGenerics, hmPasswordsOption));
         
         return new CommandLineBuilder(rootCommand)
             .UseDefaults()
