@@ -3,7 +3,7 @@ using System.IO;
 
 namespace EazyDevirt.Core.Crypto;
 
-internal sealed class HMDecryptor : HMEncryptionChain
+internal sealed class HMDecryptor : HMDecryptionChain
 {
     public HMDecryptor(byte[] password, long salt) : base(password, salt)
     {

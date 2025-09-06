@@ -2,16 +2,16 @@ using System.Security.Cryptography;
 
 namespace EazyDevirt.Core.Crypto;
 
-internal abstract class HMEncryptionChain
+internal abstract class HMDecryptionChain
 {
     private readonly SymmetricAlgorithm[] _algorithmChains;
 
-    protected HMEncryptionChain(byte[] password, long salt)
+    protected HMDecryptionChain(byte[] password, long salt)
         : this(password, ConvertLongToLittleEndian(salt))
     {
     }
 
-    protected HMEncryptionChain(byte[] password, byte[] salt)
+    protected HMDecryptionChain(byte[] password, byte[] salt)
     {
         var pbkdf = new PBKDF2(password, salt, 1);
         var array = new SymmetricAlgorithm[5];

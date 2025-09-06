@@ -170,6 +170,7 @@ internal class MethodDevirtualizer : StageBase
         {
             { 0, 0 }
         };
+        
         var lastCilOffset = 0;
         var lastOffset = 0u;
         foreach (var ins in vmMethod.Instructions)
@@ -443,18 +444,23 @@ internal class MethodDevirtualizer : StageBase
         {
             if (_readerStack.Count == 0)
             {
-                Ctx.Console.Warning($"[{vmMethod.Parent.MetadataToken}] EndHomomorphic encountered with empty reader stack.");
+                Ctx.Console.Warning($"[{vmMethod.Parent.MetadataToken}] EndHomomorphic encountered with empty reader stack");
                 return null;
             }
-
-            // Dispose decrypted reader to free memory.
-            if (!ReferenceEquals(_currentReader, VMStreamReader))
-                _currentReader.Dispose();
-
+            
+            if (vmMethod.Instructions.LastOrDefault() is not { } indexIns || !indexIns.IsLdcI4())
+            {
+                Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] EndHomomorphic: Previous instruction (index) is not ldc.i4");
+                vmMethod.SuccessfullyDevirtualized = false;
+                return null;
+            }
+            
+            // Dispose reader to free memory.
+            _currentReader.Dispose();
+            
             _currentReader = _readerStack.Pop();
-
             if (Ctx.Options.Verbose)
-                Ctx.Console.Success($"[{vmMethod.Parent.MetadataToken}] Restored previous instruction reader.");
+                Ctx.Console.Success($"[{vmMethod.Parent.MetadataToken}] Restored previous instruction reader");
         }
         catch (Exception ex)
         {
