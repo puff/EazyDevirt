@@ -115,10 +115,17 @@ internal class MethodDevirtualizer : StageBase
         vmMethod.CodeSize = _currentReader.ReadInt32();
         vmMethod.InitialCodeStreamPosition = VMStream.Position;
         vmMethod.SuccessfullyDevirtualized = true;
+        vmMethod.InstructionVirtualOffsets = new List<uint>();
+        vmMethod.VmToCilOffsetMap = new Dictionary<uint, int>();
+        var cilOffset = 0;
         var finalPosition = VMStream.Position + vmMethod.CodeSize;
         while (VMStream.Position < finalPosition)
         {
-            vmMethod.CodePosition = vmMethod.CodeSize - (finalPosition - VMStream.Position);
+            if (vmMethod.HasHomomorphicEncryption && vmMethod.HMEndPositionStack.TryPeek(out var endPosition))
+                vmMethod.CurrentVirtualOffset = (int)(endPosition - (_currentReader.BaseStream.Length - _currentReader.BaseStream.Position)) + vmMethod.HMEndPositionStack.Count * 8 - 4;
+            else
+                vmMethod.CurrentVirtualOffset = (int)(vmMethod.CodeSize - (finalPosition - VMStream.Position));
+            
             var virtualOpCode = _currentReader.ReadInt32Special();
             var vmOpCode = Ctx.PatternMatcher.GetOpCodeValue(virtualOpCode);
             if (!vmOpCode.HasVirtualCode)
@@ -126,7 +133,15 @@ internal class MethodDevirtualizer : StageBase
                 if (Ctx.Options.VeryVerbose)
                     Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Instruction {vmMethod.Instructions.Count}, VM opcode [{virtualOpCode}] not found!");
 
-                vmMethod.Instructions.Add(new CilInstruction(CilOpCodes.Nop));
+                var vmStart = (uint)vmMethod.CurrentVirtualOffset;
+                var nop = new CilInstruction(CilOpCodes.Nop)
+                {
+                    Offset = cilOffset
+                };
+                vmMethod.InstructionVirtualOffsets.Add(vmStart);
+                vmMethod.VmToCilOffsetMap[vmStart] = cilOffset;
+                vmMethod.Instructions.Add(nop);
+                cilOffset += nop.Size;
                 continue;
             }
 
@@ -159,67 +174,55 @@ internal class MethodDevirtualizer : StageBase
 
                 var instruction =
                     new CilInstruction(vmOpCode.CilOpCode.Value, operand);
+                var vmStart = (uint)vmMethod.CurrentVirtualOffset;
+                instruction.Offset = cilOffset;
+                vmMethod.InstructionVirtualOffsets.Add(vmStart);
+                vmMethod.VmToCilOffsetMap[vmStart] = cilOffset;
                 vmMethod.Instructions.Add(instruction);
+                cilOffset += instruction.Size;
             }
         }
-    }
-
-    private Dictionary<uint, int> GetVirtualOffsets(VMMethod vmMethod)
-    {
-        var virtualOffsets = new Dictionary<uint, int>(vmMethod.Instructions.Count)
-        {
-            { 0, 0 }
-        };
-        
-        var lastCilOffset = 0;
-        var lastOffset = 0u;
-        foreach (var ins in vmMethod.Instructions)
-        {
-            if (ins.OpCode == CilOpCodes.Switch)
-            {
-                var offsetsLength = (ins.Operand as Array)!.Length;
-                lastOffset += (uint)(4 * offsetsLength + 8);
-                lastCilOffset += ins.OpCode.Size + 4 + 4 * offsetsLength;
-            }
-            else
-            {
-                lastOffset += (uint)(ins.OpCode.OperandType == CilOperandType.ShortInlineBrTarget
-                    ? 8
-                    : ins.Size - ins.OpCode.Size + 4);
-                lastCilOffset += ins.Size;
-            }
-
-            virtualOffsets.Add(lastOffset, lastCilOffset);
-        }
-
-        return virtualOffsets;
     }
 
     private void ResolveBranchTargets(VMMethod vmMethod)
     {
-        var virtualOffsets = GetVirtualOffsets(vmMethod);
+        // Reuse precomputed VM -> CIL offset map.
+        var vmToCil = vmMethod.VmToCilOffsetMap;
 
         for (var i = 0; i < vmMethod.Instructions.Count; i++)
         {
             var ins = vmMethod.Instructions[i];
-            ins.Offset = virtualOffsets[virtualOffsets.Keys.ToArray()[i]];
             switch (ins.OpCode.OperandType)
             {
                 case CilOperandType.InlineBrTarget:
                 case CilOperandType.ShortInlineBrTarget:
-                    ins.Operand = vmMethod.SuccessfullyDevirtualized
-                        ? new CilOffsetLabel(virtualOffsets[(uint)ins.Operand!])
-                        : new CilOffsetLabel(0);
+                {
+                    uint vmTarget;
+                    if (ins.Operand is uint u) vmTarget = u;
+                    else if (ins.Operand is int si) vmTarget = unchecked((uint)si);
+                    else { ins.Operand = new CilOffsetLabel(0); break; }
+
+                    if (vmMethod.SuccessfullyDevirtualized && vmToCil.TryGetValue(vmTarget, out var targetCil))
+                        ins.Operand = new CilOffsetLabel(targetCil);
+                    else
+                        ins.Operand = new CilOffsetLabel(0);
                     break;
+                }
                 case CilOperandType.InlineSwitch:
-                    var offsets = ins.Operand as uint[];
-                    var labels = new ICilLabel[offsets!.Length];
+                {
+                    if (ins.Operand is not int[] offsets) break;
+                    var labels = new ICilLabel[offsets.Length];
                     for (var x = 0; x < offsets.Length; x++)
-                        labels[x] = vmMethod.SuccessfullyDevirtualized
-                            ? new CilOffsetLabel(virtualOffsets[offsets[x]])
-                            : new CilOffsetLabel(0);
+                    {
+                        var vmTarget = unchecked((uint)offsets[x]);
+                        if (vmMethod.SuccessfullyDevirtualized && vmToCil.TryGetValue(vmTarget, out var targetCil))
+                            labels[x] = new CilOffsetLabel(targetCil);
+                        else
+                            labels[x] = new CilOffsetLabel(0);
+                    }
                     ins.Operand = labels;
                     break;
+                }
             }
         }
     }
@@ -228,8 +231,9 @@ internal class MethodDevirtualizer : StageBase
     {
         vmMethod.ExceptionHandlers = new List<CilExceptionHandler>();
         if (!vmMethod.SuccessfullyDevirtualized) return;
-
-        var virtualOffsets = GetVirtualOffsets(vmMethod);
+        
+        // Reuse precomputed VM -> CIL offset map.
+        var vmToCil = vmMethod.VmToCilOffsetMap;
         foreach (var vmExceptionHandler in vmMethod.VMExceptionHandlers)
         {
             var exceptionHandler = new CilExceptionHandler
@@ -238,11 +242,11 @@ internal class MethodDevirtualizer : StageBase
                 ExceptionType = vmExceptionHandler.HandlerType == CilExceptionHandlerType.Exception ? Resolver.ResolveType(vmExceptionHandler.CatchType) : null
             };
 
-            var handlerStart = vmMethod.Instructions.GetByOffset(virtualOffsets[vmExceptionHandler.HandlerStart]);
+            var handlerStart = vmMethod.Instructions.GetByOffset(vmToCil[vmExceptionHandler.HandlerStart]);
             exceptionHandler.HandlerStart = handlerStart?.CreateLabel();
 
             // HandlerEnd is not explicitly defined, and we don't have a length, so we need to find it ourselves
-            var handlerEndIndex = vmMethod.Instructions.GetIndexByOffset(virtualOffsets[vmExceptionHandler.HandlerStart]);
+            var handlerEndIndex = vmMethod.Instructions.GetIndexByOffset(vmToCil[vmExceptionHandler.HandlerStart]);
             var foundHandlerEnd = false;
             while (!foundHandlerEnd && vmMethod.Instructions.Count - 1 > handlerEndIndex)
             {
@@ -288,17 +292,17 @@ internal class MethodDevirtualizer : StageBase
 
             exceptionHandler.HandlerEnd = vmMethod.Instructions[handlerEndIndex].CreateLabel();
 
-            exceptionHandler.TryStart = vmMethod.Instructions.GetByOffset(virtualOffsets[vmExceptionHandler.TryStart])?.CreateLabel();
+            exceptionHandler.TryStart = vmMethod.Instructions.GetByOffset(vmToCil[vmExceptionHandler.TryStart])?.CreateLabel();
 
             // TryEnd is equal to TryStart + TryLength + 1
             var tryEndIndex = vmMethod
                 .Instructions.GetIndexByOffset(
-                    virtualOffsets[vmExceptionHandler.TryStart + vmExceptionHandler.TryLength]);
+                    vmToCil[vmExceptionHandler.TryStart + vmExceptionHandler.TryLength]);
             exceptionHandler.TryEnd = vmMethod
                 .Instructions[tryEndIndex + (vmMethod.Instructions.Count - 2 >= tryEndIndex ? 1 : 0)].CreateLabel();
 
             if (vmExceptionHandler.HandlerType == CilExceptionHandlerType.Filter)
-                exceptionHandler.FilterStart = vmMethod.Instructions.GetByOffset(virtualOffsets[vmExceptionHandler.FilterStart])?.CreateLabel();
+                exceptionHandler.FilterStart = vmMethod.Instructions.GetByOffset(vmToCil[vmExceptionHandler.FilterStart])?.CreateLabel();
 
             vmMethod.ExceptionHandlers.Add(exceptionHandler);
         }
@@ -364,7 +368,12 @@ internal class MethodDevirtualizer : StageBase
     /// </returns>
     private int? ReadHomomorphicEncryption(VMMethod vmMethod)
     {
-        vmMethod.HasHomomorphicEncryption = true;
+        if (!vmMethod.HasHomomorphicEncryption)
+        {
+            vmMethod.HMEndPositionStack = new Stack<int>();
+            vmMethod.HasHomomorphicEncryption = true;
+        }
+        
         try
         {
             // Get salt from the last ldc.i8 in the devirtualized instructions
@@ -421,6 +430,7 @@ internal class MethodDevirtualizer : StageBase
             var decryptor = new HMDecryptor(pwdEntry.Bytes, salt);
             
             var decrypted = decryptor.DecryptInstructionBlock(VMStream);
+            vmMethod.HMEndPositionStack.Push(vmMethod.CurrentVirtualOffset + decrypted.Length);
 
             // Swap reader to decrypted bytes and push current for nested blocks.
             _readerStack.Push(_currentReader);
@@ -457,6 +467,8 @@ internal class MethodDevirtualizer : StageBase
             
             // Dispose reader to free memory.
             _currentReader.Dispose();
+
+            vmMethod.HMEndPositionStack.Pop();
             
             _currentReader = _readerStack.Pop();
             if (Ctx.Options.Verbose)
