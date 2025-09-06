@@ -62,7 +62,7 @@ internal class MethodDevirtualizer : StageBase
 
         ResolveBranchTargets(vmMethod);
         ResolveExceptionHandlers(vmMethod);
-
+        
         // recompile method
         vmMethod.Parent.CilMethodBody!.LocalVariables.Clear();
         vmMethod.Locals.ForEach(x => vmMethod.Parent.CilMethodBody.LocalVariables.Add(x));
@@ -72,7 +72,7 @@ internal class MethodDevirtualizer : StageBase
 
         vmMethod.Parent.CilMethodBody.Instructions.Clear();
         vmMethod.Instructions.ForEach(x => vmMethod.Parent.CilMethodBody.Instructions.Add(x));
-
+        
         vmMethod.Parent.CilMethodBody!.VerifyLabelsOnBuild = false;
         vmMethod.Parent.CilMethodBody!.ComputeMaxStackOnBuild = false;
         if (vmMethod.SuccessfullyDevirtualized && !Ctx.Options.NoVerify)
@@ -115,16 +115,15 @@ internal class MethodDevirtualizer : StageBase
         vmMethod.CodeSize = _currentReader.ReadInt32();
         vmMethod.InitialCodeStreamPosition = VMStream.Position;
         vmMethod.SuccessfullyDevirtualized = true;
-        vmMethod.InstructionVirtualOffsets = new List<uint>();
         vmMethod.VmToCilOffsetMap = new Dictionary<uint, int>();
         var cilOffset = 0;
         var finalPosition = VMStream.Position + vmMethod.CodeSize;
         while (VMStream.Position < finalPosition)
         {
             if (vmMethod.HasHomomorphicEncryption && vmMethod.HMEndPositionStack.TryPeek(out var endPosition))
-                vmMethod.CurrentVirtualOffset = (int)(endPosition - (_currentReader.BaseStream.Length - _currentReader.BaseStream.Position)) + vmMethod.HMEndPositionStack.Count * 8 - 4;
+                vmMethod.CurrentVirtualOffset = (uint)(endPosition - (_currentReader.BaseStream.Length - _currentReader.BaseStream.Position) + vmMethod.HMEndPositionStack.Count * 8 - 4);
             else
-                vmMethod.CurrentVirtualOffset = (int)(vmMethod.CodeSize - (finalPosition - VMStream.Position));
+                vmMethod.CurrentVirtualOffset = (uint)(vmMethod.CodeSize - (finalPosition - VMStream.Position));
             
             var virtualOpCode = _currentReader.ReadInt32Special();
             var vmOpCode = Ctx.PatternMatcher.GetOpCodeValue(virtualOpCode);
@@ -138,7 +137,6 @@ internal class MethodDevirtualizer : StageBase
                 {
                     Offset = cilOffset
                 };
-                vmMethod.InstructionVirtualOffsets.Add(vmStart);
                 vmMethod.VmToCilOffsetMap[vmStart] = cilOffset;
                 vmMethod.Instructions.Add(nop);
                 cilOffset += nop.Size;
@@ -176,7 +174,6 @@ internal class MethodDevirtualizer : StageBase
                     new CilInstruction(vmOpCode.CilOpCode.Value, operand);
                 var vmStart = (uint)vmMethod.CurrentVirtualOffset;
                 instruction.Offset = cilOffset;
-                vmMethod.InstructionVirtualOffsets.Add(vmStart);
                 vmMethod.VmToCilOffsetMap[vmStart] = cilOffset;
                 vmMethod.Instructions.Add(instruction);
                 cilOffset += instruction.Size;
@@ -370,8 +367,8 @@ internal class MethodDevirtualizer : StageBase
     {
         if (!vmMethod.HasHomomorphicEncryption)
         {
-            vmMethod.HMEndPositionStack = new Stack<int>();
             vmMethod.HasHomomorphicEncryption = true;
+            vmMethod.HMEndPositionStack = new Stack<uint>();
         }
         
         try
@@ -430,7 +427,7 @@ internal class MethodDevirtualizer : StageBase
             var decryptor = new HMDecryptor(pwdEntry.Bytes, salt);
             
             var decrypted = decryptor.DecryptInstructionBlock(VMStream);
-            vmMethod.HMEndPositionStack.Push(vmMethod.CurrentVirtualOffset + decrypted.Length);
+            vmMethod.HMEndPositionStack.Push((uint)(vmMethod.CurrentVirtualOffset + decrypted.Length));
 
             // Swap reader to decrypted bytes and push current for nested blocks.
             _readerStack.Push(_currentReader);
