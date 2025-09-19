@@ -27,15 +27,15 @@ Arguments:
   <output>    Path to output directory [default: ./eazydevirt-output]
 
 Options:
-  -v, --verbose <verbosity>  Level of verbosity [1: Verbose, 2: Very Verbose, 3: Very Very Verbose] [default: 0]
-  --preserve-all             Preserves all metadata tokens [default: False]
-  --no-verify                Don't verify labels or compute max stack for devirtualized methods [default: False]
-  -kt, --keep-types          Keeps obfuscator types [default: False]
-  --save-anyway              Saves output of devirtualizer even if it fails [default: False]
-  --only-save-devirted       Only saves successfully devirtualized methods (This option only matters if you use the
-                             save anyway option) [default: False]
-  --version                  Show version information
-  -?, -h, --help             Show help and usage information
+  -v, --verbose <verbosity>    Level of verbosity [1: Verbose, 2: Very Verbose, 3: Very Very Verbose] [default: 0]
+  --preserve-all               Preserves all metadata tokens [default: False]
+  --no-verify                  Don't verify labels or compute max stack for devirtualized methods [default: False]
+  -kt, --keep-types            Keeps obfuscator types [default: False]
+  --save-anyway                Saves output of devirtualizer even if it fails [default: False]
+  --only-save-devirted         Only saves successfully devirtualized methods (This option only matters if you use the save anyway option) [default: False]
+  --require-deps-for-generics  Require dependencies when resolving generic methods for accuracy [default: True]
+  --version                    Show version information
+  -?, -h, --help               Show help and usage information
 ```
 
 #### Example:

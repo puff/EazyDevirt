@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using AsmResolver.DotNet;
-using AsmResolver.DotNet.Signatures.Types;
+using AsmResolver.DotNet.Signatures;
 using AsmResolver.PE.DotNet.Cil;
 using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Devirtualization;
@@ -30,6 +30,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     private static MethodDefinition _readDecimalMethodDef = null!;
 
     private static CilVirtualMachine _vm = null!;
+    private static CilThread _thread = null!;
     private static BitVector _instanceObj = null!;
 
     private static bool _initialized;
@@ -40,6 +41,8 @@ internal class VMBinaryReader : VMBinaryReaderBase
         {
             _vm = new CilVirtualMachine(Ctx.Module, false); // 32 bit always breaks something, even on 32 bit only assemblies.
             _vm.Dispatcher.BeforeInstructionDispatch += DispatcherOnBeforeInstructionDispatch;
+            
+            _thread = _vm.CreateThread();
 
             FindInstanceDefs();
             if (_instanceType is null)
@@ -245,11 +248,12 @@ internal class VMBinaryReader : VMBinaryReaderBase
         var instanceObjectHandle = _instanceObj.AsObjectHandle(_vm);
         instanceObjectHandle.WriteField(_bufferFieldDef, _vm.ObjectMarshaller.ToBitVector(bytes));
 
-        _vm.CallStack.Peek().WriteArgument(0, _instanceObj);
-        _vm.Run();
+        
+        _thread.CallStack.Peek().WriteArgument(0, _instanceObj);
+        _thread.Run();
 
         var typeSig = Ctx.Importer.ImportTypeSignature(typeof(T));
-        var result = _vm.ObjectMarshaller.ToObject<T>(_vm.CallStack.Peek().EvaluationStack.Pop(typeSig))!;
+        var result = _vm.ObjectMarshaller.ToObject<T>(_thread.CallStack.Peek().EvaluationStack.Pop(typeSig))!;
 
         _vm.ObjectMapMemory.Clear();
         return result;
@@ -269,7 +273,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     {
         var bytes = ReadBytes(4);
 
-        _vm.CallStack.Push(_readInt32MethodDef);
+        _thread.CallStack.Push(_readInt32MethodDef);
         return ReadEmulated<int>(bytes);
     }
 
@@ -278,7 +282,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     {
         var bytes = ReadBytes(4);
 
-        _vm.CallStack.Push(_readInt32MethodDef);
+        _thread.CallStack.Push(_readInt32MethodDef);
         return ReadEmulated<int>(bytes);
     }
 
@@ -286,7 +290,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     {
         var bytes = ReadBytes(4);
 
-        _vm.CallStack.Push(_readUInt32MethodDef);
+        _thread.CallStack.Push(_readUInt32MethodDef);
         return ReadEmulated<uint>(bytes);
     }
 
@@ -294,7 +298,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     {
         var bytes = ReadBytes(8);
 
-        _vm.CallStack.Push(_readInt64MethodDef);
+        _thread.CallStack.Push(_readInt64MethodDef);
         return ReadEmulated<long>(bytes);
     }
 
@@ -302,7 +306,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     {
         var bytes = ReadBytes(8);
 
-        _vm.CallStack.Push(_readUInt64MethodDef);
+        _thread.CallStack.Push(_readUInt64MethodDef);
         return ReadEmulated<ulong>(bytes);
     }
 
@@ -310,7 +314,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     {
         var bytes = ReadBytes(2);
      
-        _vm.CallStack.Push(_readInt16MethodDef);
+        _thread.CallStack.Push(_readInt16MethodDef);
         return ReadEmulated<short>(bytes);
     }
     
@@ -318,7 +322,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     {
         var bytes = ReadBytes(2);
   
-        _vm.CallStack.Push(_readUInt16MethodDef);
+        _thread.CallStack.Push(_readUInt16MethodDef);
         return ReadEmulated<ushort>(bytes);
     }
     
@@ -326,7 +330,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     {
         var bytes = ReadBytes(4);
 
-        _vm.CallStack.Push(_readSingleMethodDef);
+        _thread.CallStack.Push(_readSingleMethodDef);
         return ReadEmulated<float>(bytes);
     }
 
@@ -334,7 +338,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     {
         var bytes = ReadBytes(8);
 
-        _vm.CallStack.Push(_readDoubleMethodDef);
+        _thread.CallStack.Push(_readDoubleMethodDef);
         return ReadEmulated<double>(bytes);
     }
 
@@ -343,7 +347,7 @@ internal class VMBinaryReader : VMBinaryReaderBase
     {
         var bytes = ReadBytes(16);
 
-        _vm.CallStack.Push(_readDecimalMethodDef);
+        _thread.CallStack.Push(_readDecimalMethodDef);
         return ReadEmulated<decimal>(bytes);
     }
     

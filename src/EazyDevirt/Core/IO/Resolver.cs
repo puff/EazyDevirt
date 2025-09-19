@@ -1,6 +1,6 @@
 using AsmResolver.DotNet;
 using AsmResolver.DotNet.Signatures;
-using AsmResolver.DotNet.Signatures.Types;
+using AsmResolver.DotNet.Signatures.Parsing;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.Architecture.InlineOperands;
 using EazyDevirt.Devirtualization;
@@ -22,21 +22,11 @@ internal class Resolver
     
     private Dictionary<int, object?> Cache { get; }
 
-    private TypeSignature ApplySigModifiers(TypeSignature baseTypeSig, Stack<string> mods)
+    public ITypeDefOrRef? ResolveType(VMInlineOperand inlineOperand)
     {
-        while (mods.Count > 0)
-        {
-            var mod = mods.Pop();
-            baseTypeSig = mod switch
-            {
-                "[]" => baseTypeSig.MakeSzArrayType(),
-                "*" => baseTypeSig.MakePointerType(),
-                "&" => baseTypeSig.MakeByReferenceType(),
-                _ => throw new Exception($"Unknown modifier: {mod}")
-            };
-        }
-
-        return baseTypeSig;
+        if (inlineOperand.IsToken)
+            return Ctx.Module.LookupMember<ITypeDefOrRef>(inlineOperand.Token);
+        return ResolveType(inlineOperand.Position);
     }
     
     public ITypeDefOrRef? ResolveType(int position)
@@ -57,80 +47,53 @@ internal class Resolver
         if (!inlineOperand.HasData || inlineOperand.Data is not VMTypeData data)
             throw new Exception("VM inline operand expected to have type data!");
 
-        if (data.IsGenericParameterType)
+        if (data.IsGenericParameterIndex)
         {
-            if (data.GenericArgumentIndex != -1)
+            if (data.GenericMethodParameterIndex >= 0)
             {
-                var typeGenericParameterSignature = new GenericParameterSignature(Ctx.Module, GenericParameterType.Method, data.GenericArgumentIndex);
-                var typeGenericTypeDefOrRef = typeGenericParameterSignature.ToTypeDefOrRef();
-                
-                Cache.Add(position, typeGenericTypeDefOrRef);
-                return typeGenericTypeDefOrRef;
+                var genericTypeDefOrRef = new GenericParameterSignature(Ctx.Module, GenericParameterType.Method, data.GenericMethodParameterIndex).ToTypeDefOrRef();
+                Cache.Add(position, genericTypeDefOrRef);
+                return genericTypeDefOrRef;
             }
             
-            if (data.GenericTypeArgumentIndex != -1)
+            if (data.GenericTypeParameterIndex >= 0)
             {
-                var typeGenericParameterSignature = new GenericParameterSignature(Ctx.Module, GenericParameterType.Type, data.GenericArgumentIndex);
-                var typeGenericTypeDefOrRef = typeGenericParameterSignature.ToTypeDefOrRef();
-                
-                Cache.Add(position, typeGenericTypeDefOrRef);
-                return typeGenericTypeDefOrRef;
+                var genericTypeDefOrRef = new GenericParameterSignature(Ctx.Module, GenericParameterType.Type, data.GenericTypeParameterIndex).ToTypeDefOrRef();
+                Cache.Add(position, genericTypeDefOrRef);
+                return genericTypeDefOrRef;
             }
         }
+
+        var typeSig = TypeNameParser.Parse(Ctx.Module, data.Name);
+        if (typeSig is null)
+            throw new Exception($"Failed to parse vm type {data.Name}");
+
+        if (data.HasGenericTypeParameters)
+            typeSig = typeSig.MakeGenericInstanceType(data.GenericParameters.Select(x => ResolveType(x)!.ToTypeSignature()).ToArray());
+
+        var typeDefOrRef = typeSig.ToTypeDefOrRef();
+        if (SignatureComparer.Default.Equals(typeDefOrRef.Scope?.GetAssembly(), Ctx.Module.Assembly))
+        {
+            var resolvedType = typeDefOrRef.Resolve();
+            if (resolvedType is not null)
+                typeDefOrRef = resolvedType;
+            else
+                Ctx.Console.Warning($"Failed to resolve same assembly vm type {data.Name}, using its reference instead.");
+        }
+        else
+            typeDefOrRef = Ctx.Importer.ImportType(typeDefOrRef);
         
-        // Try to find type definition or reference
-        var typeDefOrRef = (ITypeDefOrRef?)Ctx.Module.GetAllTypes()
-                               .FirstOrDefault(x => x.FullName == data.TypeName.Name) ??
-                           (ITypeDefOrRef?)Ctx.Module.GetImportedTypeReferences()
-                               .FirstOrDefault(x => x.FullName == data.TypeName.Name && x.Scope?.Name == data.TypeName.AssemblyName.Name);
-        if (typeDefOrRef != null)
-        {
-            var typeSig = typeDefOrRef.ToTypeSignature();
-            if (data.HasGenericTypeArgs)
-                typeSig = typeDefOrRef
-                    .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature())
-                        .ToArray());
-            
-            var typeSigWithModifiers = ApplySigModifiers(typeSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
-            Cache.Add(position, typeSigWithModifiers);
-            return typeSigWithModifiers;
-        }
-
-        var assemblyRef =
-            Ctx.Module.AssemblyReferences.FirstOrDefault(x => x.Name == data.TypeName.AssemblyName.Name) ??
-            new AssemblyReference(data.TypeName.AssemblyName.Name, data.TypeName.AssemblyName.Version!,
-                data.TypeName.AssemblyName.GetPublicKey() != null,
-                data.TypeName.AssemblyName.GetPublicKey() ?? data.TypeName.AssemblyName.GetPublicKeyToken());
-        if (assemblyRef == null!)
-        {
-            Ctx.Console.Warning($"Failed to find vm type {data.Name} assembly reference!");
-            return null!;
-        }
-
-        var parentTypeRef = !data.TypeName.IsNested
-            ? assemblyRef.CreateTypeReference(data.TypeName.Namespace, data.TypeName.NameWithoutNamespace)
-            : assemblyRef.CreateTypeReference(data.TypeName.Namespace, data.TypeName.ParentNameWithoutNamespace);
-        var typeRef = !data.TypeName.IsNested
-            ? parentTypeRef
-            : parentTypeRef.CreateTypeReference(data.TypeName.NestedName);
-        var typeBaseSig = typeRef.ToTypeSignature();
-        if (data.HasGenericTypeArgs)
-            typeBaseSig = typeRef
-                .MakeGenericInstanceType(data.GenericTypes.Select(g => ResolveType(g.Position)!.ToTypeSignature())
-                    .ToArray());
-
-        var typeBaseSigWithModifiers = ApplySigModifiers(typeBaseSig, data.TypeName.Modifiers).ToTypeDefOrRef().ImportWith(Ctx.Importer);
-        Cache.Add(position, typeBaseSigWithModifiers);
-        return typeBaseSigWithModifiers;
+        Cache.Add(position, typeDefOrRef);
+        return typeDefOrRef;
     }
     
     public IFieldDescriptor? ResolveField(int position)
     {
         if (Cache.TryGetValue(position, out var result))
             return (IFieldDescriptor?)result;
-        
+
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
-        
+
         var inlineOperand = new VMInlineOperand(VMStreamReader);
         if (inlineOperand.IsToken)
         {
@@ -138,85 +101,118 @@ internal class Resolver
             Cache.Add(position, lookup);
             return lookup;
         }
-        
+
         if (!inlineOperand.HasData || inlineOperand.Data is not VMFieldData data)
             throw new Exception("VM inline operand expected to have field data!");
-        
-        var declaringTypeSig = ResolveType(data.DeclaringType.Position);
-        var declaringType = declaringTypeSig?.Resolve();
-        if (declaringType != null)
+
+        var declaringType = ResolveType(data.DeclaringType.Position);
+        if (declaringType is null)
         {
-            var field = declaringType.Fields.FirstOrDefault(f => f.Name == data.Name)?.ImportWith(Ctx.Importer);
-            Cache.Add(position, field);
-            return field;
+            Ctx.Console.Error($"Unable to resolve vm field {data.Name} declaring type!");
+            Cache.Add(position, null);
+            return null;
         }
-        
-        Ctx.Console.Error($"Unable to resolve vm field {data.Name} declaring type {declaringTypeSig?.Name} to a TypeDef!");
+
+        if (declaringType.Resolve() is { } declaringTypeDef)
+        {
+            var fieldDef = declaringTypeDef.Fields.FirstOrDefault(f => f.Name == data.Name && f.IsStatic == data.IsStatic)?.ImportWith(Ctx.Importer);
+            Cache.Add(position, fieldDef);
+            return fieldDef;
+        }
+
+        // we can't create our own reference since we don't know the field's type.
+        // maybe it could be inferred from where it's being used, but that would require a lot of rework.
+        Ctx.Console.Error($"Unable to resolve vm field {declaringType.Name}.{data.Name}");
         return null;
     }
-    
-    private bool VerifyMethodParameters(MethodSignatureBase method, VMMethodData data) =>
-        method.ParameterTypes.Count == data.Parameters.Length && method.ParameterTypes
-            .Zip(data.Parameters).All(x =>
-                x.First is GenericParameterSignature or GenericInstanceTypeSignature || x.First.FullName ==
-                ResolveType(x.Second.Position)?.FullName);
 
-    private bool VerifyMethodParameters(MethodDefinition method, VMMethodInfo data)
+    private TypeSignature GetBaseTypeOfTypeSignature(TypeSignature ts)
     {
-        var skip = 0;
-        if (method.Parameters.ThisParameter != null && data.VMParameters.Count > 0 &&
-            method.Parameters.ThisParameter.ParameterType.FullName ==
-            ResolveType(data.VMParameters[0].VMType)?.FullName)
-            skip++;
-
-        return (method.Parameters.Count == data.VMParameters.Count || method.Parameters.Count == data.VMParameters.Count - skip) && method.Parameters
-            .Zip(data.VMParameters.Skip(skip)).All(x =>
-                x.First.ParameterType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                (x.First.ParameterType is TypeSpecificationSignature tss &&
-                 (tss.BaseType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                  tss.BaseType.FullName == ResolveType(x.Second.VMType)?.FullName)) ||
-                x.First.ParameterType?.FullName == ResolveType(x.Second.VMType)?.FullName);
+        while (ts is TypeSpecificationSignature tss)
+            ts = tss.BaseType;
+        return ts;
     }
     
-    private bool VerifyMethodParameters(MethodDefinition method, VMMethodData data)
+    private IMethodDescriptor? ResolveMethod(string name, ITypeDefOrRef declaringTypeDefOrRef, MethodSignature vmMethodSig, TypeSignature[] vmParameters, GenericContext vmGenericContext)
     {
-        var skip = 0;
-        if (method.Parameters.ThisParameter != null && data.Parameters.Length > 0 &&
-            method.Parameters.ThisParameter.ParameterType.FullName ==
-            ResolveType(data.Parameters[0].Position)?.FullName)
-            skip++;
+        // Methods utilizing generics need to be resolved to get 100% accuracy.
+        // This is because Eazfuscator uses the actual generic type instead of the generic parameter type.
+        // Example:
+        // The signature we need is:
+        // !0 class TestClass`1<int32>::TestMethod<string, int32>(!0, string, !!1, !!0)
+        // However, the signature Eazfuscator gives us is:
+        // int32 class TestClass`1<int32>::TestMethod<string, int32>(int32, string, int32, string)
+        // We can't convert them into their generic parameter type because we don't know the position of the generic type in the arguments, so we could inadvertently replace the wrong argument:
+        // !0 class TestClass`1<int32>::TestMethod<string, int32>(!0, !!0, !!1, string)
+        // In the future, we could probably implement something with Echo to analyze devirtualized code to find the correct type positions, but for now this is the easiest way.
+        if (!vmGenericContext.IsEmpty)
+        {
+            var declaringTypeDef = declaringTypeDefOrRef.Resolve();
+            if (declaringTypeDef is null)
+            {
+                if (Ctx.Options.RequireDepsForGenericMethods)
+                {
+                    Ctx.Console.Error($"Unable to resolve generic method {name} declaring type (Assembly: {declaringTypeDefOrRef.Scope?.GetAssembly()?.FullName})!");
+                    return null;
+                }
+                
+                Ctx.Console.Warning($"Unable to resolve generic method {name} declaring type (Assembly: {declaringTypeDefOrRef.Scope?.GetAssembly()?.FullName})! Method reference may be broken.");
+                
+                // This is fragile and will probably break your method signatures.
+            
+                var methodRef = declaringTypeDefOrRef.CreateMemberReference(name, vmMethodSig);
+                if (vmGenericContext.Method?.TypeArguments.Count > 0)
+                    return methodRef.MakeGenericInstanceMethod(vmGenericContext.Method.TypeArguments.ToArray());
+                return methodRef;
+            }
 
-        return (method.Parameters.Count == data.Parameters.Length || method.Parameters.Count == data.Parameters.Length - skip) && method.Parameters
-            .Zip(data.Parameters.Skip(skip)).All(x =>
-                // TODO: Should probably resolve these generic parameter signatures and verify them too
-                x.First.ParameterType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                (x.First.ParameterType is TypeSpecificationSignature tss &&
-                 (tss.BaseType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                  tss.BaseType.FullName == ResolveType(x.Second.Position)?.FullName)) ||
-                x.First.ParameterType?.FullName == ResolveType(x.Second.Position)?.FullName);
-        ;
-    }
+            // Look for matching methods
+            foreach (var method in declaringTypeDef.Methods)
+            {
+                if (method.IsStatic != !vmMethodSig.HasThis
+                    || method.Name != name
+                    || method.GenericParameters.Count != (vmGenericContext.Method?.TypeArguments.Count ?? 0)) 
+                    continue;
+                
+                if (method.Parameters.Count != vmParameters.Length)
+                    continue;
+                    
+                // Found a potential match, now build a signature from the real method and compare it with the signature built from our vm data to ensure we have the correct method
     
-    private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodInfo data) =>
-        declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
-                                                   && (m.Signature?.ReturnType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                                                       (m.Signature?.ReturnType is TypeSpecificationSignature tss &&
-                                                        (tss.BaseType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                                                         tss.BaseType.FullName == ResolveType(data.VMReturnType)?.FullName)) ||
-                                                       m.Signature?.ReturnType?.FullName ==
-                                                       ResolveType(data.VMReturnType)?.FullName)
-                                                   && VerifyMethodParameters(m, data));
-
-    private MethodDefinition? ResolveMethod(TypeDefinition? declaringType, VMMethodData data) =>
-            declaringType?.Methods.FirstOrDefault(m => m.Name == data.Name
-                                                   // TODO: Should probably resolve these generic parameter signatures and verify them too
-                                                   && (m.Signature?.ReturnType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                                                       (m.Signature?.ReturnType is TypeSpecificationSignature tss &&
-                                                        (tss.BaseType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                                                         tss.BaseType.FullName == ResolveType(data.ReturnType.Position)?.FullName)) ||
-                                                       m.Signature?.ReturnType?.FullName ==
-                                                       ResolveType(data.ReturnType.Position)?.FullName)
-                                                   && VerifyMethodParameters(m, data));
+                // Instantiate generic types for real method from vm method data
+                var realParameters = method.Parameters.Select(x => x.ParameterType).ToArray();
+                for (var i = 0; i < vmParameters.Length; i++)
+                    if (GetBaseTypeOfTypeSignature(vmParameters[i]) is GenericParameterSignature genericParameterSignature)
+                        realParameters[i] = vmGenericContext.GetTypeArgument(genericParameterSignature);
+    
+                var realReturnType = method.Signature!.ReturnType;
+                if (GetBaseTypeOfTypeSignature(realReturnType) is GenericParameterSignature)
+                    realReturnType = vmMethodSig.ReturnType;
+    
+                var realMethodSignature = (method.IsStatic
+                        ? MethodSignature.CreateStatic(realReturnType, vmGenericContext.Method?.TypeArguments.Count ?? 0,
+                            realParameters)
+                        : MethodSignature.CreateInstance(realReturnType, vmGenericContext.Method?.TypeArguments.Count ?? 0,
+                            realParameters))
+                    .InstantiateGenericTypes(vmGenericContext);
+    
+                // Compare instantiated real method signature with our signature built from vm method data
+                if (!SignatureComparer.Default.Equals(realMethodSignature, vmMethodSig))
+                    continue;
+    
+                if (vmGenericContext.Method?.TypeArguments.Count > 0)
+                    return declaringTypeDefOrRef.CreateMemberReference(method.Name, method.Signature)
+                        .MakeGenericInstanceMethod(vmGenericContext.Method.TypeArguments.ToArray());
+    
+                return declaringTypeDefOrRef.CreateMemberReference(method.Name, method.Signature);
+            }
+            
+            Ctx.Console.Error($"Failed to resolve generic method {name}!");
+            return null;
+        }
+        
+        return declaringTypeDefOrRef.CreateMemberReference(name, vmMethodSig);
+    }
     
     public IMethodDescriptor? ResolveMethod(int position)
     {
@@ -236,147 +232,40 @@ internal class Resolver
         if (!inlineOperand.HasData)
             throw new Exception("VM inline operand expected to have data!");
 
-        if (inlineOperand.Data is VMEazCallData eazCallData)
-        {
-            var resolvedEazCall = ResolveEazCall(eazCallData);
-            Cache.Add(position, resolvedEazCall);
-            return resolvedEazCall;
-        }
-
         if (inlineOperand.Data is not VMMethodData data)
             throw new Exception("VM inline operand expected to have method data!");
 
         var declaringTypeDefOrRef = ResolveType(data.DeclaringType.Position);
         if (declaringTypeDefOrRef == null)
         {
-            Ctx.Console.Error($"Unable to resolve declaring type on vm method {data.Name}");
+            Ctx.Console.Error($"Failed to resolve declaring type on vm method {data.Name}!");
             return null;
         }
 
         var returnType = ResolveType(data.ReturnType.Position);
         if (returnType == null)
         {
-            Ctx.Console.Error($"Failed to resolve vm method {data.Name} return type!");
+            Ctx.Console.Error($"Failed to resolve return type on vm method {data.Name}!");
             return null;
         }
+        
+        var vmGenericInstanceMethodSig = data.HasGenericParameters ? new GenericInstanceMethodSignature(data.GenericParameters.Select(x => ResolveType(x)?.ToTypeSignature()!)) : null;
+        var vmGenericContext = GenericContext.FromType(declaringTypeDefOrRef).WithMethod(vmGenericInstanceMethodSig!);
+        var vmParameters = data.Parameters.Select(x => ResolveType(x)?.ToTypeSignature()!).ToArray();
 
-        var declaringTypeDefOrRefUnadorned = declaringTypeDefOrRef.Resolve();
-        if (declaringTypeDefOrRef.Scope?.GetAssembly()?.Name != Ctx.Module.Assembly?.Name)
-        {
-            var importedMemberRef = Ctx.Module.GetImportedMemberReferences().FirstOrDefault(x =>
-                x.IsMethod
-                && x.DeclaringType?.FullName == (declaringTypeDefOrRefUnadorned is null ? declaringTypeDefOrRef.FullName : declaringTypeDefOrRefUnadorned.FullName)
-                && x.Name == data.Name
-                && x.Signature is MethodSignature ms
-                // TODO: Fix resolving imported member references of methods returning a generic parameter
-                && (ms.ReturnType is GenericParameterSignature or GenericInstanceTypeSignature ||
-                    ms.ReturnType.FullName == returnType.FullName)
-                && ms.GenericParameterCount == data.GenericArguments.Length
-                && VerifyMethodParameters(ms, data));
-
-            if (importedMemberRef != null)
-            {
-                if (data.HasGenericArguments)
-                {
-                    var importedMemberRefGenerics = importedMemberRef
-                        .MakeGenericInstanceMethod(
-                            data.GenericArguments.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
-                        .ImportWith(Ctx.Importer);
-
-                    Cache.Add(position, importedMemberRefGenerics);
-                    return importedMemberRefGenerics;
-                }
-
-                var importedMemberRefImported = importedMemberRef.ImportWith(Ctx.Importer);
-                Cache.Add(position, importedMemberRefImported);
-                return importedMemberRefImported;
-            }
-        }
-
-        var declaringType = declaringTypeDefOrRef.Resolve();
-        if (declaringType != null)
-        {
-            var methodDef = ResolveMethod(declaringType, data);
-            if (data.HasGenericArguments)
-            {
-                var methodDefGenerics =  methodDef?
-                    .MakeGenericInstanceMethod(data.GenericArguments
-                        .Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray())
-                    .ImportWith(Ctx.Importer);
-
-                Cache.Add(position, methodDefGenerics);
-                return methodDefGenerics;
-            }
-
-            var methodDefImported = methodDef?.ImportWith(Ctx.Importer);
-            Cache.Add(position, methodDefImported);
-            return methodDefImported;
-        }
-
-        // stuff below should only execute on types that aren't able to be resolved (so hopefully never)
-
-        var declaringTypeSig = declaringTypeDefOrRef.ToTypeSignature();
-        var parameters = data.Parameters.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray();
-        var genericArgs = data.GenericArguments.Select(g => ResolveType(g.Position)!.ToTypeSignature()).ToArray();
-        var newParams = new List<TypeSignature>();
-        // convert generic parameters to their indexes (!!0, !0)
-        foreach (var parameter in parameters)
-        {
-            // TODO: Search through all methods instead of just converting like this
-            // these might not resolve or convert correctly if there are other parameters that use the type specified in the generic arg
-            // a much better way would be to search for the method through declaringType.Methods and check the generics count and other stuff to ensure it's the correct method
-            for (var gi = 0; gi < genericArgs.Length; gi++)
-            {
-                var genericArg = genericArgs[gi];
-                
-                // convert generic parameters into their index form (!!0)
-                if (SignatureComparer.Default.Equals(genericArg, parameter))
-                    newParams.Add(new GenericParameterSignature(GenericParameterType.Method, gi));
-
-                // convert return type to its index form (!!0) if it matches
-                if (SignatureComparer.Default.Equals(genericArg, returnType.ToTypeSignature()))
-                    returnType = new GenericParameterSignature(GenericParameterType.Method, gi).ToTypeDefOrRef();
-            }
-
-            if (declaringTypeSig is GenericInstanceTypeSignature declaringTypeGenericSig)
-            {
-                // convert generic type arguments in method parameters to their index form (!0)
-                var f = declaringTypeGenericSig.TypeArguments.FirstOrDefault(x => x.FullName == parameter.FullName);
-                if (f != null)
-                    newParams.Add(new GenericParameterSignature(GenericParameterType.Type,
-                        declaringTypeGenericSig.TypeArguments.IndexOf(f)));
-                else
-                {
-                    // convert generic return type to its index form (!0)
-                    f = declaringTypeGenericSig.TypeArguments.FirstOrDefault(x => x.FullName == returnType.FullName);
-                    if (f != null)
-                        returnType = new GenericParameterSignature(GenericParameterType.Type,
-                            declaringTypeGenericSig.TypeArguments.IndexOf(f)).ToTypeDefOrRef();
-                }
-            }
-            else
-                newParams.Add(parameter);
-        }
-
-        var memberRef = declaringTypeDefOrRef
-            .CreateMemberReference(data.Name, data.IsStatic
-                ? MethodSignature.CreateStatic(
-                    returnType.ToTypeSignature(), data.GenericArguments.Length,
-                    newParams)
-                : MethodSignature.CreateInstance(
-                    returnType.ToTypeSignature(), data.GenericArguments.Length,
-                    newParams));
-
-        if (data.HasGenericArguments)
-        {
-            var memberRefGenerics = memberRef.MakeGenericInstanceMethod(genericArgs).ImportWith(Ctx.Importer);
-            Cache.Add(position, memberRefGenerics);
-            return memberRefGenerics;
-        }
-
-        var memberRefImported = memberRef.ImportWith(Ctx.Importer);
-        Cache.Add(position, memberRefImported);
-        return memberRefImported;
+        var vmMethodSig = (data.IsStatic
+                ? MethodSignature.CreateStatic(returnType.ToTypeSignature(),
+                    vmGenericContext.Method?.TypeArguments.Count ?? 0, vmParameters)
+                : MethodSignature.CreateInstance(returnType.ToTypeSignature(),
+                    vmGenericContext.Method?.TypeArguments.Count ?? 0, vmParameters))
+            .InstantiateGenericTypes(vmGenericContext);
+        
+        var method = ResolveMethod(data.Name, declaringTypeDefOrRef, vmMethodSig, vmParameters, vmGenericContext)?.ImportWith(Ctx.Importer);
+        if (method is null) 
+            return null;
+        
+        Cache.Add(position, method);
+        return (IMethodDescriptor)method;
     }
 
     public IMemberDescriptor? ResolveToken(int position)
@@ -415,19 +304,48 @@ internal class Resolver
         };
     }
 
-    public IMethodDescriptor? ResolveEazCall(VMEazCallData eazCallData) => 
-        ResolveMethod(eazCallData.VMMethodPosition);
-
     public IMethodDescriptor? ResolveEazCall(int value)
     {
         var noGenericArgs = (value & 0x80000000) != 0; 
-        // var maybeSomethingWithDeclaringType  = (value & 0x40000000) != 0;
+        var useConstrainedType  = (value & 0x40000000) != 0;
         var position = value & 0x3FFFFFFF;
+        if (Cache.TryGetValue(position, out var result))
+            return (IMethodDescriptor?)result;
 
-        return noGenericArgs ? ResolveEazCall_Helper(position, null, null) : ResolveMethod(position);
+        if (noGenericArgs)
+            return ResolveEazCall(position, new GenericContext(), useConstrainedType);
+        
+        Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
+        
+        var inlineOperand = new VMInlineOperand(VMStreamReader);
+        if (inlineOperand.IsToken)
+        {
+            var lookup = Ctx.Module.LookupMember<IMethodDescriptor>(inlineOperand.Token);
+            Cache.Add(position, lookup);
+            return lookup;
+        }
+        
+        if (!inlineOperand.HasData)
+            throw new Exception("VM inline operand expected to have data!");
+
+        if (inlineOperand.Data is not VMEazCallData data)
+            throw new Exception("VM inline operand expected to have eazcall data!");
+
+        return ResolveEazCall(data);
     }
 
-    private IMethodDescriptor? ResolveEazCall_Helper(int position, ITypeDefOrRef[]? genericTypes, ITypeDefOrRef[]? declaringGenericTypes)
+    private IMethodDescriptor? ResolveEazCall(VMEazCallData eazCallData)
+    {
+        var useConstrainedType  = (eazCallData.EazCallValue & 0x40000000) != 0;
+        var position = eazCallData.EazCallValue & -0x40000001;
+
+        var method = ResolveMethod(eazCallData.VMMethodPosition);
+        var genericContext = GenericContext.FromMethod(method!);
+        
+        return ResolveEazCall(position, genericContext, useConstrainedType);
+    }
+
+    private IMethodDescriptor? ResolveEazCall(int position, GenericContext vmGenericContext, bool useConstrainedType)
     {
         if (Cache.TryGetValue(position, out var result))
             return (IMethodDescriptor?)result;
@@ -435,9 +353,15 @@ internal class Resolver
         Ctx.VMResolverStream.Seek(position, SeekOrigin.Begin);
 
         var methodInfo = new VMMethodInfo(VMStreamReader);
+        
+        // i don't think anything special needs to be done for constrained
+        // eaz just includes the types needed in the data anyway
+        // but log it just in case
+        if (useConstrainedType)
+            Ctx.Console.Warning("Constrained type EazCall detected");
 
-        var declaringType = ResolveType(methodInfo.VMDeclaringType);
-        if (declaringType is null)
+        var declaringTypeDefOrRef = ResolveType(methodInfo.VMDeclaringType);
+        if (declaringTypeDefOrRef is null)
             throw new Exception("Failed to resolve eaz call declaring type!");
         
         var returnType = ResolveType(methodInfo.VMReturnType);
@@ -446,10 +370,19 @@ internal class Resolver
             Ctx.Console.Error($"Failed to resolve eaz call {methodInfo.Name} return type!");
             return null;
         }
+        
+        var vmParameters = methodInfo.VMParameters.Select(x => ResolveType(x.VMType)?.ToTypeSignature()!).ToArray();
 
-        var method = ResolveMethod(declaringType.Resolve(), methodInfo);
+        var vmMethodSig = (methodInfo.IsStatic
+                ? MethodSignature.CreateStatic(returnType.ToTypeSignature(),
+                    vmGenericContext.Method?.TypeArguments.Count ?? 0, vmParameters)
+                : MethodSignature.CreateInstance(returnType.ToTypeSignature(),
+                    vmGenericContext.Method?.TypeArguments.Count ?? 0, vmParameters.Skip(1))) // instance eaz calls will contain declaring type as first parameter
+            .InstantiateGenericTypes(vmGenericContext);
+        
+        var method = ResolveMethod(methodInfo.Name, declaringTypeDefOrRef, vmMethodSig, vmParameters, vmGenericContext);
         if (method is null)
-        {
+        {        
             Ctx.Console.Error($"Failed to resolve eaz call {methodInfo.Name}!");
             return null;
         }

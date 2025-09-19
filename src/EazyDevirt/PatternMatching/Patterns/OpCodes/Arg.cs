@@ -1,8 +1,7 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Serialized;
 using AsmResolver.PE.DotNet.Cil;
-using AsmResolver.PE.DotNet.Metadata.Tables.Rows;
-using EazyDevirt.Core.Abstractions;
+using AsmResolver.PE.DotNet.Metadata.Tables;
 using EazyDevirt.Core.Abstractions.Interfaces;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Devirtualization;
