@@ -1,4 +1,4 @@
-﻿using AsmResolver.DotNet;
+using AsmResolver.DotNet;
 using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.PE.DotNet.Cil;
 
@@ -17,12 +17,19 @@ internal record VMMethod(MethodDefinition Parent, string EncodedMethodKey, long 
     public List<CilLocalVariable> Locals { get; set; }
     public List<CilInstruction> Instructions { get; set; }
     
-    
     public bool SuccessfullyDevirtualized { get; set; }
     public bool HasHomomorphicEncryption { get; set; }
     public int CodeSize { get; set; }
-    public long CodePosition { get; set; }
+    public uint CurrentVirtualOffset { get; set; }
+    /// <summary>
+    /// Mapping from VM virtual offset to CIL offset, built once during instruction reading.
+    /// </summary>
+    public Dictionary<uint, int> VmToCilOffsetMap { get; set; }
     public long InitialCodeStreamPosition { get; set; }
+    /// <summary>
+    /// Stack holding Homomorphic Encryption ending positions. Used to calculate virtual <-> CIL offsets.
+    /// </summary>
+    public Stack<uint> HMEndPositionStack { get; set; }
     
     public override string ToString() =>
         $"Parent: {Parent.MetadataToken} | EncodedMethodKey: {EncodedMethodKey} | MethodKey: 0x{MethodKey:X} | " +
