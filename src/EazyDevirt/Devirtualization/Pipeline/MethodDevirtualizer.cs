@@ -381,7 +381,10 @@ internal class MethodDevirtualizer : StageBase
             // Resolve password from CLI or prompt.
             if (!TryGetHomomorphicPassword(vmMethod.Parent.MetadataToken.ToUInt32(), out var pwdEntry))
             {
-                Ctx.Console.Info($"[{vmMethod.Parent.MetadataToken}] Enter homomorphic password:");
+                var token = vmMethod.Parent.MetadataToken.ToUInt32();
+                Ctx.Options.HmPasswords.TryGetValue(token, out var existingList);
+                var displayOrder = (existingList?.Count ?? 0) + 1;
+                Ctx.Console.Info($"[{vmMethod.Parent.MetadataToken}] Enter homomorphic password ({displayOrder}):");
                 Console.Write("Type (sbyte, byte, short, ushort, int, uint, long, ulong, string): ");
                 var typeInput = Console.ReadLine()?.Trim() ?? string.Empty;
                 Console.Write("Value (decimal, 0xHEX, or text): ");
@@ -395,11 +398,10 @@ internal class MethodDevirtualizer : StageBase
 
                 if (string.IsNullOrWhiteSpace(typeInput) || !TryMapType(typeInput, out var kind) || !TryParseTypedNumericToBigEndian(kind, valueInput, out var bytes))
                 {
-                    Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Invalid type or value. Type must be one of sbyte, byte, short, ushort, int, uint, long, ulong, string. Value must be decimal, 0xHEX, or text for string.");
+                    Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Invalid type or value. Type must be one of sbyte, byte, short, ushort, int, uint, long, ulong, string. Value must be decimal, 0xHEX, or text.");
                     vmMethod.SuccessfullyDevirtualized = false;
                     return null;
                 }
-                var token = vmMethod.Parent.MetadataToken.ToUInt32();
                 if (!Ctx.Options.HmPasswords.TryGetValue(token, out var list))
                 {
                     list = new List<HmPasswordEntry>();
@@ -490,55 +492,6 @@ internal class MethodDevirtualizer : StageBase
         return true;
     }
 
-    private static bool TryParseNumericToBigEndian(string s, out byte[] bytes)
-    {
-        bytes = Array.Empty<byte>();
-        if (string.IsNullOrWhiteSpace(s)) return false;
-        s = s.Trim();
-
-        // Hex prefixed value => parse as unsigned and choose minimal width
-        if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-        {
-            var hex = s[2..];
-            if (!ulong.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var u))
-                return false;
-
-            if (u <= byte.MaxValue)
-                bytes = new[] { (byte)u };
-            else if (u <= ushort.MaxValue)
-                bytes = new[] { (byte)(u >> 8), (byte)u };
-            else if (u <= uint.MaxValue)
-                bytes = new[] { (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u };
-            else
-                bytes = new[]
-                {
-                    (byte)(u >> 56), (byte)(u >> 48), (byte)(u >> 40), (byte)(u >> 32),
-                    (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u
-                };
-            return true;
-        }
-        
-        // Decimal: try signed then unsigned types to preserve width semantics
-        if (sbyte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sb))
-        { bytes = new[] { unchecked((byte)sb) }; return true; }
-        if (byte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var b))
-        { bytes = new[] { b }; return true; }
-        if (short.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sh))
-        { var u = unchecked((ushort)sh); bytes = new[] { (byte)(u >> 8), (byte)u }; return true; }
-        if (ushort.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ush))
-        { bytes = new[] { (byte)(ush >> 8), (byte)ush }; return true; }
-        if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i32))
-        { var u = unchecked((uint)i32); bytes = new[] { (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; return true; }
-        if (uint.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui32))
-        { bytes = new[] { (byte)(ui32 >> 24), (byte)(ui32 >> 16), (byte)(ui32 >> 8), (byte)ui32 }; return true; }
-        if (long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i64))
-        { var u = unchecked((ulong)i64); bytes = new[] { (byte)(u >> 56), (byte)(u >> 48), (byte)(u >> 40), (byte)(u >> 32), (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; return true; }
-        if (ulong.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui64))
-        { bytes = new[] { (byte)(ui64 >> 56), (byte)(ui64 >> 48), (byte)(ui64 >> 40), (byte)(ui64 >> 32), (byte)(ui64 >> 24), (byte)(ui64 >> 16), (byte)(ui64 >> 8), (byte)ui64 }; return true; }
-
-        return false;
-    }
-
     private static bool TryMapType(string s, out NumericKind kind)
     {
         kind = default;
@@ -611,68 +564,28 @@ internal class MethodDevirtualizer : StageBase
                 default: return false;
             }
         }
-        else
-        {
-            switch (kind)
-            {
-                case NumericKind.SByte:
-                    if (!sbyte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sb)) return false; bytes = new[] { unchecked((byte)sb) }; return true;
-                case NumericKind.Byte:
-                    if (!byte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var b)) return false; bytes = new[] { b }; return true;
-                case NumericKind.Int16:
-                    if (!short.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sh)) return false; { var u = unchecked((ushort)sh); bytes = new[] { (byte)(u >> 8), (byte)u }; return true; }
-                case NumericKind.UInt16:
-                    if (!ushort.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ush)) return false; bytes = new[] { (byte)(ush >> 8), (byte)ush }; return true;
-                case NumericKind.Int32:
-                    if (!int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i32)) return false; { var u = unchecked((uint)i32); bytes = new[] { (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; return true; }
-                case NumericKind.UInt32:
-                    if (!uint.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui32)) return false; bytes = new[] { (byte)(ui32 >> 24), (byte)(ui32 >> 16), (byte)(ui32 >> 8), (byte)ui32 }; return true;
-                case NumericKind.Int64:
-                    if (!long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i64)) return false; { var u = unchecked((ulong)i64); bytes = new[] { (byte)(u >> 56), (byte)(u >> 48), (byte)(u >> 40), (byte)(u >> 32), (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; return true; }
-                case NumericKind.UInt64:
-                    if (!ulong.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui64)) return false; bytes = new[] { (byte)(ui64 >> 56), (byte)(ui64 >> 48), (byte)(ui64 >> 40), (byte)(ui64 >> 32), (byte)(ui64 >> 24), (byte)(ui64 >> 16), (byte)(ui64 >> 8), (byte)ui64 }; return true;
-                default:
-                    return false;
-            }
-        }
-    }
 
-    private static bool TryParseNumericAutoWidthToBigEndian(string s, out byte[] bytes, out NumericKind kind)
-    {
-        bytes = Array.Empty<byte>();
-        kind = default;
-        if (string.IsNullOrWhiteSpace(s)) return false;
-        s = s.Trim();
-        if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        switch (kind)
         {
-            var hex = s[2..];
-            if (!ulong.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var u))
+            case NumericKind.SByte:
+                if (!sbyte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sb)) return false; bytes = new[] { unchecked((byte)sb) }; return true;
+            case NumericKind.Byte:
+                if (!byte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var b)) return false; bytes = new[] { b }; return true;
+            case NumericKind.Int16:
+                if (!short.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sh)) return false; { var u = unchecked((ushort)sh); bytes = new[] { (byte)(u >> 8), (byte)u }; return true; }
+            case NumericKind.UInt16:
+                if (!ushort.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ush)) return false; bytes = new[] { (byte)(ush >> 8), (byte)ush }; return true;
+            case NumericKind.Int32:
+                if (!int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i32)) return false; { var u = unchecked((uint)i32); bytes = new[] { (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; return true; }
+            case NumericKind.UInt32:
+                if (!uint.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui32)) return false; bytes = new[] { (byte)(ui32 >> 24), (byte)(ui32 >> 16), (byte)(ui32 >> 8), (byte)ui32 }; return true;
+            case NumericKind.Int64:
+                if (!long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i64)) return false; { var u = unchecked((ulong)i64); bytes = new[] { (byte)(u >> 56), (byte)(u >> 48), (byte)(u >> 40), (byte)(u >> 32), (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; return true; }
+            case NumericKind.UInt64:
+                if (!ulong.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui64)) return false; bytes = new[] { (byte)(ui64 >> 56), (byte)(ui64 >> 48), (byte)(ui64 >> 40), (byte)(ui64 >> 32), (byte)(ui64 >> 24), (byte)(ui64 >> 16), (byte)(ui64 >> 8), (byte)ui64 }; return true;
+            default:
                 return false;
-            if (u <= byte.MaxValue)
-            { bytes = new[] { (byte)u }; kind = NumericKind.Byte; return true; }
-            if (u <= ushort.MaxValue)
-            { bytes = new[] { (byte)(u >> 8), (byte)u }; kind = NumericKind.UInt16; return true; }
-            if (u <= uint.MaxValue)
-            { bytes = new[] { (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; kind = NumericKind.UInt32; return true; }
-            bytes = new[] { (byte)(u >> 56), (byte)(u >> 48), (byte)(u >> 40), (byte)(u >> 32), (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; kind = NumericKind.UInt64; return true;
         }
-        if (sbyte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sb2))
-        { bytes = new[] { unchecked((byte)sb2) }; kind = NumericKind.SByte; return true; }
-        if (byte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var b2))
-        { bytes = new[] { b2 }; kind = NumericKind.Byte; return true; }
-        if (short.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sh2))
-        { var u2 = unchecked((ushort)sh2); bytes = new[] { (byte)(u2 >> 8), (byte)u2 }; kind = NumericKind.Int16; return true; }
-        if (ushort.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ush2))
-        { bytes = new[] { (byte)(ush2 >> 8), (byte)ush2 }; kind = NumericKind.UInt16; return true; }
-        if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i322))
-        { var u3 = unchecked((uint)i322); bytes = new[] { (byte)(u3 >> 24), (byte)(u3 >> 16), (byte)(u3 >> 8), (byte)u3 }; kind = NumericKind.Int32; return true; }
-        if (uint.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui322))
-        { bytes = new[] { (byte)(ui322 >> 24), (byte)(ui322 >> 16), (byte)(ui322 >> 8), (byte)ui322 }; kind = NumericKind.UInt32; return true; }
-        if (long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i642))
-        { var u4 = unchecked((ulong)i642); bytes = new[] { (byte)(u4 >> 56), (byte)(u4 >> 48), (byte)(u4 >> 40), (byte)(u4 >> 32), (byte)(u4 >> 24), (byte)(u4 >> 16), (byte)(u4 >> 8), (byte)u4 }; kind = NumericKind.Int64; return true; }
-        if (ulong.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui642))
-        { bytes = new[] { (byte)(ui642 >> 56), (byte)(ui642 >> 48), (byte)(ui642 >> 40), (byte)(ui642 >> 32), (byte)(ui642 >> 24), (byte)(ui642 >> 16), (byte)(ui642 >> 8), (byte)ui642 }; kind = NumericKind.UInt64; return true; }
-        return false;
     }
 
     private object? ReadInlineTok(VMOpCode vmOpCode) =>

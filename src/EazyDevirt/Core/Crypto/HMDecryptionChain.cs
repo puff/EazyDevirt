@@ -15,7 +15,7 @@ internal abstract class HMDecryptionChain
     {
         var pbkdf = new PBKDF2(password, salt, 1);
         var array = new SymmetricAlgorithm[5];
-        for (int i = 0; i < 5; i++)
+        for (var i = 0; i < 5; i++)
         {
             var chain = new SymmetricAlgorithmChain(new Skip32Cipher());
             chain.Key = pbkdf.GetBytes(chain.KeySize / 8);

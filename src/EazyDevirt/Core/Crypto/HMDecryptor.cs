@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-
 namespace EazyDevirt.Core.Crypto;
 
 internal sealed class HMDecryptor : HMDecryptionChain

@@ -34,6 +34,40 @@ internal class DevirtualizationOptionsBinder : BinderBase<DevirtualizationOption
         _hmPasswordsOption = hmPasswordsOption;
     }
 
+    private static bool TryUnquote(string s, out string unquoted)
+    {
+        unquoted = string.Empty;
+        if (string.IsNullOrEmpty(s) || s.Length < 2)
+            return false;
+
+        // Only double-quoted strings are allowed.
+        if (!(s[0] == '"' && s[^1] == '"'))
+            return false;
+
+        var inner = s.Substring(1, s.Length - 2);
+        var sb = new StringBuilder(inner.Length);
+        for (int i = 0; i < inner.Length; i++)
+        {
+            var c = inner[i];
+            if (c == '\\')
+            {
+                if (i + 1 >= inner.Length) return false; // trailing backslash is invalid
+                var n = inner[i + 1];
+                if (n == '"' || n == '\\')
+                {
+                    sb.Append(n);
+                    i++;
+                    continue;
+                }
+                // Disallow other escapes
+                return false;
+            }
+            sb.Append(c);
+        }
+        unquoted = sb.ToString();
+        return true;
+    }
+
     protected override DevirtualizationOptions GetBoundValue(BindingContext bindingContext) =>
         new()
         {
@@ -54,44 +88,75 @@ internal class DevirtualizationOptionsBinder : BinderBase<DevirtualizationOption
         // Temporary structure to retain insertion order for implicit-order entries.
         var tmp = new Dictionary<uint, List<(NumericKind Kind, string Value, byte[] Bytes, int? Order, int Seq)>>();
         var entries = bindingContext.ParseResult.GetValueForOption(_hmPasswordsOption) ?? Array.Empty<string>();
+        var invalidSpecs = new List<string>();
         foreach (var entry in entries)
         {
             if (string.IsNullOrWhiteSpace(entry))
+            {
+                invalidSpecs.Add("--hm-pass: empty specification provided");
                 continue;
+            }
 
-            // Accept formats
+            // Accept formats:
             // 1) mdtoken:order:type:value
             // 2) mdtoken:type:value
             var parts = entry.Split(':', 4, StringSplitOptions.TrimEntries);
             if (parts.Length < 2)
+            {
+                invalidSpecs.Add($"--hm-pass '{entry}': invalid format. Expected 'mdtoken:type:value' or 'mdtoken:order:type:value'.");
                 continue;
+            }
 
             var tokenStr = parts[0];
             if (!TryParseMdToken(tokenStr, out var token))
+            {
+                invalidSpecs.Add($"--hm-pass '{entry}': invalid mdtoken '{tokenStr}'. Use hex with or without 0x, e.g. 0x060000AB.");
                 continue;
+            }
 
             // Ensure list and determine next seq
             if (!tmp.TryGetValue(token, out var list))
                 tmp[token] = list = new List<(NumericKind Kind, string Value, byte[] Bytes, int? Order, int Seq)>();
             var seq = list.Count; // 0-based insertion sequence within this token
 
-            if (parts.Length == 4 && TryParseOrder(parts[1], out var ord) && TryMapType(parts[2], out var kind1))
+            if (parts.Length >= 4 && TryParseOrder(parts[1], out var ord) && TryMapType(parts[2], out var kind1))
             {
                 var valueStr = parts[3];
                 if (!TryParseTypedNumericToBigEndian(kind1, valueStr, out var bytes1))
+                {
+                    invalidSpecs.Add($"--hm-pass '{entry}': value '{valueStr}' is not valid for type '{parts[2]}'.");
                     continue;
+                }
                 list.Add((kind1, valueStr, bytes1, ord, seq));
                 continue;
             }
 
-            if (parts.Length == 3 && TryMapType(parts[1], out var kind2))
+            if (parts.Length == 4 && TryParseOrder(parts[1], out _))
             {
-                var valueStr = parts[2];
+                invalidSpecs.Add($"--hm-pass '{entry}': invalid format. Expected 'mdtoken:order:type:value'.");
+                continue;
+            }
+
+            if (parts.Length >= 3 && TryMapType(parts[1], out var kind2))
+            {
+                var valueStr = string.Join(":", parts, 2, parts.Length - 2);
                 if (!TryParseTypedNumericToBigEndian(kind2, valueStr, out var bytes2))
+                {
+                    invalidSpecs.Add($"--hm-pass '{entry}': value '{valueStr}' is not valid for type '{parts[1]}'.");
                     continue;
+                }
                 list.Add((kind2, valueStr, bytes2, null, seq));
                 continue;
             }
+
+            if (parts.Length == 3)
+            {
+                invalidSpecs.Add($"--hm-pass '{entry}': invalid format. Expected 'mdtoken:type:value'.");
+                continue;
+            }
+
+            // Any other length (e.g., 1 or 2 parts) is invalid.
+            invalidSpecs.Add($"--hm-pass '{entry}': invalid format. Expected 'mdtoken:type:value'.");
         }
 
         // Materialize final map with effective Order values (1-based consumption order).
@@ -190,7 +255,9 @@ internal class DevirtualizationOptionsBinder : BinderBase<DevirtualizationOption
         s = s.Trim();
         if (kind == NumericKind.String)
         {
-            bytes = Encoding.Unicode.GetBytes(s);
+            if (!TryUnquote(s, out var unquoted))
+                return false;
+            bytes = Encoding.Unicode.GetBytes(unquoted);
             return true;
         }
 
@@ -306,51 +373,5 @@ internal class DevirtualizationOptionsBinder : BinderBase<DevirtualizationOption
                     return false;
             }
         }
-    }
-
-    private static bool TryParseNumericAutoWidthToBigEndian(string s, out byte[] bytes, out NumericKind kind)
-    {
-        bytes = Array.Empty<byte>();
-        kind = default;
-        if (string.IsNullOrWhiteSpace(s)) return false;
-        s = s.Trim();
-
-        if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-        {
-            var hex = s[2..];
-            if (!ulong.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var u))
-                return false;
-            if (u <= byte.MaxValue)
-            { bytes = new[] { (byte)u }; kind = NumericKind.Byte; return true; }
-            if (u <= ushort.MaxValue)
-            { bytes = new[] { (byte)(u >> 8), (byte)u }; kind = NumericKind.UInt16; return true; }
-            if (u <= uint.MaxValue)
-            { bytes = new[] { (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; kind = NumericKind.UInt32; return true; }
-            bytes = new[]
-            {
-                (byte)(u >> 56), (byte)(u >> 48), (byte)(u >> 40), (byte)(u >> 32),
-                (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u
-            }; kind = NumericKind.UInt64; return true;
-        }
-
-        // Decimal: try signed then unsigned to preserve width semantics
-        if (sbyte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sb))
-        { bytes = new[] { unchecked((byte)sb) }; kind = NumericKind.SByte; return true; }
-        if (byte.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var b))
-        { bytes = new[] { b }; kind = NumericKind.Byte; return true; }
-        if (short.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var sh))
-        { var u = unchecked((ushort)sh); bytes = new[] { (byte)(u >> 8), (byte)u }; kind = NumericKind.Int16; return true; }
-        if (ushort.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ush))
-        { bytes = new[] { (byte)(ush >> 8), (byte)ush }; kind = NumericKind.UInt16; return true; }
-        if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i32))
-        { var u = unchecked((uint)i32); bytes = new[] { (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; kind = NumericKind.Int32; return true; }
-        if (uint.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui32))
-        { bytes = new[] { (byte)(ui32 >> 24), (byte)(ui32 >> 16), (byte)(ui32 >> 8), (byte)ui32 }; kind = NumericKind.UInt32; return true; }
-        if (long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i64))
-        { var u = unchecked((ulong)i64); bytes = new[] { (byte)(u >> 56), (byte)(u >> 48), (byte)(u >> 40), (byte)(u >> 32), (byte)(u >> 24), (byte)(u >> 16), (byte)(u >> 8), (byte)u }; kind = NumericKind.Int64; return true; }
-        if (ulong.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ui64))
-        { bytes = new[] { (byte)(ui64 >> 56), (byte)(ui64 >> 48), (byte)(ui64 >> 40), (byte)(ui64 >> 32), (byte)(ui64 >> 24), (byte)(ui64 >> 16), (byte)(ui64 >> 8), (byte)ui64 }; kind = NumericKind.UInt64; return true; }
-
-        return false;
     }
 }

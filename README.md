@@ -34,7 +34,7 @@ Options:
   --save-anyway                Saves output of devirtualizer even if it fails [default: False]
   --only-save-devirted         Only saves successfully devirtualized methods (This option only matters if you use the save anyway option) [default: False]
   --require-deps-for-generics  Require dependencies when resolving generic methods for accuracy [default: True]
-  --hm-pass <spec>             Homomorphic password(s) keyed by mdtoken, repeatable. Formats: mdtoken:order:type:value | mdtoken:type:value. Types: sbyte, byte, short, ushort, int, uint, long, ulong, string. Strings use UTF-16. Passwords are consumed per method in specified order.
+  --hm-pass <hm-pass>          Homomorphic password(s) keyed by mdtoken, supporting multiple passwords per method with optional 1-based ordering. Formats: mdtoken:order:type:value | mdtoken:type:value. Types: sbyte, byte, short, ushort, int, uint, long, ulong, string. String values must be wrapped in double quotes (\"...\") and may contain colons; escape double quotes and backslashes with a backslash. Strings use UTF-16. Repeatable; passwords are consumed in the specified order per method.
   --version                    Show version information
   -?, -h, --help               Show help and usage information
 ```
@@ -44,24 +44,41 @@ Options:
 $ EazyDevirt.exe test.exe -v 3 --preserve-all --save-anyway true
 ```
 
-### Homomorphic Encryption passwords (--hm-pass)
+### Homomorphic Encryption passwords
+You can either provide the passwords using the CLI or the interactive prompt.
+If you're using the interactive prompt, you don't need to quote string values, but the rules below regarding the types and numeric values still apply.
+
 - Provide one or more passwords per method using the metadata token (hex, with or without `0x`).
 - Typed-only: you must specify the type. Supported: `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`, `string`.
 - Repeat the option for multiple passwords. Use optional 1-based `order` to control sequence when a method has multiple Homomorphic Encryption blocks.
 
-Formats (typed-only):
+Formats:
 - `mdtoken:order:type:value`
 - `mdtoken:type:value`
+
+Validation rules:
+- `mdtoken` must be hex (with or without `0x`), e.g. `0x06000123` or `06000123`.
+- `order` (if present) must be a positive integer (1-based).
+- `type` must be one of the supported types. Aliases are accepted:
+  - `sbyte`/`i8`, `byte`/`u8`, `short`/`int16`/`i16`, `ushort`/`uint16`/`u16`,
+    `int`/`int32`/`i32`, `uint`/`uint32`/`u32`, `long`/`int64`/`i64`, `ulong`/`uint64`/`u64`, `string`/`str`.
+- `value` must match the specified type:
+  - Numerics: decimal (e.g. `1337`) or hex with `0x` prefix (e.g. `0xDEADBEEF`).
+  - String: any text wrapped in double quotes ("..."). Quotes are required; colons are allowed inside. Only double quotes and backslashes must be escaped via backslash (i.e., use `\"` for `"` and `\\` for `\`). Strings are encoded as UTF-16.
+- If `order` is omitted, passwords are consumed in the order they appear on the CLI for that `mdtoken`.
 
 Examples:
 ```console
 # Two explicitly ordered numeric passwords for method 0x06000123
 EazyDevirt.exe app.exe --hm-pass 0x06000123:1:uint:1234 --hm-pass 0x06000123:2:ulong:0xDEADBEEF
 
-# Multiple methods; string uses UTF-16
+# Multiple methods; string must be quoted and use UTF-16
 EazyDevirt.exe app.exe \
   --hm-pass 06000123:int:1337 \
-  --hm-pass 06000456:string:MySecret
+  --hm-pass 06000456:string:"My Secret Password"
+
+# Strings with quotes inside (escape double quotes):
+EazyDevirt.exe app.exe --hm-pass 06000456:string:"Password is: \"Hello\"" 
 ```
 
 It should be noted there are two additional password types that are not supported by [EazyDevirt]: `IEnumerable` and `byte[]`.
