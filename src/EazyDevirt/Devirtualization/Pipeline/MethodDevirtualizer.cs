@@ -4,13 +4,8 @@ using EazyDevirt.Core.Abstractions;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.Crypto;
 using EazyDevirt.Core.IO;
-using System;
-using System.IO;
-using System.Linq;
 using System.Globalization;
 using System.Text;
-using System.Collections.Generic;
-using EazyDevirt.PatternMatching.Patterns.OpCodes;
 using EazyDevirt.Devirtualization.Options;
 
 namespace EazyDevirt.Devirtualization.Pipeline;
@@ -21,6 +16,7 @@ internal class MethodDevirtualizer : StageBase
     private VMBinaryReader VMStreamReader { get; set; }
     private VMBinaryReader _currentReader;
     private readonly Stack<VMBinaryReader> _readerStack = new();
+    private readonly Dictionary<uint, int> _hmPasswordIndices = new();
 
     private Resolver Resolver { get; set; }
 
@@ -382,11 +378,11 @@ internal class MethodDevirtualizer : StageBase
                 return null;
             }
 
-            // Resolve password from CLI or prompt (typed).
+            // Resolve password from CLI or prompt.
             if (!TryGetHomomorphicPassword(vmMethod.Parent.MetadataToken.ToUInt32(), out var pwdEntry))
             {
-                Ctx.Console.Info($"[{vmMethod.Parent.MetadataToken}] Enter homomorphic password (typed):");
-                Console.Write("Type (sbyte, byte, short, ushort, int, uint, long, ulong, string) [empty=auto]: ");
+                Ctx.Console.Info($"[{vmMethod.Parent.MetadataToken}] Enter homomorphic password:");
+                Console.Write("Type (sbyte, byte, short, ushort, int, uint, long, ulong, string): ");
                 var typeInput = Console.ReadLine()?.Trim() ?? string.Empty;
                 Console.Write("Value (decimal, 0xHEX, or text): ");
                 var valueInput = Console.ReadLine() ?? string.Empty;
@@ -397,29 +393,22 @@ internal class MethodDevirtualizer : StageBase
                     return null;
                 }
 
-                if (!string.IsNullOrWhiteSpace(typeInput))
+                if (string.IsNullOrWhiteSpace(typeInput) || !TryMapType(typeInput, out var kind) || !TryParseTypedNumericToBigEndian(kind, valueInput, out var bytes))
                 {
-                    if (!TryMapType(typeInput, out var kind) || !TryParseTypedNumericToBigEndian(kind, valueInput, out var bytes))
-                    {
-                        Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Invalid type or value. Type must be one of sbyte, byte, short, ushort, int, uint, long, ulong, string. Value must be decimal, 0xHEX, or text for string.");
-                        vmMethod.SuccessfullyDevirtualized = false;
-                        return null;
-                    }
-                    pwdEntry = new HmPasswordEntry(kind, valueInput, bytes);
+                    Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Invalid type or value. Type must be one of sbyte, byte, short, ushort, int, uint, long, ulong, string. Value must be decimal, 0xHEX, or text for string.");
+                    vmMethod.SuccessfullyDevirtualized = false;
+                    return null;
                 }
-                else
+                var token = vmMethod.Parent.MetadataToken.ToUInt32();
+                if (!Ctx.Options.HmPasswords.TryGetValue(token, out var list))
                 {
-                    if (!TryParseNumericAutoWidthToBigEndian(valueInput, out var bytes, out var inferredKind))
-                    {
-                        Ctx.Console.Error($"[{vmMethod.Parent.MetadataToken}] Invalid password value. Provide an integer (decimal or 0xHEX).");
-                        vmMethod.SuccessfullyDevirtualized = false;
-                        return null;
-                    }
-                    pwdEntry = new HmPasswordEntry(inferredKind, valueInput, bytes);
+                    list = new List<HmPasswordEntry>();
+                    Ctx.Options.HmPasswords[token] = list;
                 }
-
-                // Cache for subsequent use within the same run.
-                Ctx.Options.HmPasswords[vmMethod.Parent.MetadataToken.ToUInt32()] = pwdEntry;
+                var order = list.Count + 1;
+                pwdEntry = new HmPasswordEntry(kind, valueInput, bytes, order);
+                list.Add(pwdEntry);
+                _hmPasswordIndices[token] = order; // next retrieval should move past this one
             }
             else if (Ctx.Options.VeryVerbose)
                 Ctx.Console.InfoStr($"Found homomorphic password from CLI arg: {pwdEntry.Value} [{pwdEntry.Kind.ToString()}].", vmMethod.Parent.MetadataToken);
@@ -487,7 +476,18 @@ internal class MethodDevirtualizer : StageBase
         if (map is null || map.Count == 0)
             return false;
 
-        return map.TryGetValue(mdToken, out pwdEntry);
+        if (!map.TryGetValue(mdToken, out var list) || list is null || list.Count == 0)
+            return false;
+
+        var idx = 0;
+        if (_hmPasswordIndices.TryGetValue(mdToken, out var curr))
+            idx = curr;
+        if (idx >= list.Count)
+            return false;
+
+        pwdEntry = list[idx];
+        _hmPasswordIndices[mdToken] = idx + 1; // advance to the next password for subsequent homomorphic blocks
+        return true;
     }
 
     private static bool TryParseNumericToBigEndian(string s, out byte[] bytes)

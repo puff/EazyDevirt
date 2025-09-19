@@ -34,6 +34,7 @@ Options:
   --save-anyway                Saves output of devirtualizer even if it fails [default: False]
   --only-save-devirted         Only saves successfully devirtualized methods (This option only matters if you use the save anyway option) [default: False]
   --require-deps-for-generics  Require dependencies when resolving generic methods for accuracy [default: True]
+  --hm-pass <spec>             Homomorphic password(s) keyed by mdtoken, repeatable. Formats: mdtoken:order:type:value | mdtoken:type:value. Types: sbyte, byte, short, ushort, int, uint, long, ulong, string. Strings use UTF-16. Passwords are consumed per method in specified order.
   --version                    Show version information
   -?, -h, --help               Show help and usage information
 ```
@@ -42,6 +43,29 @@ Options:
 ```console
 $ EazyDevirt.exe test.exe -v 3 --preserve-all --save-anyway true
 ```
+
+### Homomorphic Encryption passwords (--hm-pass)
+- Provide one or more passwords per method using the metadata token (hex, with or without `0x`).
+- Typed-only: you must specify the type. Supported: `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`, `string`.
+- Repeat the option for multiple passwords. Use optional 1-based `order` to control sequence when a method has multiple Homomorphic Encryption blocks.
+
+Formats (typed-only):
+- `mdtoken:order:type:value`
+- `mdtoken:type:value`
+
+Examples:
+```console
+# Two explicitly ordered numeric passwords for method 0x06000123
+EazyDevirt.exe app.exe --hm-pass 0x06000123:1:uint:1234 --hm-pass 0x06000123:2:ulong:0xDEADBEEF
+
+# Multiple methods; string uses UTF-16
+EazyDevirt.exe app.exe \
+  --hm-pass 06000123:int:1337 \
+  --hm-pass 06000456:string:MySecret
+```
+
+It should be noted there are two additional password types that are not supported by [EazyDevirt]: `IEnumerable` and `byte[]`.
+Feel free to make a PR if you need support for them.
 
 ### Notes
 Don't rename any members before devirtualization, as [Eazfuscator.NET] resolves members using names rather than tokens.

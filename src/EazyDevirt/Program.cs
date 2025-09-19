@@ -93,7 +93,7 @@ internal static class Program
         var requireDepsForGenerics = new Option<bool>(new[] { "--require-deps-for-generics"}, "Require dependencies when resolving generic methods for accuracy");
         requireDepsForGenerics.SetDefaultValue(true);
 
-        var hmPasswordsOption = new Option<string[]>(new[] {"--hm-pass"}, "Homomorphic password(s) keyed by mdtoken. Format: mdtoken:type:value or mdtoken:value (auto-width, may fail). Types: sbyte, byte, short, ushort, int, uint, long, ulong, string. String uses UTF-16. Repeatable.")
+        var hmPasswordsOption = new Option<string[]>(new[] {"--hm-pass"}, "Homomorphic password(s) keyed by mdtoken, supporting multiple passwords per method with optional 1-based ordering. Formats: mdtoken:order:type:value | mdtoken:type:value. Types: sbyte, byte, short, ushort, int, uint, long, ulong, string. String uses UTF-16. Repeatable; passwords are consumed in the specified order per method.")
         {
             Arity = ArgumentArity.ZeroOrMore
         };

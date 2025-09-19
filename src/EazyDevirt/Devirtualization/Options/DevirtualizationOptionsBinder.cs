@@ -1,4 +1,3 @@
-using System;
 using System.CommandLine;
 using System.CommandLine.Binding;
 using System.Globalization;
@@ -50,18 +49,20 @@ internal class DevirtualizationOptionsBinder : BinderBase<DevirtualizationOption
             HmPasswords = ParseHmPasswords(bindingContext)
         };
 
-    private Dictionary<uint, HmPasswordEntry> ParseHmPasswords(BindingContext bindingContext)
+    private Dictionary<uint, List<HmPasswordEntry>> ParseHmPasswords(BindingContext bindingContext)
     {
-        var dict = new Dictionary<uint, HmPasswordEntry>();
+        // Temporary structure to retain insertion order for implicit-order entries.
+        var tmp = new Dictionary<uint, List<(NumericKind Kind, string Value, byte[] Bytes, int? Order, int Seq)>>();
         var entries = bindingContext.ParseResult.GetValueForOption(_hmPasswordsOption) ?? Array.Empty<string>();
         foreach (var entry in entries)
         {
             if (string.IsNullOrWhiteSpace(entry))
                 continue;
-            // Accept formats:
-            // 1) mdtoken:type:value
-            // 2) mdtoken:value    (fallback, auto-width)
-            var parts = entry.Split(':', 3, StringSplitOptions.TrimEntries);
+
+            // Accept formats
+            // 1) mdtoken:order:type:value
+            // 2) mdtoken:type:value
+            var parts = entry.Split(':', 4, StringSplitOptions.TrimEntries);
             if (parts.Length < 2)
                 continue;
 
@@ -69,26 +70,71 @@ internal class DevirtualizationOptionsBinder : BinderBase<DevirtualizationOption
             if (!TryParseMdToken(tokenStr, out var token))
                 continue;
 
-            if (parts.Length == 3)
+            // Ensure list and determine next seq
+            if (!tmp.TryGetValue(token, out var list))
+                tmp[token] = list = new List<(NumericKind Kind, string Value, byte[] Bytes, int? Order, int Seq)>();
+            var seq = list.Count; // 0-based insertion sequence within this token
+
+            if (parts.Length == 4 && TryParseOrder(parts[1], out var ord) && TryMapType(parts[2], out var kind1))
             {
-                var typeStr = parts[1];
-                var valueStr = parts[2];
-                if (!TryMapType(typeStr, out var kind))
+                var valueStr = parts[3];
+                if (!TryParseTypedNumericToBigEndian(kind1, valueStr, out var bytes1))
                     continue;
-                if (!TryParseTypedNumericToBigEndian(kind, valueStr, out var bytes))
-                    continue;
-                dict[token] = new HmPasswordEntry(kind, valueStr, bytes);
+                list.Add((kind1, valueStr, bytes1, ord, seq));
+                continue;
             }
-            else // parts.Length == 2 -> fallback (auto-width)
+
+            if (parts.Length == 3 && TryMapType(parts[1], out var kind2))
             {
-                var valueStr = parts[1];
-                if (!TryParseNumericAutoWidthToBigEndian(valueStr, out var bytes, out var inferredKind))
+                var valueStr = parts[2];
+                if (!TryParseTypedNumericToBigEndian(kind2, valueStr, out var bytes2))
                     continue;
-                dict[token] = new HmPasswordEntry(inferredKind, valueStr, bytes);
+                list.Add((kind2, valueStr, bytes2, null, seq));
+                continue;
             }
         }
 
-        return dict;
+        // Materialize final map with effective Order values (1-based consumption order).
+        var result = new Dictionary<uint, List<HmPasswordEntry>>();
+        foreach (var kv in tmp)
+        {
+            var token = kv.Key;
+            var list = kv.Value;
+            // Sort: explicit orders ascending, then implicit in insertion order.
+            list.Sort((a, b) =>
+            {
+                var aHas = a.Order.HasValue;
+                var bHas = b.Order.HasValue;
+                if (aHas && !bHas) return -1;
+                if (!aHas && bHas) return 1;
+                if (aHas && bHas)
+                    return a.Order!.Value.CompareTo(b.Order!.Value);
+                return a.Seq.CompareTo(b.Seq);
+            });
+
+            var finalList = new List<HmPasswordEntry>(list.Count);
+            for (int i = 0; i < list.Count; i++)
+            {
+                var t = list[i];
+                // Effective consumption order is list index + 1
+                finalList.Add(new HmPasswordEntry(t.Kind, t.Value, t.Bytes, i + 1));
+            }
+
+            result[token] = finalList;
+        }
+
+        return result;
+    }
+
+    private static bool TryParseOrder(string s, out int order)
+    {
+        order = 0;
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        if (!int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var o))
+            return false;
+        if (o <= 0) return false; // enforce 1-based
+        order = o;
+        return true;
     }
 
     private static bool TryParseMdToken(string s, out uint token)

@@ -73,11 +73,13 @@ internal record DevirtualizationOptions
     public bool RequireDepsForGenericMethods { get; init; }
 
     /// <summary>
-    /// Dictionary of homomorphic encryption passwords keyed by method metadata token (mdtoken).
-    /// Provided via CLI as "--hm-pass mdtoken:type:value" (repeatable).
+    /// Dictionary of homomorphic encryption password sequences keyed by method metadata token (mdtoken).
+    /// Provided via CLI as "--hm-pass mdtoken[:order]:type:value" (repeatable). If <c>order</c> is omitted,
+    /// passwords are appended in the order they are provided on the command line. When <c>order</c> is provided,
+    /// it is treated as a 1-based position, and passwords are consumed in ascending order per method.
     /// Types: sbyte, byte, short, ushort, int, uint, long, ulong, string.
     /// </summary>
-    public Dictionary<uint, HmPasswordEntry> HmPasswords { get; init; } = new();
+    public Dictionary<uint, List<HmPasswordEntry>> HmPasswords { get; init; } = new();
 }
 
 /// <summary>
@@ -99,4 +101,4 @@ internal enum NumericKind
 /// <summary>
 /// Represents a typed HM password value and its precomputed big-endian bytes.
 /// </summary>
-internal sealed record HmPasswordEntry(NumericKind Kind, string Value, byte[] Bytes);
+internal sealed record HmPasswordEntry(NumericKind Kind, string Value, byte[] Bytes, int Order);
