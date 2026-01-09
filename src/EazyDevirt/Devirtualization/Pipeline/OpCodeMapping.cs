@@ -109,7 +109,7 @@ internal class OpCodeMapping : StageBase
         {
             var instructionField = op[2].Operand as SerializedFieldDefinition;
             var instructionField2 = op[7].Operand as SerializedFieldDefinition;
-            var opCodeDelegate = op[9].Operand as SerializedMethodDefinition;
+            var opCodeDelegate = op[13].Operand as SerializedMethodDefinition;
             // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
             containerType ??= instructionField!.DeclaringType!;
             
@@ -193,7 +193,13 @@ internal class OpCodeMapping : StageBase
         
         if (Ctx.Options.VeryVerbose)
             Ctx.Console.InfoStr($"VM opcodes identified ({identified / vmOpCodes.Count:P})", identified);
-                
+
+        if (Ctx.Options.VeryVeryVerbose)
+        {
+            var unidentifiedPatterns = Ctx.PatternMatcher.OpCodePatterns.Where(x => !x.AllowMultiple).ToList();
+            Ctx.Console.InfoStr($"Unidentified opcode patterns (excluding AllowMultiple): {string.Join(", ", unidentifiedPatterns.Select(x => x.IsSpecial ? x.SpecialOpCode.ToString() : x.CilOpCode.ToString()))}", unidentifiedPatterns.Count);
+        }
+
         return true;
     }
 

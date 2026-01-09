@@ -124,7 +124,9 @@ internal sealed class ResourceParsing : StageBase
     {
         foreach (var type in Ctx.Module.GetAllTypes())
         {
-            if (_resourceGetterMethod != null && _resourceInitializationMethod != null) return true;
+            if (_resourceGetterMethod != null && _resourceInitializationMethod != null)
+                return true;
+            
             foreach (var method in type.Methods.Where(m =>
                          m is { Managed: true, IsPublic: true, IsStatic: true } &&
                          m.Signature?.ReturnType.FullName == typeof(Stream).FullName))
@@ -140,7 +142,8 @@ internal sealed class ResourceParsing : StageBase
                     (SerializedMethodDefinition)method.CilMethodBody!.Instructions[12].Operand!;
                 var getVmInstanceMethod = type.Methods.First(m =>
                     m.MetadataToken != _resourceGetterMethod.MetadataToken &&
-                    m.MetadataToken != _resourceModulusStringMethod.MetadataToken);
+                    m.MetadataToken != _resourceModulusStringMethod.MetadataToken
+                    && m is { IsAssembly: false, Parameters.Count: 0 });
 
                 if (!getVmInstanceMethod.Signature!.ReturnsValue)
                     throw new Exception("Failed to get VM Declaring type!");

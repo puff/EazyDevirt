@@ -20,11 +20,12 @@ internal class PatternMatcher
     }
     
     private Dictionary<int, VMOpCode> OpCodes { get; }
-    private List<IOpCodePattern> OpCodePatterns { get; }
+    public List<IOpCodePattern> OpCodePatterns { get; }
     
     public void SetOpCodeValue(int value, VMOpCode opCode) => OpCodes[value] = opCode;
 
     public VMOpCode GetOpCodeValue(int value) => OpCodes.TryGetValue(value, out var opc) ? opc : VMOpCode.DefaultNopOpCode;
+
 
     public IOpCodePattern FindOpCode(VMOpCode vmOpCode, int index = 0)
     {

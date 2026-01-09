@@ -347,12 +347,13 @@ internal record IsVMOperandAssignableFromTypePattern : IPattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     {
-        CilOpCodes.Ldloc_1,         // 15	001D	ldloc.1
-        CilOpCodes.Ldarg_2,         // 16	001E	ldarg.2
-        CilOpCodes.Beq_S,           // 17	001F	beq.s	61 (007F) ldc.i4.1 
-        CilOpCodes.Ldarg_2,         // 18	0021	ldarg.2
-        CilOpCodes.Ldloc_1,         // 19	0022	ldloc.1
-        CilOpCodes.Callvirt,        // 20	0023	callvirt	instance bool [mscorlib]System.Type::IsAssignableFrom(class [mscorlib]System.Type)
+        CilOpCodes.Ldloc_1,     // 15   001D   ldloc.1
+        CilOpCodes.Ldarg_2,     // 16   001E   ldarg.2
+        CilOpCodes.Call,        // 17   001F   call       bool [System.Runtime]System.Type::op_Equality(class [System.Runtime]System.Type, class [System.Runtime]System.Type)
+        CilOpCodes.Brtrue_S,    // 18   0024   brtrue.s   62 (0084) ldc.i4.1 
+        CilOpCodes.Ldarg_2,     // 19   0026   ldarg.2
+        CilOpCodes.Ldloc_1,     // 20   0027   ldloc.1
+        CilOpCodes.Callvirt,    // 21   0028   callvirt   instance bool [System.Runtime]System.Type::IsAssignableFrom(class [System.Runtime]System.Type)
     };
 
     public bool MatchEntireBody => false;
@@ -360,7 +361,7 @@ internal record IsVMOperandAssignableFromTypePattern : IPattern
     public bool InterchangeLdlocOpCodes => true;
 
     public bool Verify(CilInstructionCollection instructions, int index = 0) =>
-        (instructions[index + 5].Operand as IMethodDescriptor)?.FullName ==
+        (instructions[index + 6].Operand as IMethodDescriptor)?.FullName ==
         "System.Boolean System.Type::IsAssignableFrom(System.Type)";
 }
 

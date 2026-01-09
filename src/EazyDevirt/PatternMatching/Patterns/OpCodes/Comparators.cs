@@ -31,11 +31,11 @@ internal record Clt : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     {
-        CilOpCodes.Call,        // 9	0011	call	bool VM::Clt_Inner(class VMOperandType, class VMOperandType)
-        CilOpCodes.Brtrue_S,    // 10	0016	brtrue.s	13 (001B) ldc.i4.1 
-        CilOpCodes.Ldc_I4_0,    // 11	0018	ldc.i4.0
-        CilOpCodes.Br_S,        // 12	0019	br.s	14 (001C) newobj instance void VMIntOperand::.ctor(int32)
-        CilOpCodes.Ldc_I4_1,    // 13	001B	ldc.i4.1
+        CilOpCodes.Call,        // 9    0011   call   bool VM::Clt_Inner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Ldc_I4_0,    // 10   0016   ldc.i4.0
+        CilOpCodes.Cgt_Un,      // 11   0017   cgt.un
+        CilOpCodes.Newobj,      // 12   0019   newobj instance void VMIntOperand::.ctor(int32)
+        CilOpCodes.Callvirt,    // 13   001E   callvirt   instance void VM::PushStack(class VMOperandType)
     };
 
     public CilOpCode? CilOpCode => CilOpCodes.Clt;
@@ -73,11 +73,11 @@ internal record Clt_Un : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     {
-        CilOpCodes.Call,        // 9	0011	call	bool VM::Clt_UnInner(class VMOperandType, class VMOperandType)
-        CilOpCodes.Brtrue_S,    // 10	0016	brtrue.s	13 (001B) ldc.i4.1 
-        CilOpCodes.Ldc_I4_0,    // 11	0018	ldc.i4.0
-        CilOpCodes.Br_S,        // 12	0019	br.s	14 (001C) newobj instance void VMIntOperand::.ctor(int32)
-        CilOpCodes.Ldc_I4_1,    // 13	001B	ldc.i4.1
+        CilOpCodes.Call,        // 9    0011   call   bool VM::Clt_UnInner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Ldc_I4_0,    // 10   0016   ldc.i4.0
+        CilOpCodes.Cgt_Un,      // 11   0017   cgt.un
+        CilOpCodes.Newobj,      // 12   0019   newobj instance void VMIntOperand::.ctor(int32)
+        CilOpCodes.Callvirt,    // 13   001E   callvirt   instance void VM::PushStack(class VMOperandType)
     };
 
     public CilOpCode? CilOpCode => CilOpCodes.Clt_Un;
@@ -114,11 +114,11 @@ internal record Cgt : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     {
-        CilOpCodes.Call,        // 9	0011	call	bool VM::CgtInner(class VMOperandType, class VMOperandType)
-        CilOpCodes.Brtrue_S,    // 10	0016	brtrue.s	13 (001B) ldc.i4.1 
-        CilOpCodes.Ldc_I4_0,    // 11	0018	ldc.i4.0
-        CilOpCodes.Br_S,        // 12	0019	br.s	14 (001C) newobj instance void VMIntOperand::.ctor(int32)
-        CilOpCodes.Ldc_I4_1,    // 13	001B	ldc.i4.1
+        CilOpCodes.Call,        // 9    0011   call   bool VM::Cgt_Inner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Ldc_I4_0,    // 10   0016   ldc.i4.0
+        CilOpCodes.Cgt_Un,      // 11   0017   cgt.un
+        CilOpCodes.Newobj,      // 12   0019   newobj instance void VMIntOperand::.ctor(int32)
+        CilOpCodes.Callvirt,    // 13   001E   callvirt   instance void VM::PushStack(class VMOperandType)
     };
 
     public CilOpCode? CilOpCode => CilOpCodes.Cgt;
@@ -157,11 +157,11 @@ internal record Cgt_Un : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     {
-        CilOpCodes.Call,        // 9	0011	call	bool VM::Cgt_UnInner(class VMOperandType, class VMOperandType)
-        CilOpCodes.Brtrue_S,    // 10	0016	brtrue.s	13 (001B) ldc.i4.1 
-        CilOpCodes.Ldc_I4_0,    // 11	0018	ldc.i4.0
-        CilOpCodes.Br_S,        // 12	0019	br.s	14 (001C) newobj instance void VMIntOperand::.ctor(int32)
-        CilOpCodes.Ldc_I4_1,    // 13	001B	ldc.i4.1
+        CilOpCodes.Call,        // 9    0011   call   bool VM::Cgt_UnInner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Ldc_I4_0,    // 10   0016   ldc.i4.0
+        CilOpCodes.Cgt_Un,      // 11   0017   cgt.un
+        CilOpCodes.Newobj,      // 12   0019   newobj instance void VMIntOperand::.ctor(int32)
+        CilOpCodes.Callvirt,    // 13   001E   callvirt   instance void VM::PushStack(class VMOperandType)
     };
 
     public CilOpCode? CilOpCode => CilOpCodes.Cgt_Un;
@@ -203,11 +203,11 @@ internal record Ceq : IOpCodePattern
 {
     public IList<CilOpCode> Pattern => new List<CilOpCode>
     {
-        CilOpCodes.Call,        // 11	0017	call	bool VM::CeqInner(class VMOperandType, class VMOperandType)
-        CilOpCodes.Brtrue_S,    // 12	001C	brtrue.s	15 (0021) ldc.i4.1 
-        CilOpCodes.Ldc_I4_0,    // 13	001E	ldc.i4.0
-        CilOpCodes.Br_S,        // 14	001F	br.s	16 (0022) callvirt instance void VMIntOperand::method_4(int32)
-        CilOpCodes.Ldc_I4_1,    // 15	0021	ldc.i4.1
+        CilOpCodes.Call,        // 11   0017   call   bool VM::CeqInner(class VMOperandType, class VMOperandType)
+        CilOpCodes.Ldc_I4_0,    // 12   001C   ldc.i4.0
+        CilOpCodes.Cgt_Un,      // 13   001D   cgt.un
+        CilOpCodes.Callvirt,    // 14   001F   callvirt   instance void VMIntOperand::method_4(int32)
+        CilOpCodes.Callvirt,    // 15   0024   callvirt   instance void VM::PushStack(class VMOperandType)
     };
 
     public CilOpCode? CilOpCode => CilOpCodes.Ceq;

@@ -4,6 +4,7 @@ using AsmResolver.DotNet.Signatures.Parsing;
 using EazyDevirt.Core.Architecture;
 using EazyDevirt.Core.Architecture.InlineOperands;
 using EazyDevirt.Devirtualization;
+using EazyDevirt.Util;
 
 namespace EazyDevirt.Core.IO;
 
@@ -14,6 +15,7 @@ internal class Resolver
         Ctx = ctx;
         VMStreamReader = new VMBinaryReader(new CryptoStreamV3(Ctx.VMResolverStream, Ctx.MethodCryptoKey, true));
         Cache = new Dictionary<int, object?>();
+        TypeSigVisitor = new TypeSigVisitor(Ctx.Module.Assembly!);
     }
     
     private DevirtualizationContext Ctx { get; }
@@ -21,6 +23,8 @@ internal class Resolver
     private VMBinaryReader VMStreamReader { get; }
     
     private Dictionary<int, object?> Cache { get; }
+    
+    private TypeSigVisitor TypeSigVisitor { get; }
 
     public ITypeDefOrRef? ResolveType(VMInlineOperand inlineOperand)
     {
@@ -68,21 +72,12 @@ internal class Resolver
         if (typeSig is null)
             throw new Exception($"Failed to parse vm type {data.Name}");
 
+        typeSig.AcceptVisitor(TypeSigVisitor);
+        
         if (data.HasGenericTypeParameters)
             typeSig = typeSig.MakeGenericInstanceType(data.GenericParameters.Select(x => ResolveType(x)!.ToTypeSignature()).ToArray());
 
         var typeDefOrRef = typeSig.ToTypeDefOrRef();
-        if (SignatureComparer.Default.Equals(typeDefOrRef.Scope?.GetAssembly(), Ctx.Module.Assembly))
-        {
-            var resolvedType = typeDefOrRef.Resolve();
-            if (resolvedType is not null)
-                typeDefOrRef = resolvedType;
-            else
-                Ctx.Console.Warning($"Failed to resolve same assembly vm type {data.Name}, using its reference instead.");
-        }
-        else
-            typeDefOrRef = Ctx.Importer.ImportType(typeDefOrRef);
-        
         Cache.Add(position, typeDefOrRef);
         return typeDefOrRef;
     }
@@ -115,7 +110,7 @@ internal class Resolver
 
         if (declaringType.Resolve() is { } declaringTypeDef)
         {
-            var fieldDef = declaringTypeDef.Fields.FirstOrDefault(f => f.Name == data.Name && f.IsStatic == data.IsStatic)?.ImportWith(Ctx.Importer);
+            var fieldDef = declaringTypeDef.Fields.FirstOrDefault(f => f.Name == data.Name && f.IsStatic == data.IsStatic);
             Cache.Add(position, fieldDef);
             return fieldDef;
         }
@@ -210,8 +205,19 @@ internal class Resolver
             Ctx.Console.Error($"Failed to resolve generic method {name}!");
             return null;
         }
-        
-        return declaringTypeDefOrRef.CreateMemberReference(name, vmMethodSig);
+
+        IMethodDescriptor memberRef = declaringTypeDefOrRef.CreateMemberReference(name, vmMethodSig);
+        var scope = declaringTypeDefOrRef.Scope?.GetAssembly();
+        if (vmGenericContext.IsEmpty && SignatureComparer.Default.Equals(scope, Ctx.Module.Assembly))
+        {
+            var methodDef = memberRef.Resolve();
+            if (methodDef is not null) 
+                return methodDef;
+            
+            Ctx.Console.Warning($"Failed to resolve method {memberRef.FullName} to methoddef! Placing member reference instead.");
+        }
+
+        return memberRef;
     }
     
     public IMethodDescriptor? ResolveMethod(int position)
@@ -260,12 +266,12 @@ internal class Resolver
                     vmGenericContext.Method?.TypeArguments.Count ?? 0, vmParameters))
             .InstantiateGenericTypes(vmGenericContext);
         
-        var method = ResolveMethod(data.Name, declaringTypeDefOrRef, vmMethodSig, vmParameters, vmGenericContext)?.ImportWith(Ctx.Importer);
+        var method = ResolveMethod(data.Name, declaringTypeDefOrRef, vmMethodSig, vmParameters, vmGenericContext);
         if (method is null) 
             return null;
         
         Cache.Add(position, method);
-        return (IMethodDescriptor)method;
+        return method;
     }
 
     public IMemberDescriptor? ResolveToken(int position)
@@ -371,7 +377,23 @@ internal class Resolver
             return null;
         }
         
-        var vmParameters = methodInfo.VMParameters.Select(x => ResolveType(x.VMType)?.ToTypeSignature()!).ToArray();
+        var vmParameters = new TypeSignature[methodInfo.VMParameters.Count];
+        for (var index = 0; index < methodInfo.VMParameters.Count; index++)
+        {
+            var vmParameter = methodInfo.VMParameters[index];
+            var typeSig = ResolveType(vmParameter.VMType)?.ToTypeSignature();
+            if (typeSig is null)
+            {
+                Ctx.Console.Error($"Failed to resolve eaz call {methodInfo.Name} parameter {index}!");
+                return null;
+            }
+            
+            if (vmParameter.In && typeSig is not ByReferenceTypeSignature)
+                Ctx.Console.Warning($"Parameter {index} of eaz call {methodInfo.Name} has In flag set but is not a by reference type!");
+            
+            vmParameters[index] = typeSig;
+        }
+
 
         var vmMethodSig = (methodInfo.IsStatic
                 ? MethodSignature.CreateStatic(returnType.ToTypeSignature(),
@@ -386,6 +408,9 @@ internal class Resolver
             Ctx.Console.Error($"Failed to resolve eaz call {methodInfo.Name}!");
             return null;
         }
+
+        if (method is not MethodDefinition or MethodSpecification { Method: MethodDefinition })
+            Ctx.Console.Warning($"Eaz call {methodInfo.Name} failed to resolve to a method definition, is the method missing? Placing reference instead.");
 
         Cache.Add(position, method);
         return method;

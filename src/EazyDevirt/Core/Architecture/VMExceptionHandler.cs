@@ -18,9 +18,9 @@ internal record VMExceptionHandler
             return VMHandlerType switch
             {
                 0 => CilExceptionHandlerType.Exception,
-                1 => CilExceptionHandlerType.Finally,
-                // 4 =>  CilExceptionHandlerType.Fault,
-                2 => CilExceptionHandlerType.Filter,
+                2 => CilExceptionHandlerType.Finally,
+                // 1 =>  CilExceptionHandlerType.Fault,
+                4 => CilExceptionHandlerType.Filter,
                 _ => throw new NotSupportedException()
             };
         }
@@ -32,8 +32,8 @@ internal record VMExceptionHandler
         CatchType = reader.ReadInt32();
         HandlerStart = reader.ReadUInt32();
         TryStart = reader.ReadUInt32();
-        FilterStart = reader.ReadUInt32();
         TryLength = reader.ReadUInt32();
+        FilterStart = reader.ReadUInt32();
     }
 
     public override string ToString() =>

@@ -37,19 +37,19 @@ internal record VMOpCode(SerializedFieldDefinition SerializedInstructionField = 
         {
             return VirtualOperandType switch
             {
-                5 => CilOperandType.InlineI,
-                6 => CilOperandType.ShortInlineI,
-                8 => CilOperandType.InlineI8,
-                12 => CilOperandType.InlineR,
-                3 => CilOperandType.ShortInlineR,
-                2 => CilOperandType.InlineVar,              // used for both locals and arguments
-                4 => CilOperandType.ShortInlineVar,         // used for both locals and arguments
-                0 => CilOperandType.InlineTok,
-                1 => CilOperandType.InlineSwitch,
-                10 => CilOperandType.InlineBrTarget,        // in eazfuscator, this is unsigned
-                11 => CilOperandType.InlineArgument,        // this doesn't seem to be used, might not be correct 
-                7 => CilOperandType.ShortInlineArgument,    // this doesn't seem to be used, might not be correct
-                9 => CilOperandType.InlineNone,
+                6 => CilOperandType.InlineI, // 5
+                0 => CilOperandType.ShortInlineI, // 6
+                10 => CilOperandType.InlineI8, // 8
+                8 => CilOperandType.InlineR, // 12
+                4 => CilOperandType.ShortInlineR, //3 
+                5 => CilOperandType.InlineVar,        // 2      // used for both locals and arguments
+                3 => CilOperandType.ShortInlineVar,   // 4      // used for both locals and arguments
+                2 => CilOperandType.InlineTok,  //0
+                9 => CilOperandType.InlineSwitch, //1
+                1 => CilOperandType.InlineBrTarget, //10       // in eazfuscator, this is unsigned
+                12 => CilOperandType.InlineArgument, //11        // this doesn't seem to be used, might not be correct 
+                7 => CilOperandType.ShortInlineArgument,//7    // this doesn't seem to be used, might not be correct
+                11 => CilOperandType.InlineNone, // 9
 
                 _ => throw new ArgumentOutOfRangeException(nameof(VirtualOperandType), VirtualOperandType, "Unknown operand type")
             };
